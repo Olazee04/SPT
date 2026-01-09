@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SPT.Data;
 
@@ -11,9 +12,11 @@ using SPT.Data;
 namespace SPT.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260109153119_AddVerifiedByColumn")]
+    partial class AddVerifiedByColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -312,26 +315,8 @@ namespace SPT.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DateJoined")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NextOfKin")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NextOfKinPhone")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Phone")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProfilePicture")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("TrackId")
@@ -490,6 +475,9 @@ namespace SPT.Migrations
                     b.Property<bool>("PracticeDone")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ProjectMilestone")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("QuizScore")
                         .HasColumnType("int");
 
@@ -498,9 +486,6 @@ namespace SPT.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("VerifiedByUserId")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

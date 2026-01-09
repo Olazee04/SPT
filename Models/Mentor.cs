@@ -66,6 +66,21 @@ namespace SPT.Models
 
         [Required]
         public string FullName { get; set; } = string.Empty;
+        public string? Address { get; set; }
+
+        public string? Phone { get; set; }
+
+        public string? ProfilePicture { get; set; }
+
+        public string? NextOfKin { get; set; }
+
+        public string? NextOfKinPhone { get; set; }
+
+        [Required]
+
+        [Display(Name = "Date Joined")]
+
+        public DateTime DateJoined { get; set; } = DateTime.UtcNow;
 
         public int? TrackId { get; set; }
 
@@ -134,70 +149,7 @@ namespace SPT.Models
     // =========================
     // PROGRESS LOG (CORE TABLE)
     // =========================
-    public class ProgressLog
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required]
-        public int StudentId { get; set; }
-
-        [ForeignKey(nameof(StudentId))]
-        public Student Student { get; set; } = null!;
-
-        [Required]
-        public int ModuleId { get; set; }
-
-        [ForeignKey(nameof(ModuleId))]
-        public SyllabusModule Module { get; set; } = null!;
-
-        [Required]
-        public DateTime Date { get; set; }
-
-        [Required]
-        [Range(0, 24)]
-        public decimal Hours { get; set; }
-
-        [Display(Name = "Lesson Covered")]
-        public string? LessonCovered { get; set; }
-
-        [Display(Name = "Practice Done")]
-        public bool PracticeDone { get; set; }
-
-        [Display(Name = "Mini Project Progress (%)")]
-        [Range(0, 100)]
-        public int? MiniProjectProgress { get; set; }
-
-        [Display(Name = "Quiz Score (%)")]
-        [Range(0, 100)]
-        public int? QuizScore { get; set; }
-
-        [Display(Name = "Project Milestone")]
-        public string? ProjectMilestone { get; set; }
-
-        [Display(Name = "Blocker")]
-        public string? Blocker { get; set; }
-
-        [Display(Name = "Next Goal")]
-        public string? NextGoal { get; set; }
-
-        [Display(Name = "Evidence Link")]
-        [Url]
-        public string? EvidenceLink { get; set; }
-
-        [Required]
-        [Display(Name = "Logged By")]
-        public string LoggedBy { get; set; } = string.Empty; // Admin or Mentor
-
-        [Required]
-        public string LoggedByUserId { get; set; } = string.Empty;
-
-        [Display(Name = "Approved")]
-        public bool IsApproved { get; set; } = true;
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    }
+    
 
     // =========================
     // STUDENT REFLECTION

@@ -1,21 +1,187 @@
 ﻿@model SPT.Models.Student
-
+@using System.Linq
 
 @{
-    ViewData["Title"] = "Student Dashboard";
+    ViewData["Title"] = "My Dashboard";
+
+    var logs = Model.ProgressLogs != null
+
+        ? Model.ProgressLogs.ToList()
+
+        : new List<SPT.Models.ProgressLog>();
+
+    var approvedHours = logs.Where(p => p.IsApproved).Sum(p => p.Hours);
+
+    var pendingHours = logs.Where(p => !p.IsApproved).Sum(p => p.Hours);
+
+    var logsCount = logs.Count;
+
+    var consistencyScore = 0;
 }
 
-<div class="container mt-4">
-    <h2>Student Dashboard</h2>
-
-    <div class="card mt-3">
+<div class="col-md-3">
+    <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
-            <h5 class="card-title">@Model.FullName</h5>
+            <h6 class="text-muted text-uppercase small fw-bold">Verified Hours</h6>
+            <div class="d-flex align-items-center">
+                <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
+                <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
+            </div>
 
-            <p><strong>Course:</strong> @Model.Track</p>
-            <p><strong>Cohort:</strong> @Model.Cohort</p>
-            <p><strong>Username:</strong> @User.Identity.Name</p>
+            @if (pendingHours > 0)
+            {
+                <div class="mt-2 badge bg-warning text-dark">
+                    <i class="fas fa-clock"></i> @pendingHours hrs pending
+                </div>
+            }
+            else
+            {
+                <small class="text-muted">All logs verified</small>
+            }
         </div>
     </div>
 </div>
 
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">👋 Welcome, @Model.FullName.Split(' ')[0]!</h2>
+            <p class="text-muted mb-0">
+                <span class="badge bg-primary">@Model.Track?.Code</span>
+                @Model.Cohort?.Name •
+                <span class="text-success">@Model.EnrollmentStatus</span>
+            </p>
+        </div>
+        <a href="#" class="btn btn-primary btn-lg shadow-sm">
+
+            <a asp-controller="ProgressLog" asp-action="Create" class="btn btn-primary btn-lg shadow-sm">
+                <i class="fas fa-plus-circle"></i> Log Daily Progress
+            </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Consistency Score</h6>
+                    <div class="d-flex align-items-center">
+                        <h2 class="mb-0 fw-bold text-primary">@consistencyScore%</h2>
+                        <span class="ms-2 badge bg-light text-dark">Rank: #--</span>
+                    </div>
+                    <small class="text-muted">Target: 80%+</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Total Hours</h6>
+                    <div class="d-flex align-items-center">
+                        <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
+                        <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek (Target)</span>
+                    </div>
+                    <small class="text-muted">Last 7 Days</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Total Check-ins</h6>
+                    <h2 class="mb-0 fw-bold text-info">@logsCount</h2>
+                    <small class="text-muted">Days active</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Your Mentor</h6>
+                    <div class="d-flex align-items-center mt-2">
+                        <div class="avatar-circle bg-warning text-white me-2" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">
+                            @(Model.Mentor?.FullName.Substring(0, 1) ?? "?")
+                        </div>
+                        <div>
+                            <p class="mb-0 fw-bold">@(Model.Mentor?.FullName ?? "Not Assigned")</p>
+                            <small class="text-muted">View Feedback</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">📅 Recent Activity</h5>
+                    <a href="#" class="text-decoration-none small">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Topic / Module</th>
+                                    <th>Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.ProgressLogs.Any())
+
+                                {
+
+                                    foreach (var log in Model.ProgressLogs.OrderByDescending(p => p.Date).Take(5))
+
+                                    {
+                                        <tr>
+                                            <td>@log.Date.ToString("MMM dd")</td>
+                                            <td>@log.ModuleId (Placeholder)</td>
+                                            <td>@log.Hours hrs</td>
+                                            <td>
+                                                <span class="badge bg-success">Verified</span>
+                                            </td>
+                                        </tr>
+                                    }
+
+                                }
+
+                                else
+
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                                            <p>No activity logged yet. Start today!</p>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body text-center">
+                    <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle mb-3" style="width:100px;height:100px;object-fit:cover;" />
+                    <h5>@Model.FullName</h5>
+                    <p class="text-muted small">@Model.Email</p>
+                    <hr />
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary btn-sm">Edit Profile</button>
+                        <a asp-controller="Student" asp-action="Profile" class="btn btn-outline-secondary btn-sm">Edit Profile</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

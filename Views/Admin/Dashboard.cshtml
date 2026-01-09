@@ -14,3 +14,96 @@
 <a asp-controller="Admin" asp-action="Students" class="btn btn-outline-primary">
     📋 View Students
 </a>
+@{
+    ViewData["Title"] = "Admin Dashboard";
+
+    int pendingCount = ViewBag.PendingLogs ?? 0;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h2>
+        <span class="text-muted">Welcome, @User.Identity.Name</span>
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 @(pendingCount > 0 ? "border-warning border-2" : "")">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="text-muted text-uppercase fw-bold">Pending Reviews</h6>
+                        <i class="fas fa-check-double fa-2x text-warning"></i>
+                    </div>
+
+                    <h2 class="display-4 fw-bold my-2">@pendingCount</h2>
+
+                    @if (pendingCount > 0)
+
+                    {
+                        <p class="text-danger fw-bold small"><i class="fas fa-exclamation-circle"></i> Requires Attention</p>
+                        <a asp-action="ReviewLogs" class="btn btn-warning w-100 fw-bold">
+                            Review Now <i class="fas fa-arrow-right"></i>
+                        </a>
+                    }
+
+                    else
+
+                    {
+                        <p class="text-muted small">All caught up!</p>
+                        <button disabled class="btn btn-light w-100">No Pending Logs</button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="text-muted text-uppercase fw-bold">Total Students</h6>
+                        <i class="fas fa-users fa-2x text-primary"></i>
+                    </div>
+                    <h2 class="display-4 fw-bold my-2">@ViewBag.TotalStudents</h2>
+                    <p class="text-muted small">Total registered accounts</p>
+                    <a asp-action="Students" class="btn btn-outline-primary w-100">View All Students</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="text-muted text-uppercase fw-bold">Active Students</h6>
+                        <i class="fas fa-user-check fa-2x text-success"></i>
+                    </div>
+                    <h2 class="display-4 fw-bold my-2">@ViewBag.ActiveStudents</h2>
+                    <p class="text-muted small">Currently enrolling</p>
+
+                    @if (User.IsInRole("Admin"))
+
+                    {
+                        <div class="d-grid gap-2">
+                            <a asp-action="CreateStudent" class="btn btn-outline-success">
+                                <i class="fas fa-user-graduate"></i> Add Student
+                            </a>
+                            <a asp-action="CreateMentor" class="btn btn-outline-dark">
+                                <i class="fas fa-chalkboard-teacher"></i> Add Mentor
+                            </a>
+                        </div>
+                    }
+
+                    else
+
+                    {
+                        <button class="btn btn-light w-100 text-muted" disabled>
+                            <i class="fas fa-lock"></i> Admin Access Only
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

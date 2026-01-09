@@ -1,4 +1,4 @@
-﻿@model SPT.Models.Student
+﻿@model SPT.Models.Mentor
 @{
     ViewData["Title"] = "My Profile";
 }
@@ -29,7 +29,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email</label>
-                                <input value="@Model.Email" class="form-control bg-light" readonly />
+                                <input value="@Model.User?.Email" class="form-control bg-light" readonly />
                             </div>
                         </div>
 

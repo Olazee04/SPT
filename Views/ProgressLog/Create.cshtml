@@ -1,0 +1,111 @@
+﻿@model SPT.Models.ProgressLog
+
+@{
+    ViewData["Title"] = "Log Daily Progress";
+    bool canLogProject = ViewBag.UnlockProject ?? false;
+    double currentProgress = ViewBag.CurrentProgress ?? 0;
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="mb-0"><i class="fas fa-edit"></i> Log Daily Progress</h4>
+                    <small>Transparency is key, @ViewBag.StudentName!</small>
+                </div>
+                <div class="card-body p-4">
+
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Date" class="form-label fw-bold">Date *</label>
+                                <input asp-for="Date" type="date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                                <span asp-validation-for="Date" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Hours" class="form-label fw-bold">Hours Spent *</label>
+                                <input asp-for="Hours" type="number" step="0.5" class="form-control" placeholder="e.g. 4.5" min="0.5" max="24" />
+                                <span asp-validation-for="Hours" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label asp-for="ModuleId" class="form-label fw-bold">Module / Topic *</label>
+                                <select asp-for="ModuleId" class="form-select" asp-items="ViewBag.ModuleId">
+                                    <option value="">-- Select What You Learned --</option>
+                                    <option value="999">Other / Research</option>
+                                </select>
+                                <span asp-validation-for="ModuleId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label asp-for="LessonCovered" class="form-label fw-bold">Specific Lesson / Activity *</label>
+                                <input asp-for="LessonCovered" class="form-control" placeholder="e.g. Learned about Async/Await" />
+                                <span asp-validation-for="LessonCovered" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check p-3 border rounded bg-light h-100 d-flex align-items-center">
+                                    <input asp-for="PracticeDone" class="form-check-input me-2" type="checkbox" />
+                                    <label asp-for="PracticeDone" class="form-check-label fw-bold">I did practical coding</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                @if (canLogProject)
+                                {
+                                    <label asp-for="MiniProjectProgress" class="form-label fw-bold text-success">
+                                        <i class="fas fa-rocket"></i> Project Progress (%)
+                                    </label>
+                                    <input asp-for="MiniProjectProgress" type="number" class="form-control border-success" placeholder="0 - 100" min="0" max="100" />
+                                    <small class="text-success">You've unlocked this feature!</small>
+                                }
+                                else
+                                {
+                                    <label class="form-label text-muted">Project Progress (Locked)</label>
+                                    <input disabled class="form-control bg-light" placeholder="Locked (Current: @currentProgress%)" />
+                                    <small class="text-muted"><i class="fas fa-lock"></i> Unlocks at 75% Syllabus Completion</small>
+                                }
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label asp-for="EvidenceLink" class="form-label fw-bold">Evidence Link (GitHub / Slack) *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-link"></i></span>
+                                    <input asp-for="EvidenceLink" type="url" class="form-control" placeholder="https://github.com/username/repo..." required />
+                                </div>
+                                <span asp-validation-for="EvidenceLink" class="text-danger"></span>
+                                <small class="text-muted">Must be a valid URL to your code or update.</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Blocker" class="form-label">Any Blockers? (Optional)</label>
+                                <textarea asp-for="Blocker" class="form-control" rows="2" placeholder="What got you stuck?"></textarea>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NextGoal" class="form-label">Goal for Tomorrow (Optional)</label>
+                                <textarea asp-for="NextGoal" class="form-control" rows="2" placeholder="What will you learn next?"></textarea>
+                            </div>
+
+                            <div class="col-12 text-end mt-3">
+                                <a asp-controller="Student" asp-action="Dashboard" class="btn btn-secondary me-2">Cancel</a>
+                                <button type="submit" class="btn btn-success btn-lg px-5">Submit Log</button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

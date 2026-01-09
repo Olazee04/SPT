@@ -8,7 +8,7 @@ using SPT.Models;
 
 namespace SPT.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Mentor")]
     public class AdminController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -31,11 +31,14 @@ namespace SPT.Controllers
         public async Task<IActionResult> Dashboard()
         {
             var totalStudents = await _context.Students.CountAsync();
-            var activeStudents = await _context.Students
-                .CountAsync(s => s.EnrollmentStatus == "Active");
+            var activeStudents = await _context.Students.CountAsync(s => s.EnrollmentStatus == "Active");
+
+            // ✅ NEW: Count logs that are NOT approved yet
+            var pendingLogs = await _context.ProgressLogs.CountAsync(p => !p.IsApproved);
 
             ViewBag.TotalStudents = totalStudents;
             ViewBag.ActiveStudents = activeStudents;
+            ViewBag.PendingLogs = pendingLogs; // Pass to View
 
             return View();
         }
@@ -79,6 +82,7 @@ namespace SPT.Controllers
         // CREATE STUDENT (GET)
         // =========================
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStudent()
         {
             await PopulateDropdowns();
@@ -90,6 +94,7 @@ namespace SPT.Controllers
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStudent(Student model, IFormFile? profilePicture, string password)
         {
             // 1. Remove validation errors for fields we generate automatically
@@ -222,6 +227,7 @@ namespace SPT.Controllers
         // EDIT STUDENT (GET)
         // =========================
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditStudent(int id)
         {
             var student = await _context.Students
@@ -240,6 +246,7 @@ namespace SPT.Controllers
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditStudent(int id, Student model, IFormFile? profilePicture)
         {
             if (id != model.Id) return NotFound();
@@ -313,6 +320,123 @@ namespace SPT.Controllers
 
             TempData["Success"] = "✅ Student deactivated successfully!";
             return RedirectToAction(nameof(Students));
+        }
+
+        // =========================
+        // GET: Review Pending Logs
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> ReviewLogs()
+        {
+            var pendingLogs = await _context.ProgressLogs
+                .Include(p => p.Student)
+                .Include(p => p.Module)
+                .Where(p => !p.IsApproved) // Only show unapproved logs
+                .OrderByDescending(p => p.Date)
+                .ToListAsync();
+
+            return View(pendingLogs);
+        }
+
+        // POST: Approve or Reject Log
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveLog(int id, decimal verifiedHours, int? quizScore, string action)
+        {
+            var log = await _context.ProgressLogs.FindAsync(id);
+            if (log == null) return NotFound();
+
+            if (action == "Approve")
+            {
+                log.Hours = verifiedHours;
+                log.QuizScore = quizScore;
+                log.IsApproved = true;
+
+                // This line crashes if Migration wasn't run. 
+                // We use a try-catch to be safe, or simply comment it out if you haven't migrated yet.
+                try
+                {
+                    log.VerifiedByUserId = _userManager.GetUserId(User);
+                }
+                catch { /* Ignore if column missing for now */ }
+
+                TempData["Success"] = "✅ Log verified and saved.";
+            }
+            else if (action == "Reject")
+            {
+                _context.ProgressLogs.Remove(log);
+                TempData["Error"] = "❌ Log rejected.";
+            }
+
+            // CRITICAL: This actually commits the changes to the database
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(ReviewLogs));
+        }
+
+        // =========================
+        // CREATE MENTOR (GET)
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin")] 
+        public async Task<IActionResult> CreateMentor()
+        {
+            ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
+            return View();
+        }
+
+        // =========================
+        // CREATE MENTOR (POST)
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateMentor(Mentor model, string email, string password, string username)
+        {
+            // 1. Ignore Validation for Auto-Generated Fields
+            ModelState.Remove("User");
+            ModelState.Remove("UserId");
+            ModelState.Remove("Track"); // <--- ADD THIS (Fixes the issue if Track is empty)
+
+            if (!ModelState.IsValid)
+            {
+                // DEBUGGING: This puts the specific error into the Alert box so you can see it
+                var errors = string.Join("; ", ModelState.Values
+                                                .SelectMany(v => v.Errors)
+                                                .Select(e => e.ErrorMessage));
+
+                TempData["Error"] = $"Failed to create: {errors}"; // Show error on screen
+
+                ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
+                return View(model);
+            }
+
+            // 2. Create Login
+            var user = new ApplicationUser
+            {
+                UserName = username,
+                Email = email,
+                EmailConfirmed = true
+            };
+
+            var result = await _userManager.CreateAsync(user, password);
+
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors) ModelState.AddModelError("", error.Description);
+                ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
+                return View(model);
+            }
+
+            await _userManager.AddToRoleAsync(user, "Mentor");
+
+            // 3. Save Mentor Profile
+            model.UserId = user.Id;
+            _context.Mentors.Add(model);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"✅ Mentor Created! Login: <strong>{username}</strong>";
+            return RedirectToAction("Dashboard");
         }
     }
 }

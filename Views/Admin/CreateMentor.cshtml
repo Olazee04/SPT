@@ -1,0 +1,80 @@
+﻿@model SPT.Models.Mentor
+
+@{
+    ViewData["Title"] = "Create Mentor";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="mb-0"><i class="fas fa-chalkboard-teacher"></i> Create New Mentor</h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="CreateMentor" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <h5 class="text-primary border-bottom pb-2 mb-3">Login Details</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Username *</label>
+                                <input name="username" class="form-control" placeholder="e.g. MrAzeez" required />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Password *</label>
+                                <input name="password" type="text" class="form-control" placeholder="e.g. Mentor@123" required />
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Email *</label>
+                                <input name="email" type="email" class="form-control" required />
+                            </div>
+                        </div>
+
+                        <h5 class="text-primary border-bottom pb-2 mb-3 mt-3">Profile Details</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="FullName" class="form-label">Full Name *</label>
+                                <input asp-for="FullName" class="form-control" placeholder="e.g. Azeez O." />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Phone" class="form-label">Phone Number</label>
+                                    <input asp-for="Phone" class="form-control" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Address" class="form-label">Address</label>
+                                    <input asp-for="Address" class="form-control" />
+                                </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="TrackId" class="form-label">Specialty Track (Optional)</label>
+                                <select asp-for="TrackId" class="form-select" asp-items="ViewBag.Tracks">
+                                    <option value="">-- General / All --</option>
+                                </select>
+                            </div>
+
+                        </div>
+
+                            <h5 class="text-primary border-bottom pb-2 mb-3 mt-3">Personal Details</h5>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NextOfKin" class="form-label">Next of Kin Name</label>
+                                <input asp-for="NextOfKin" class="form-control" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NextOfKinPhone" class="form-label">Next of Kin Phone</label>
+                                <input asp-for="NextOfKinPhone" class="form-control" />
+                            </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Create Mentor Account</button>
+                            <a asp-action="Dashboard" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

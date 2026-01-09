@@ -30,15 +30,10 @@ namespace SPT.Controllers
             return View();
         }
 
-        // =========================
         // POST: /Account/Login
-        // =========================
         [HttpPost]
-        public async Task<IActionResult>
-            Login(
-            string username,
-            string password,
-            bool rememberMe)
+        [ValidateAntiForgeryToken] // Ensure this is here for security
+        public async Task<IActionResult> Login(string username, string password, bool rememberMe)
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
@@ -46,38 +41,33 @@ namespace SPT.Controllers
                 return View();
             }
 
-            var result = await _signInManager.PasswordSignInAsync(
-            username,
-            password,
-            rememberMe,
-            lockoutOnFailure: false
-            );
-
-            // ✅ LOGIN SUCCESS
-            // AccountController.cs -> Login (POST)
+            var result = await _signInManager.PasswordSignInAsync(username, password, rememberMe, lockoutOnFailure: false);
 
             if (result.Succeeded)
             {
                 var user = await _userManager.FindByNameAsync(username);
 
-                // SAFETY CHECK: Ensure user is not null
-                if (user == null)
-                {
-                    return RedirectToAction("Login");
-                }
+                // SAFETY CHECK
+                if (user == null) return RedirectToAction("Login");
+
+                // 1. Check Admin
                 if (await _userManager.IsInRoleAsync(user, "Admin"))
                     return RedirectToAction("Dashboard", "Admin");
 
+                // 2. Check Student
                 if (await _userManager.IsInRoleAsync(user, "Student"))
                     return RedirectToAction("Dashboard", "Student");
 
+                // 3. Check Mentor (THIS IS THE PART YOU ASKED ABOUT)
                 if (await _userManager.IsInRoleAsync(user, "Mentor"))
-                    return RedirectToAction("Dashboard", "Mentor");
+                {
+                    // Redirect Mentor to the Admin Dashboard (Shared view)
+                    return RedirectToAction("Dashboard", "Admin");
+                }
 
                 return RedirectToAction("Index", "Home");
             }
 
-            // ❌ LOGIN FAILED
             ModelState.AddModelError("", "Invalid username or password");
             return View();
         }
