@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SPT</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom mb-3">
+            <div class="container-fluid">
+
+                <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
+                    SPT
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+
+                        @* ===== ROLE-BASED NAV LINKS ===== *@
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Admin" asp-action="Dashboard">
+                                    Admin Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Admin" asp-action="CreateStudent">
+                                    Create Student
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole("Student"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Student" asp-action="Dashboard">
+                                    Student Dashboard
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole("Mentor"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Mentor" asp-action="Dashboard">
+                                    Mentor Dashboard
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    @* ===== RIGHT SIDE (LOGIN / USER INFO) ===== *@
+                    <ul class="navbar-nav ms-auto">
+                        @if (User.Identity!.IsAuthenticated)
+                        {
+                            <li class="nav-item me-3">
+                                <span class="navbar-text">
+                                    👋 Hello <strong>@User.Identity.Name</strong>
+                                    <span class="text-muted">
+                                        (
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <text>Admin</text>
+                                        }
+                                        else if (User.IsInRole("Student"))
+                                        {
+
+                                            <text>Student</text>
+                                        }
+                                        else if (User.IsInRole("Mentor"))
+                                        {
+
+                                            <text>Mentor</text>
+                                        }
+                                        )
+                                    </span>
+                                </span>
+                            </li>
+
+                            <li class="nav-item">
+                                <form asp-controller="Account"
+                                      asp-action="Logout"
+                                      method="post">
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm">
+                                        Logout
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="btn btn-primary btn-sm"
+                                   asp-controller="Account"
+                                   asp-action="Login">
+                                    Login
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted mt-5">
+        <div class="container text-center">
+            &copy; 2026 - Student Progress Tracking (SPT)
+        </div>
+    </footer>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

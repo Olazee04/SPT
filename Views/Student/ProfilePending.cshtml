@@ -1,0 +1,14 @@
+﻿@{
+    ViewData["Title"] = "Account Pending";
+}
+
+<div class="container mt-5 text-center">
+    <div class="card shadow p-5">
+        <h1 class="text-warning"><i class="fas fa-user-clock"></i> Profile Setup Pending</h1>
+        <p class="lead mt-3">Hello, <strong>@User.Identity.Name</strong>!</p>
+        <p>Your user account exists, but the Admin has not linked your Student Profile details yet.</p>
+        <hr />
+        <p>Please contact the administrator to complete your enrollment.</p>
+        <a asp-controller="Account" asp-action="Logout" class="btn btn-secondary mt-3">Logout</a>
+    </div>
+</div>

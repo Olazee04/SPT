@@ -1,0 +1,21 @@
+﻿@model SPT.Models.Student
+
+
+@{
+    ViewData["Title"] = "Student Dashboard";
+}
+
+<div class="container mt-4">
+    <h2>Student Dashboard</h2>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <h5 class="card-title">@Model.FullName</h5>
+
+            <p><strong>Course:</strong> @Model.Track</p>
+            <p><strong>Cohort:</strong> @Model.Cohort</p>
+            <p><strong>Username:</strong> @User.Identity.Name</p>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,16 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<h2>Admin Dashboard</h2>
+
+<p>Welcome, <strong>@User.Identity.Name</strong></p>
+
+<ul>
+    <li><a asp-action="CreateStudent">➕ Create Student</a></li>
+    <li><a asp-controller="Account" asp-action="Logout">🚪 Logout</a></li>
+</ul>
+
+<a asp-controller="Admin" asp-action="Students" class="btn btn-outline-primary">
+    📋 View Students
+</a>

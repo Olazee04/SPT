@@ -1,0 +1,185 @@
+﻿@model SPT.Models.Student
+
+@{
+    ViewData["Title"] = "Edit Student";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-user-edit"></i> Edit Student
+                    </h3>
+                    <span class="badge bg-light text-dark">@Model.EnrollmentStatus</span>
+                </div>
+                <div class="card-body">
+
+                    <form asp-action="EditStudent" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="UserId" />
+                        <input type="hidden" asp-for="CohortId" />
+                        <input type="hidden" asp-for="TargetHoursPerWeek" />
+
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">📋 Personal Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="FullName" class="form-label">Full Name *</label>
+                                        <input asp-for="FullName" class="form-control" />
+                                        <span asp-validation-for="FullName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Username (Locked)</label>
+                                        <input value="@Model.User?.UserName" class="form-control bg-light" readonly />
+                                        <small class="text-muted">Username cannot be changed.</small>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Email" class="form-label">Email *</label>
+                                        <input asp-for="Email" type="email" class="form-control" />
+                                        <span asp-validation-for="Email" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Phone" class="form-label">Phone Number *</label>
+                                        <input asp-for="Phone" class="form-control" />
+                                        <span asp-validation-for="Phone" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-12 mb-3">
+                                        <label asp-for="Address" class="form-label">Address *</label>
+                                        <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+                                        <span asp-validation-for="Address" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Update Profile Picture</label>
+                                        <input type="file" name="profilePicture" class="form-control" accept="image/*" />
+
+                                        @if (!string.IsNullOrEmpty(Model.ProfilePicture))
+                                        {
+                                            <div class="mt-2">
+                                                <small class="text-muted">Current:</small>
+                                                <img src="@Model.ProfilePicture" class="rounded-circle" style="width: 40px; height: 40px;" />
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="EnrollmentStatus" class="form-label">Status</label>
+                                        <select asp-for="EnrollmentStatus" class="form-select">
+                                            <option value="Active">Active</option>
+                                            <option value="Suspended">Suspended</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">🎓 Academic Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="TrackId" class="form-label">Track / Course</label>
+                                        <select asp-for="TrackId" class="form-select" asp-items="ViewBag.Tracks"></select>
+                                        <span asp-validation-for="TrackId" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="DateJoined" class="form-label">Start Date</label>
+                                        <input asp-for="DateJoined" type="date" class="form-control" />
+                                        <span asp-validation-for="DateJoined" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Cohort (Locked)</label>
+                                        <input value="@Model.Cohort?.Name" class="form-control bg-light" readonly />
+                                        <small class="text-muted">To change cohort, create a new student record.</small>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="MentorId" class="form-label">Assigned Mentor</label>
+                                        <select asp-for="MentorId" class="form-select" asp-items="ViewBag.Mentors">
+                                            <option value="">-- Assign Later --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">🚨 Emergency Contact</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="EmergencyContactName" class="form-label">Contact Name</label>
+                                        <input asp-for="EmergencyContactName" class="form-control" />
+                                        <span asp-validation-for="EmergencyContactName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="EmergencyContactPhone" class="form-label">Contact Phone</label>
+                                        <input asp-for="EmergencyContactPhone" class="form-control" />
+                                        <span asp-validation-for="EmergencyContactPhone" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-12 mb-3">
+                                        <label asp-for="EmergencyContactAddress" class="form-label">Contact Address</label>
+                                        <textarea asp-for="EmergencyContactAddress" class="form-control" rows="2"></textarea>
+                                        <span asp-validation-for="EmergencyContactAddress" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">🔗 Optional Links</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="GitHubUrl" class="form-label">GitHub</label>
+                                        <input asp-for="GitHubUrl" class="form-control" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="PortfolioUrl" class="form-label">Portfolio</label>
+                                        <input asp-for="PortfolioUrl" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning btn-lg">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
