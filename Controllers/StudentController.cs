@@ -45,65 +45,64 @@ namespace SPT.Controllers
 
             if (student == null) return View("ProfilePending");
 
-            // ---------------------------------------------------------
-            // 📊 STATS CALCULATION ENGINE
-            // ---------------------------------------------------------
-            // We verify specific stats here so they appear on the Dashboard
-            var logs = student.ProgressLogs.Where(l => l.IsApproved).ToList(); // Only verified logs count
+            // 2. Filter Verified Logs
+            var logs = student.ProgressLogs.Where(l => l.IsApproved).ToList();
             var today = DateTime.UtcNow.Date;
 
-            // A. Calculate Streak (Consecutive days backwards from today/yesterday)
+            // ---------------------------------------------------------
+            // 📊 NEW STATS ENGINE (Monday Reset)
+            // ---------------------------------------------------------
+
+            // A. Calculate "Start of Week" (Most recent Monday)
+            // DayOfWeek.Monday is 1. If today is Sunday (0), we go back 6 days.
+            int daysSinceMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var thisMonday = today.AddDays(-daysSinceMonday);
+
+            // B. Calculate Weekly Hours (From Monday to Now)
+            decimal weeklyHours = logs
+                .Where(l => l.Date.Date >= thisMonday)
+                .Sum(l => l.Hours);
+
+            // C. Calculate Consistency (Based on Weekly Target)
+            int consistencyScore = 0;
+            if (student.TargetHoursPerWeek > 0)
+            {
+                consistencyScore = (int)((weeklyHours / student.TargetHoursPerWeek) * 100);
+                if (consistencyScore > 100) consistencyScore = 100;
+            }
+
+            // D. Calculate Streak
             int currentStreak = 0;
             var logDates = logs.Select(l => l.Date.Date).Distinct().OrderByDescending(d => d).ToList();
-
             if (logDates.Any())
             {
                 var lastLogDate = logDates.First();
-                // Check if streak is alive (logged Today OR Yesterday)
                 if (lastLogDate == today || lastLogDate == today.AddDays(-1))
                 {
                     currentStreak = 1;
                     for (int i = 0; i < logDates.Count - 1; i++)
                     {
-                        // Check if the next date in the list is exactly 1 day before the current one
-                        if (logDates[i].AddDays(-1) == logDates[i + 1])
-                            currentStreak++;
-                        else
-                            break;
+                        if (logDates[i].AddDays(-1) == logDates[i + 1]) currentStreak++;
+                        else break;
                     }
                 }
             }
 
-            // B. Calculate Consistency Score (Last 28 Days Performance)
-            var last28Days = today.AddDays(-28);
-            decimal recentHours = logs.Where(l => l.Date >= last28Days).Sum(l => l.Hours);
-            decimal targetHours4Weeks = (decimal)(student.TargetHoursPerWeek * 4);
-
-            int consistencyScore = 0;
-            if (targetHours4Weeks > 0)
-            {
-                consistencyScore = (int)((recentHours / targetHours4Weeks) * 100);
-                if (consistencyScore > 100) consistencyScore = 100;
-            }
-
-            // C. Calculate Rank (Compare against all active students)
+            // E. Calculate Global Rank
             decimal myTotalHours = logs.Sum(l => l.Hours);
-
-            // Count how many students have MORE hours than me
             var betterStudentsCount = await _context.Students
                 .Where(s => s.EnrollmentStatus == "Active" && s.Id != student.Id)
                 .Select(s => new {
                     Id = s.Id,
-                    // Sum only approved hours for other students too
                     TotalHours = s.ProgressLogs.Where(p => p.IsApproved).Sum(p => (decimal?)p.Hours) ?? 0
                 })
                 .CountAsync(x => x.TotalHours > myTotalHours);
-
-            int rank = betterStudentsCount + 1; // If 0 people are better, I am #1
+            int rank = betterStudentsCount + 1;
 
             // ---------------------------------------------------------
             // PASS DATA TO VIEW
             // ---------------------------------------------------------
+            ViewBag.WeeklyHours = weeklyHours; // <--- NEW
             ViewBag.Streak = currentStreak;
             ViewBag.Consistency = consistencyScore;
             ViewBag.Rank = rank;
@@ -392,6 +391,77 @@ namespace SPT.Controllers
             }
 
             return RedirectToAction("Curriculum");
+        }
+        // =========================
+        // GET: Leaderboard (Hall of Fame)
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> Leaderboard()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            if (student == null) return RedirectToAction("Dashboard");
+
+            // 1. Get Top 20 Students (Active only)
+            // Ordered by: Total Verified Hours (Desc), then Name (Asc)
+            var leaderboard = await _context.Students
+                .Include(s => s.Track)
+                .Include(s => s.Cohort)
+                .Include(s => s.ProgressLogs) // Need logs to sum hours
+                .Where(s => s.EnrollmentStatus == "Active")
+                .Select(s => new LeaderboardViewModel
+                {
+                    StudentId = s.Id,
+                    FullName = s.FullName,
+                    TrackCode = s.Track.Code,
+                    CohortName = s.Cohort.Name,
+                    ProfilePicture = s.ProfilePicture,
+                    // Only sum APPROVED hours
+                    TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => (decimal?)l.Hours) ?? 0
+                })
+                .OrderByDescending(x => x.TotalHours)
+                .Take(20)
+                .ToListAsync();
+
+            // 2. Find My Rank
+            // We scan the list to see if "I" am inside the top 20
+            ViewBag.MyStudentId = student.Id;
+
+            return View(leaderboard);
+        }
+
+        // =========================
+        // GET: Certificate of Completion
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> Certificate()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var student = await _context.Students
+                .Include(s => s.Track)
+                .Include(s => s.Cohort)
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
+
+            if (student == null) return RedirectToAction("Dashboard");
+
+            // 1. Get Total Modules Count for this Track
+            var totalModules = await _context.SyllabusModules
+                .CountAsync(m => m.TrackId == student.TrackId && m.IsActive);
+
+            // 2. Get Student's Completed Modules Count
+            var completedCount = await _context.ModuleCompletions
+                .CountAsync(mc => mc.StudentId == student.Id && mc.IsCompleted);
+
+            // 3. Calculate Progress
+            double progress = totalModules == 0 ? 0 : ((double)completedCount / totalModules) * 100;
+
+            // 4. Pass Data to View
+            ViewBag.IsEligible = completedCount >= totalModules && totalModules > 0;
+            ViewBag.Progress = (int)progress;
+            ViewBag.CompletedCount = completedCount;
+            ViewBag.TotalModules = totalModules;
+
+            return View(student);
         }
     }
 }

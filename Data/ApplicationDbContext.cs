@@ -17,7 +17,7 @@ namespace SPT.Data
         public DbSet<Cohort> Cohorts { get; set; }
         public DbSet<Track> Tracks { get; set; }
         public DbSet<Mentor> Mentors { get; set; }
-        public DbSet<SyllabusModule> SyllabusModules { get; set; }
+
         public DbSet<ProgressLog> ProgressLogs { get; set; }
         public DbSet<MentorReview> MentorReviews { get; set; }
         public DbSet<ModuleCompletion> ModuleCompletions { get; set; }
@@ -29,6 +29,7 @@ namespace SPT.Data
         public DbSet<Announcement> Announcements { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<ModuleResource> ModuleResources { get; set; }
+        public DbSet<SyllabusModule> SyllabusModules { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

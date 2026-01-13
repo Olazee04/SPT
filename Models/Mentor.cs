@@ -90,61 +90,7 @@ namespace SPT.Models
         public ICollection<Student> Students { get; set; } = new List<Student>();
         public ICollection<MentorReview> Reviews { get; set; } = new List<MentorReview>();
     }
-
-    // =========================
-    // SYLLABUS MODULE
-    // =========================
-    public class SyllabusModule
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required]
-        [Display(Name = "Module Code")]
-        public string ModuleCode { get; set; } = string.Empty; // CM1, CM2, etc.
-
-        [Required]
-        [Display(Name = "Module Name")]
-        public string ModuleName { get; set; } = string.Empty;
-
-        [Required]
-        public int TrackId { get; set; }
-
-        [ForeignKey(nameof(TrackId))]
-        public Track Track { get; set; } = null!;
-
-        [Display(Name = "Topics")]
-        public string? Topics { get; set; } // Can be JSON or plain text
-
-        [Display(Name = "Required Hours")]
-        public int RequiredHours { get; set; }
-
-        [Display(Name = "Has Quiz")]
-        public bool HasQuiz { get; set; }
-
-        [Display(Name = "Has Project")]
-        public bool HasProject { get; set; }
-
-        [Display(Name = "Weight Percentage")]
-        public decimal WeightPercentage { get; set; }
-
-        [Display(Name = "Difficulty Level")]
-        public string DifficultyLevel { get; set; } = "Beginner"; // Beginner/Intermediate/Advanced
-
-        [Display(Name = "Prerequisite Module")]
-        public int? PrerequisiteModuleId { get; set; }
-
-        [ForeignKey(nameof(PrerequisiteModuleId))]
-        public SyllabusModule? PrerequisiteModule { get; set; }
-
-        [Display(Name = "Display Order")]
-        public int DisplayOrder { get; set; }
-
-        public bool IsActive { get; set; } = true;
-
-        public ICollection<ProgressLog> ProgressLogs { get; set; } = new List<ProgressLog>();
-        public ICollection<ModuleCompletion> ModuleCompletions { get; set; } = new List<ModuleCompletion>();
-    }
+ 
 
     // =========================
     // MENTOR REVIEW

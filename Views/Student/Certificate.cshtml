@@ -1,0 +1,135 @@
+﻿@model SPT.Models.Student
+@{
+    ViewData["Title"] = "Certificate of Completion";
+    bool isEligible = ViewBag.IsEligible;
+    int progress = ViewBag.Progress;
+}
+
+<div class="container mt-5">
+    @if (isEligible)
+    {
+        <div class="text-center mb-4 no-print">
+            <h2 class="fw-bold text-success"><i class="fas fa-medal"></i> Congratulations, @Model.FullName!</h2>
+            <p class="text-muted">You have successfully completed the <strong>@Model.Track.Name</strong> track.</p>
+            <button onclick="window.print()" class="btn btn-primary btn-lg shadow">
+                <i class="fas fa-print"></i> Download / Print Certificate
+            </button>
+        </div>
+
+        <div class="certificate-container shadow-lg">
+            <div class="certificate-border">
+                <div class="certificate-content text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-award fa-4x text-warning"></i>
+                        <h1 class="display-4 fw-bold mt-2" style="font-family: 'Times New Roman', serif;">Certificate of Completion</h1>
+                    </div>
+
+                    <p class="lead mt-4">This certifies that</p>
+
+                    <h1 class="display-5 fw-bold text-dark border-bottom d-inline-block px-5 pb-2 mb-4">
+                        @Model.FullName
+                    </h1>
+
+                    <p class="lead">has successfully completed the comprehensive training in</p>
+
+                    <h2 class="fw-bold text-primary mb-4">@Model.Track.Name</h2>
+
+                    <p class="mb-5">
+                        Demonstrating proficiency in all required modules, projects, and assessments<br />
+                        conducted by <strong>Student Performance Tracker (SPT)</strong>.
+                    </p>
+
+                    <div class="row mt-5">
+                        <div class="col-md-6 text-center">
+                            <hr class="w-50 mx-auto border-dark opacity-100" />
+                            <h5 class="fw-bold">@DateTime.Now.ToString("MMMM dd, yyyy")</h5>
+                            <small class="text-muted">Date of Issue</small>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <hr class="w-50 mx-auto border-dark opacity-100" />
+                            <h5 class="fw-bold">Program Director</h5>
+                            <small class="text-muted">Signature</small>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 text-muted small">
+                        Certificate ID: SPT-@Model.Id-@DateTime.Now.Year
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="card shadow-sm border-0 py-5">
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <span class="fa-stack fa-3x">
+                                <i class="fas fa-certificate fa-stack-2x text-muted opacity-25"></i>
+                                <i class="fas fa-lock fa-stack-1x text-secondary"></i>
+                            </span>
+                        </div>
+                        <h2 class="fw-bold text-muted">Certificate Locked</h2>
+                        <p class="lead text-muted">You're almost there! Complete all modules to unlock your certificate.</p>
+
+                        <div class="my-4 px-5">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="fw-bold">Progress</span>
+                                <span>@ViewBag.CompletedCount / @ViewBag.TotalModules Modules</span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+                                     role="progressbar"
+                                     style="width: @progress%">
+                                    @progress%
+                                </div>
+                            </div>
+                        </div>
+
+                        <a asp-action="Curriculum" class="btn btn-outline-primary mt-3">
+                            <i class="fas fa-book-open"></i> Go to Curriculum
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .certificate-container {
+        border: 10px solid #ddd;
+        padding: 10px;
+        background: white;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .certificate-border {
+        border: 5px solid #333;
+        padding: 40px;
+        background: #fff;
+        background-image: radial-gradient(#f0f0f0 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    /* HIDE EVERYTHING ELSE WHEN PRINTING */
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+        .certificate-container, .certificate-container * {
+            visibility: visible;
+        }
+        .certificate-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: none;
+        }
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>

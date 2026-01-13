@@ -3,7 +3,9 @@
     public class LeaderboardViewModel
     {
         public int Rank { get; set; }
-        public string StudentName { get; set; } = string.Empty;
+        public string FullName { get; set; }
+        public int StudentId { get; set; }
+        public string CohortName { get; set; }
         public string TrackCode { get; set; } = string.Empty; // e.g. "FS"
         public string ProfilePicture { get; set; } = string.Empty;
         public decimal TotalHours { get; set; }

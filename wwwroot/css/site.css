@@ -1,22 +1,188 @@
-html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+:root {
+    /* Color Palette from Image */
+    --primary-color: #4361ee; /* Bright Blue Buttons */
+    --sidebar-bg: #0d0d0d; /* Pitch Black Sidebar */
+    --sidebar-text: #b0b0b0; /* Grey text for inactive */
+    --sidebar-active-bg: #ffffff; /* White active item */
+    --sidebar-active-text: #000000;
+    --body-bg: #f3f4f6; /* Light grey background */
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --border-radius-lg: 15px;
+    --sidebar-width: 260px;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--body-bg);
+    overflow-x: hidden;
+}
+
+/* ===========================
+   DARK SIDEBAR
+   =========================== */
+#wrapper {
+    display: flex;
+    width: 100%;
+}
+
+#sidebar-wrapper {
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    background-color: var(--sidebar-bg);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-logo {
+    padding: 25px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.list-group-item {
+    background-color: transparent;
+    border: none;
+    color: var(--sidebar-text);
+    padding: 12px 25px;
+    font-weight: 500;
+    margin: 4px 15px;
+    border-radius: 8px; /* Rounded items */
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+    .list-group-item:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: #fff;
+    }
+
+    /* The Active State (White Box) */
+    .list-group-item.active {
+        background-color: var(--sidebar-active-bg);
+        color: var(--sidebar-active-text);
+        font-weight: 700;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+.logout-btn {
+    margin-top: auto;
+    margin-bottom: 20px;
+    padding: 0 20px;
+}
+
+/* ===========================
+   MAIN CONTENT AREA
+   =========================== */
+#page-content-wrapper {
+    width: 100%;
+    padding: 0;
+}
+
+.top-navbar {
+    background: #fff;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    margin-left: 10px;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+    .icon-btn:hover {
+        background: #e1e4e8;
+        color: #000;
+    }
+
+/* ===========================
+   PROFILE CARDS
+   =========================== */
+.custom-card {
+    background: #fff;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--card-shadow);
+    padding: 25px;
+    border: none;
+    height: 100%;
+}
+
+.card-title-custom {
+    font-weight: 700;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    color: #000;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+/* Action Buttons (Big Blue Ones) */
+.btn-action-lg {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    width: 100%;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s;
+    height: 100px; /* Tall button */
+}
+
+    .btn-action-lg:hover {
+        transform: translateY(-3px);
+        background-color: #304ccb;
+        color: white;
+    }
+
+/* Profile Image Area */
+.profile-img-container {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    margin: 0 auto 20px;
+    overflow: hidden;
+    border: 4px solid #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.form-row-custom {
+    display: flex;
+    border-bottom: 1px solid #eee;
+    padding: 12px 0;
+}
+
+.form-label-custom {
+    width: 140px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-value-custom {
+    flex: 1;
+    font-weight: 500;
+    color: #000;
 }

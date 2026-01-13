@@ -16,7 +16,11 @@
 
     var logsCount = logs.Count;
 
-    var consistencyScore = 0;
+
+
+    var weeklyHours = (decimal)ViewBag.WeeklyHours;
+
+    var consistencyScore = (int)ViewBag.Consistency;
 }
 
 <div class="col-md-3">
@@ -76,12 +80,25 @@
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Total Hours</h6>
+                    <h6 class="text-muted text-uppercase small fw-bold">Hours This Week</h6>
                     <div class="d-flex align-items-center">
-                        <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
-                        <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek (Target)</span>
+                        <h2 class="mb-0 fw-bold text-success">@weeklyHours</h2>
+                        <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
                     </div>
-                    <small class="text-muted">Last 7 Days</small>
+
+                    @if (pendingHours > 0)
+
+                    {
+                        <div class="mt-2 badge bg-warning text-dark">
+                            <i class="fas fa-clock"></i> @pendingHours hrs pending
+                        </div>
+                    }
+
+                    else
+
+                    {
+                        <small class="text-muted d-block mt-1">Total Lifetime: <strong>@approvedHours</strong> hrs</small>
+                    }
                 </div>
             </div>
         </div>

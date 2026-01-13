@@ -68,16 +68,17 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // 6. Seed Syllabus Modules
+        // --- FETCH TRACKS HERE (So they are available for ALL blocks below) ---
+        var backendTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "BEC");
+        var frontendTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "FEJ");
+        var fullstackTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "FSC");
+
+        // 6. Seed Syllabus Modules (If empty)
         if (!context.SyllabusModules.Any())
         {
-            var backendTrack = context.Tracks.FirstOrDefault(t => t.Code == "BEC");
-            var frontendTrack = context.Tracks.FirstOrDefault(t => t.Code == "FEJ");
-            var fullstackTrack = context.Tracks.FirstOrDefault(t => t.Code == "FSC");
-
             var modules = new List<SyllabusModule>();
 
-            // --- 1. FRONTEND JS (Original Modules Restored) ---
+            // --- 1. FRONTEND JS ---
             if (frontendTrack != null)
             {
                 modules.AddRange(new[]
@@ -89,7 +90,7 @@ public static class SeedData
                 });
             }
 
-            // --- 2. BACKEND C# (Original Modules Restored) ---
+            // --- 2. BACKEND C# ---
             if (backendTrack != null)
             {
                 modules.AddRange(new[]
@@ -102,7 +103,7 @@ public static class SeedData
                 });
             }
 
-            // --- 3. FULLSTACK (UPDATED with New 18-Module Syllabus) ---
+            // --- 3. FULLSTACK ---
             if (fullstackTrack != null)
             {
                 modules.AddRange(new[]
@@ -131,14 +132,33 @@ public static class SeedData
             context.SyllabusModules.AddRange(modules);
             await context.SaveChangesAsync();
         }
-        // ... (After saving SyllabusModules)
 
-        // 7. Seed Resources (Links from Doc)
+        // --- 6b. SEPARATE CHECK FOR CAPSTONE (Module 19) ---
+        // We do this separately so it gets added even if modules 1-18 already exist.
+        if (fullstackTrack != null && !context.SyllabusModules.Any(m => m.ModuleCode == "CAP-01"))
+        {
+            context.SyllabusModules.Add(new SyllabusModule
+            {
+                DisplayOrder = 19,
+                ModuleCode = "CAP-01",
+                ModuleName = "Capstone Mini-Project",
+                TrackId = fullstackTrack.Id,
+                RequiredHours = 40,
+                DifficultyLevel = "Expert",
+                Topics = "Build a full e-commerce app, Integrate Payment, Deploy to Cloud",
+                HasProject = true,
+                IsMiniProject = true
+            });
+            await context.SaveChangesAsync();
+        }
+
+        // --- 7. SEED RESOURCES ---
         if (!context.ModuleResources.Any())
         {
             var resources = new List<ModuleResource>();
 
             // Helper function to find module ID by code
+            // We use .FirstOrDefault() here because we are inside a static method
             int GetModId(string code) => context.SyllabusModules.FirstOrDefault(m => m.ModuleCode == code)?.Id ?? 0;
 
             // 1. Syntax & Basics

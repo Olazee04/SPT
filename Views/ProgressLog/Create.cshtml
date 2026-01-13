@@ -63,6 +63,17 @@
                                 </div>
                             </div>
 
+                            <div id="miniProjectSection" style="display:none;" class="card bg-light border-primary mb-3">
+                                <div class="card-body">
+                                    <label asp-for="MiniProjectProgress" class="form-label fw-bold text-primary">
+                                        <i class="fas fa-rocket"></i> Project Completion (%)
+                                    </label>
+                                    <input asp-for="MiniProjectProgress" type="range" class="form-range" min="0" max="100" step="5" id="projectRange" oninput="document.getElementById('rangeVal').innerText = this.value + '%'">
+                                    <div class="text-center fw-bold" id="rangeVal">0%</div>
+                                    <small class="text-muted">Rate how far you have gone with your Capstone Project.</small>
+                                </div>
+                            </div>
+
                             <div class="col-md-12 mb-3">
                                 <label asp-for="EvidenceLink" id="evidenceLabel" class="form-label fw-bold">Evidence Link (GitHub / Slack)</label>
 
@@ -104,37 +115,35 @@
     }
 
     <script>
-        // 1. Get the list of IDs that REQUIRE an assignment from C#
         var assignmentModules = @Html.Raw(Json.Serialize(ViewBag.AssignmentModules));
+        var miniProjectModules = @Html.Raw(Json.Serialize(ViewBag.MiniProjectModules)); // Get IDs
 
-        // 2. Get DOM Elements
-        var moduleSelect = document.getElementById("ModuleId"); // Ensure your select has asp-for="ModuleId"
+        var moduleSelect = document.getElementById("ModuleId");
         var evidenceInput = document.getElementById("evidenceInput");
         var evidenceLabel = document.getElementById("evidenceLabel");
-        var evidenceHelp = document.getElementById("evidenceHelp");
+        var projectSection = document.getElementById("miniProjectSection"); // The Slider Div
 
-        function checkAssignment() {
-            // Get selected ID (convert to integer)
+        function checkRequirements() {
             var selectedId = parseInt(moduleSelect.value);
 
-            // Check if this ID exists in our "Assignment Required" list
+            // 1. Check Assignment (Existing Logic)
             if (assignmentModules.includes(selectedId)) {
-                // ENFORCE REQUIREMENT
                 evidenceInput.setAttribute("required", "required");
-                evidenceLabel.innerHTML = "Evidence Link (GitHub) <span class='text-danger'>* Required for this Task</span>";
-                evidenceHelp.className = "text-danger fw-bold";
-                evidenceHelp.innerText = "⚠️ This module has a mandatory assignment. You must provide a link.";
+                evidenceLabel.innerHTML = "Evidence Link <span class='text-danger'>* Required</span>";
             } else {
-                // MAKE OPTIONAL
                 evidenceInput.removeAttribute("required");
-                evidenceLabel.innerHTML = "Evidence Link (GitHub / Slack)";
-                evidenceHelp.className = "text-muted";
-                evidenceHelp.innerText = "Optional for study-only days.";
+                evidenceLabel.innerHTML = "Evidence Link (Optional)";
+            }
+
+            // 2. Check Mini Project (New Logic)
+            if (miniProjectModules.includes(selectedId)) {
+                projectSection.style.display = "block"; // SHOW SLIDER
+            } else {
+                projectSection.style.display = "none";  // HIDE SLIDER
             }
         }
 
-        // Run on change and on page load (in case of validation error reload)
-        moduleSelect.addEventListener("change", checkAssignment);
-        checkAssignment(); // Run once immediately
+        moduleSelect.addEventListener("change", checkRequirements);
+        checkRequirements(); // Run on load
     </script>
 }

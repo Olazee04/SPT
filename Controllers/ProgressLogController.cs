@@ -32,13 +32,22 @@ namespace SPT.Controllers
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return RedirectToAction("Dashboard", "Student");
+
+            // 1. Get Special Module Lists (For JavaScript Logic)
             var assignmentModuleIds = await _context.SyllabusModules
-                    .Where(m => m.TrackId == student.TrackId && m.HasProject)
-                    .Select(m => m.Id)
-                    .ToListAsync();
+                .Where(m => m.TrackId == student.TrackId && m.HasProject)
+                .Select(m => m.Id)
+                .ToListAsync();
+
+            var miniProjectModuleIds = await _context.SyllabusModules
+                .Where(m => m.TrackId == student.TrackId && m.IsMiniProject)
+                .Select(m => m.Id)
+                .ToListAsync();
 
             ViewBag.AssignmentModules = assignmentModuleIds;
+            ViewBag.MiniProjectModules = miniProjectModuleIds;
 
+            // 2. Get All Modules & Completions (For Barrier Logic)
             var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
@@ -49,7 +58,7 @@ namespace SPT.Controllers
                 .Select(mc => mc.ModuleId)
                 .ToListAsync();
 
-            
+            // 3. Filter: Allow completed modules + FIRST incomplete one
             var allowedModules = new List<SyllabusModule>();
             bool unlockNext = true;
 
@@ -59,6 +68,7 @@ namespace SPT.Controllers
                 {
                     allowedModules.Add(module);
 
+                    // If THIS module is NOT complete, stop unlocking future ones.
                     if (!completedIds.Contains(module.Id))
                     {
                         unlockNext = false;
@@ -66,6 +76,7 @@ namespace SPT.Controllers
                 }
             }
 
+            // 4. Build Dropdown
             var dropdownList = allowedModules.Select(m => new
             {
                 Id = m.Id,
@@ -75,12 +86,9 @@ namespace SPT.Controllers
             ViewBag.ModuleId = new SelectList(dropdownList, "Id", "DisplayText");
             ViewBag.StudentName = student.FullName;
 
-           
-            ViewBag.UnlockProject = false;
-            ViewBag.CurrentProgress = 0;
-
             return View();
         }
+
         // =========================
         // POST: Save the Log
         // =========================
@@ -98,9 +106,10 @@ namespace SPT.Controllers
             ModelState.Remove("LoggedBy");
             ModelState.Remove("LoggedByUserId");
 
+            // 1. Server-Side Validation: Check if Project Link is Required
             var module = await _context.SyllabusModules.FindAsync(model.ModuleId);
 
-            if (module != null && module.HasProject) // If module requires assignment
+            if (module != null && module.HasProject)
             {
                 if (string.IsNullOrWhiteSpace(model.EvidenceLink))
                 {
@@ -110,11 +119,32 @@ namespace SPT.Controllers
 
             if (!ModelState.IsValid)
             {
+                // If error, refill the dropdown (ideally with barrier logic, but all modules is a safe fallback for error state)
                 var modules = await _context.SyllabusModules
                     .Where(m => m.TrackId == student.TrackId && m.IsActive)
                     .OrderBy(m => m.DisplayOrder)
                     .ToListAsync();
-                ViewBag.ModuleId = new SelectList(modules, "Id", "ModuleName");
+
+                // Refill dropdown so it doesn't crash
+                var dropdownList = modules.Select(m => new
+                {
+                    Id = m.Id,
+                    DisplayText = $"{m.ModuleCode}: {m.ModuleName} ({m.DifficultyLevel})"
+                });
+
+                ViewBag.ModuleId = new SelectList(dropdownList, "Id", "DisplayText");
+
+                // Refill the JS lists too
+                var assignmentModuleIds = await _context.SyllabusModules
+                    .Where(m => m.TrackId == student.TrackId && m.HasProject)
+                    .Select(m => m.Id).ToListAsync();
+                var miniProjectModuleIds = await _context.SyllabusModules
+                    .Where(m => m.TrackId == student.TrackId && m.IsMiniProject)
+                    .Select(m => m.Id).ToListAsync();
+
+                ViewBag.AssignmentModules = assignmentModuleIds;
+                ViewBag.MiniProjectModules = miniProjectModuleIds;
+
                 return View(model);
             }
 
@@ -123,7 +153,7 @@ namespace SPT.Controllers
             model.LoggedByUserId = user.Id;
             model.CreatedAt = DateTime.UtcNow;
             model.UpdatedAt = DateTime.UtcNow;
-            model.IsApproved = false; // Admin must verify later (optional rule)
+            model.IsApproved = false;
 
             _context.ProgressLogs.Add(model);
             await _context.SaveChangesAsync();

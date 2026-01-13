@@ -1,80 +1,102 @@
 ﻿@model SPT.Models.Student
 @{
-    ViewData["Title"] = "My Profile";
+    ViewData["Title"] = "Profile";
 }
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="fas fa-user-cog"></i> My Profile Settings</h4>
+<div class="row g-4">
+    <div class="col-lg-4 d-flex flex-column gap-4">
+
+        <div class="custom-card text-center">
+            <h5 class="card-title-custom text-start">Profile Picture</h5>
+
+            <div class="profile-img-container">
+                <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")"
+                     style="width:100%; height:100%; object-fit:cover;">
+            </div>
+
+            <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data">
+                <label class="btn btn-primary w-100 fw-bold py-2" style="background-color: var(--primary-color);">
+                    Change Photo
+                    <input type="file" name="profilePicture" class="d-none" onchange="this.form.submit()">
+                </label>
+            </form>
+        </div>
+
+        <div class="custom-card">
+            <h5 class="card-title-custom">Emergency Contact</h5>
+
+            <div class="d-flex flex-column gap-3">
+                <div class="p-3 bg-light rounded">
+                    <small class="text-muted d-block">Contact Name</small>
+                    <strong>@Model.EmergencyContactName</strong>
                 </div>
-                <div class="card-body">
-                    @if (TempData["Success"] != null)
-                    {
-                        <div class="alert alert-success">@TempData["Success"]</div>
-                    }
-                    @if (TempData["Error"] != null)
-                    {
-                        <div class="alert alert-danger">@TempData["Error"]</div>
-                    }
-
-                    <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data">
-                        <h5 class="text-muted border-bottom pb-2">Personal Details (Read Only)</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name</label>
-                                <input value="@Model.FullName" class="form-control bg-light" readonly />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input value="@Model.Email" class="form-control bg-light" readonly />
-                            </div>
-                        </div>
-
-                        <h5 class="text-muted border-bottom pb-2 mt-4">Update Picture</h5>
-                        <div class="row mb-3 align-items-center">
-                            <div class="col-auto">
-                                <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;" />
-                            </div>
-                            <div class="col">
-                                <input type="file" name="profilePicture" class="form-control" accept="image/*" />
-                            </div>
-                        </div>
-
-                        <h5 class="text-muted border-bottom pb-2 mt-4">Change Password</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Current Password</label>
-                                <input type="password" name="currentPassword" class="form-control" placeholder="Required to change password" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">New Password</label>
-                                <input type="password" name="newPassword" class="form-control" placeholder="Enter new password" />
-                            </div>
-                        </div>
-
-                        <div class="text-end">
-                            <a asp-action="Dashboard" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-
-                        <div class="card-body">
-                            <div class="alert alert-light border-start border-4 border-info d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-info-circle text-info"></i>
-                                    <small class="text-muted">
-                                        Your name, email, and course details are managed by the administrator.
-                                        Found an error?
-                                    </small>
-                                </div>
-                                <a asp-controller="Support" asp-action="Index" class="btn btn-sm btn-outline-info">
-                                    Request Change
-                                </a>
-                            </div>
-                    </form>
+                <div class="p-3 bg-light rounded">
+                    <small class="text-muted d-block">Phone Number</small>
+                    <strong>@Model.EmergencyContactPhone</strong>
                 </div>
+                <a asp-controller="Support" asp-action="Index" class="text-center small text-muted mt-2">Request Change</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+
+        <div class="custom-card">
+            <h5 class="card-title-custom">Student Information</h5>
+
+            <div class="mt-4">
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Full Name</span>
+                    <span class="form-value-custom">@Model.FullName</span>
+                </div>
+
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Email Address</span>
+                    <span class="form-value-custom">@Model.Email</span>
+                </div>
+
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Student ID</span>
+                    <span class="form-value-custom">SPT-@Model.Id.ToString("D4")</span>
+                </div>
+
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Phone</span>
+                    <span class="form-value-custom">@(Model.Phone ?? "N/A")</span>
+                </div>
+
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Address</span>
+                    <span class="form-value-custom">@(Model.Address ?? "N/A")</span>
+                </div>
+
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Track</span>
+                    <span class="form-value-custom">
+                        <span class="badge bg-primary text-white">@Model.Track?.Name</span>
+                    </span>
+                </div>
+
+                <div class="form-row-custom">
+                    <span class="form-label-custom">Cohort</span>
+                    <span class="form-value-custom">@Model.Cohort?.Name</span>
+                </div>
+
+                <div class="form-row-custom border-0">
+                    <span class="form-label-custom">Date Joined</span>
+                    <span class="form-value-custom">@Model.DateJoined.ToString("MMMM dd, yyyy")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mt-2">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <a asp-action="Certificate" class="btn-action-lg text-decoration-none">
+                    <i class="fas fa-medal fa-2x"></i>
+                    <span>View / Download Certificate</span>
+                </a>
             </div>
         </div>
     </div>
