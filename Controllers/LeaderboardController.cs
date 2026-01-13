@@ -4,10 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Models.ViewModels; // ✅ FIXED: Added this namespace
 
 namespace SPT.Controllers
 {
-    [Authorize] // Students, Mentors, and Admins can see this
+    [Authorize]
     public class LeaderboardController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -34,14 +35,15 @@ namespace SPT.Controllers
             // 2. Transform into Leaderboard Data
             var leaderboard = students.Select(s => new LeaderboardViewModel
             {
-                StudentName = s.FullName,
+                FullName = s.FullName, // ✅ FIXED: Changed StudentName to FullName to match ViewModel
                 TrackCode = s.Track?.Code ?? "N/A",
                 ProfilePicture = s.ProfilePicture,
+                StudentId = s.Id,
 
                 // Only sum APPROVED logs
                 TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => l.Hours),
 
-                // Calculate Consistency (Simplified logic for list view)
+                // Calculate Consistency
                 ConsistencyScore = CalculateConsistency(s.ProgressLogs.Where(l => l.IsApproved).ToList(), s.TargetHoursPerWeek),
 
                 IsCurrentUser = s.UserId == currentUserId

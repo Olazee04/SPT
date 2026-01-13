@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Models.ViewModels;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

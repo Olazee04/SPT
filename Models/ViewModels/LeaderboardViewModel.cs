@@ -1,4 +1,6 @@
-﻿namespace SPT.Models
+﻿using System;
+
+namespace SPT.Models.ViewModels
 {
     public class LeaderboardViewModel
     {
