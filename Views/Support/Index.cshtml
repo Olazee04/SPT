@@ -1,0 +1,194 @@
+﻿@{
+    ViewData["Title"] = "Support & Reflections";
+    var tickets = ViewBag.Tickets as List<SPT.Models.SupportTicket>;
+    var reflections = ViewBag.Reflections as List<SPT.Models.StudentReflection>;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-headset text-primary"></i> Support & Reflections</h2>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <ul class="nav nav-tabs mb-4" id="supportTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold" id="help-tab" data-bs-toggle="tab" data-bs-target="#help" type="button">
+                <i class="fas fa-ticket-alt"></i> Help Desk
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" id="journal-tab" data-bs-toggle="tab" data-bs-target="#journal" type="button">
+                <i class="fas fa-book-open"></i> Daily Reflection
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+
+        <div class="tab-pane fade show active" id="help" role="tabpanel">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card shadow-sm border-0 bg-light">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-3">Submit a Request</h5>
+                            <form asp-action="CreateTicket" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">Subject</label>
+                                    <input name="Subject" class="form-control" placeholder="Brief issue title" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Category</label>
+                                    <select name="Category" class="form-select">
+                                        <option>Technical Issue</option>
+                                        <option>Course Content Help</option>
+                                        <option>Mentorship Request</option>
+                                        <option>Personal / Other</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Message</label>
+                                    <textarea name="Message" class="form-control" rows="4" placeholder="Describe your issue..." required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Category</label>
+                                    <select name="Category" class="form-select">
+                                        <option>Technical Issue</option>
+                                        <option>Course Content Help</option>
+                                        <option>Mentorship Request</option>
+                                        <option value="Profile Update">👤 Profile Update Request</option>
+                                        <option>Personal / Other</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Submit Ticket</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <h5 class="fw-bold mb-3">My Tickets</h5>
+                    @if (tickets == null || !tickets.Any())
+                    {
+                            <div class="alert alert-info">You haven't submitted any support tickets yet.</div>
+                    }
+                    else
+                    {
+                            <div class="list-group">
+                            @foreach (var t in tickets)
+                            {
+                                string badgeClass = t.Status == "Resolved" ? "bg-success" : (t.Status == "In Progress" ? "bg-warning" : "bg-danger");
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1 fw-bold">@t.Subject</h6>
+                                                <span class="badge @badgeClass">@t.Status</span>
+                                            </div>
+                                            <p class="mb-1 small text-muted">@t.Message</p>
+
+                                    @if (!string.IsNullOrEmpty(t.AdminResponse))
+                                    {
+                                                    <div class="mt-2 p-2 bg-light border-start border-4 border-success rounded">
+                                                        <small class="fw-bold text-success"><i class="fas fa-reply"></i> Mentor Response:</small>
+                                                        <p class="mb-0 small">@t.AdminResponse</p>
+                                                    </div>
+                                    }
+                                            <small class="text-muted" style="font-size:0.7em;">@t.CreatedAt.ToString("g")</small>
+                                        </div>
+                            }
+                            </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="journal" role="tabpanel">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card shadow-sm border-success h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0 card-title"><i class="fas fa-pen-fancy"></i> Daily Check-in</h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="CreateReflection" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">How are you feeling?</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="Mood" id="mood1" value="🤩" autocomplete="off">
+                                        <label class="btn btn-outline-success" for="mood1">🤩</label>
+
+                                        <input type="radio" class="btn-check" name="Mood" id="mood2" value="🙂" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="mood2">🙂</label>
+
+                                        <input type="radio" class="btn-check" name="Mood" id="mood3" value="😐" autocomplete="off">
+                                        <label class="btn btn-outline-secondary" for="mood3">😐</label>
+
+                                        <input type="radio" class="btn-check" name="Mood" id="mood4" value="😫" autocomplete="off">
+                                        <label class="btn btn-outline-warning" for="mood4">😫</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">What did you learn?</label>
+                                    <textarea name="WhatILearned" class="form-control" rows="2" required></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Any Struggles?</label>
+                                    <textarea name="Struggles" class="form-control" rows="2"></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Goal for Tomorrow</label>
+                                    <input name="GoalTomorrow" class="form-control" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Understanding (1-5)</label>
+                                    <input type="range" name="UnderstandingRating" class="form-range" min="1" max="5" id="rangeRating" oninput="document.getElementById('ratingVal').innerText = this.value">
+                                    <div class="text-center fw-bold text-primary" id="ratingVal">3</div>
+                                </div>
+
+                                <button type="submit" class="btn btn-success w-100">Save Journal</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <h5 class="fw-bold mb-3">Recent Journals</h5>
+                    <div class="row">
+                        @foreach (var r in reflections)
+                        {
+                                <div class="col-md-6 mb-3">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fs-4">@r.Mood</span>
+                                                <small class="text-muted">@r.Date.ToString("MMM dd")</small>
+                                            </div>
+                                            <hr class="my-2" />
+                                            <p class="card-text mb-1"><strong>Learned:</strong> @r.WhatILearned</p>
+                                        @if (!string.IsNullOrEmpty(r.Struggles))
+                                        {
+                                                    <p class="card-text mb-1 text-danger small"><strong>Struggle:</strong> @r.Struggles</p>
+                                        }
+                                            <div class="mt-2 text-end">
+                                                <span class="badge bg-light text-dark border">Rating: @r.UnderstandingRating/5</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

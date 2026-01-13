@@ -27,6 +27,15 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
+                                <label asp-for="Location" class="form-label fw-bold">Where did you work today? *</label>
+                                <select asp-for="Location" class="form-select">
+                                    <option value="Remote">🏠 Remote / Home</option>
+                                    <option value="Office">🏢 Office / On-Site</option>
+                                </select>
+                                <span asp-validation-for="Location" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
                                 <label asp-for="Hours" class="form-label fw-bold">Hours Spent *</label>
                                 <input asp-for="Hours" type="number" step="0.5" class="form-control" placeholder="e.g. 4.5" min="0.5" max="24" />
                                 <span asp-validation-for="Hours" class="text-danger"></span>
@@ -54,31 +63,16 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6 mb-3">
-                                @if (canLogProject)
-                                {
-                                    <label asp-for="MiniProjectProgress" class="form-label fw-bold text-success">
-                                        <i class="fas fa-rocket"></i> Project Progress (%)
-                                    </label>
-                                    <input asp-for="MiniProjectProgress" type="number" class="form-control border-success" placeholder="0 - 100" min="0" max="100" />
-                                    <small class="text-success">You've unlocked this feature!</small>
-                                }
-                                else
-                                {
-                                    <label class="form-label text-muted">Project Progress (Locked)</label>
-                                    <input disabled class="form-control bg-light" placeholder="Locked (Current: @currentProgress%)" />
-                                    <small class="text-muted"><i class="fas fa-lock"></i> Unlocks at 75% Syllabus Completion</small>
-                                }
-                            </div>
-
                             <div class="col-md-12 mb-3">
-                                <label asp-for="EvidenceLink" class="form-label fw-bold">Evidence Link (GitHub / Slack) *</label>
+                                <label asp-for="EvidenceLink" id="evidenceLabel" class="form-label fw-bold">Evidence Link (GitHub / Slack)</label>
+
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-link"></i></span>
-                                    <input asp-for="EvidenceLink" type="url" class="form-control" placeholder="https://github.com/username/repo..." required />
+                                    <input asp-for="EvidenceLink" id="evidenceInput" type="url" class="form-control" placeholder="https://github.com/..." />
                                 </div>
                                 <span asp-validation-for="EvidenceLink" class="text-danger"></span>
-                                <small class="text-muted">Must be a valid URL to your code or update.</small>
+
+                                <small id="evidenceHelp" class="text-muted">Optional for study-only days.</small>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -108,4 +102,39 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        // 1. Get the list of IDs that REQUIRE an assignment from C#
+        var assignmentModules = @Html.Raw(Json.Serialize(ViewBag.AssignmentModules));
+
+        // 2. Get DOM Elements
+        var moduleSelect = document.getElementById("ModuleId"); // Ensure your select has asp-for="ModuleId"
+        var evidenceInput = document.getElementById("evidenceInput");
+        var evidenceLabel = document.getElementById("evidenceLabel");
+        var evidenceHelp = document.getElementById("evidenceHelp");
+
+        function checkAssignment() {
+            // Get selected ID (convert to integer)
+            var selectedId = parseInt(moduleSelect.value);
+
+            // Check if this ID exists in our "Assignment Required" list
+            if (assignmentModules.includes(selectedId)) {
+                // ENFORCE REQUIREMENT
+                evidenceInput.setAttribute("required", "required");
+                evidenceLabel.innerHTML = "Evidence Link (GitHub) <span class='text-danger'>* Required for this Task</span>";
+                evidenceHelp.className = "text-danger fw-bold";
+                evidenceHelp.innerText = "⚠️ This module has a mandatory assignment. You must provide a link.";
+            } else {
+                // MAKE OPTIONAL
+                evidenceInput.removeAttribute("required");
+                evidenceLabel.innerHTML = "Evidence Link (GitHub / Slack)";
+                evidenceHelp.className = "text-muted";
+                evidenceHelp.innerText = "Optional for study-only days.";
+            }
+        }
+
+        // Run on change and on page load (in case of validation error reload)
+        moduleSelect.addEventListener("change", checkAssignment);
+        checkAssignment(); // Run once immediately
+    </script>
 }

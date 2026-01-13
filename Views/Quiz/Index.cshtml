@@ -1,0 +1,28 @@
+﻿@model IEnumerable<SPT.Models.Track>
+@{
+    ViewData["Title"] = "Select Module for Quiz";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">📂 Select a Module to Manage Quiz</h2>
+
+    @foreach (var track in Model)
+    {
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">@track.Name (@track.Code)</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    @foreach (var module in track.Modules.OrderBy(m => m.DisplayOrder))
+                    {
+                        <a asp-action="Manage" asp-route-moduleId="@module.Id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <span><strong>@module.ModuleCode:</strong> @module.ModuleName</span>
+                            <span class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Manage Quiz</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

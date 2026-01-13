@@ -1,0 +1,58 @@
+﻿@model IEnumerable<SPT.Models.QuizQuestion>
+@{
+    var module = ViewBag.Module as SPT.Models.SyllabusModule;
+    ViewData["Title"] = "Manage Quiz: " + module.ModuleName;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-0">Manage Quiz: <span class="text-primary">@module.ModuleName</span></h4>
+            <span class="text-muted">Total Questions: @Model.Count()</span>
+        </div>
+        <div>
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+            <a asp-action="CreateQuestion" asp-route-moduleId="@module.Id" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add New Question
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @foreach (var q in Model)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h5 class="card-title">@q.QuestionText</h5>
+                    <form asp-action="DeleteQuestion" method="post">
+                        <input type="hidden" name="id" value="@q.Id" />
+                        <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this question?');">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                <ul class="list-group list-group-flush mt-2">
+                    @foreach (var opt in q.Options)
+                    {
+                        <li class="list-group-item @(opt.IsCorrect ? "list-group-item-success" : "")">
+                            @if (opt.IsCorrect)
+                            {
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                            }
+                            else
+                            {
+                                <i class="far fa-circle text-muted me-2"></i>
+                            }
+                            @opt.OptionText
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+</div>

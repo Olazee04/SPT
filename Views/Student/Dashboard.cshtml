@@ -177,11 +177,74 @@
                     <p class="text-muted small">@Model.Email</p>
                     <hr />
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-secondary btn-sm">Edit Profile</button>
                         <a asp-controller="Student" asp-action="Profile" class="btn btn-outline-secondary btn-sm">Edit Profile</a>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="row g-3 mb-4">
+    
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small fw-bold">Consistency</h6>
+                <div class="d-flex align-items-center">
+                    @{
+                        var score = (int)(ViewBag.Consistency ?? 0);
+                        string colorClass = score >= 80 ? "text-success" : (score >= 50 ? "text-warning" : "text-danger");
+                    }
+                    <h2 class="mb-0 fw-bold @colorClass">@score%</h2>
+                    
+                    <span class="ms-2 badge bg-primary text-white" title="Your Global Rank">
+                        <i class="fas fa-trophy"></i> #@(ViewBag.Rank ?? "-")
+                    </span>
+                </div>
+                <div class="progress mt-2" style="height: 5px;">
+                    <div class="progress-bar @(score >= 80 ? "bg-success" : "bg-warning")" role="progressbar" style="width: @score%"></div>
+                </div>
+                <small class="text-muted">Last 28 Days Performance</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small fw-bold">Verified Hours</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
+                    <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
+                </div>
+                @if (pendingHours > 0)
+                {
+                    <div class="mt-2 badge bg-warning text-dark">
+                        <i class="fas fa-clock"></i> @pendingHours hrs pending
+                    </div>
+                }
+                else 
+                {
+                    <small class="text-muted">All logs verified</small>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small fw-bold">Current Streak</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0 fw-bold text-danger">
+                        <i class="fas fa-fire"></i> @(ViewBag.Streak ?? 0)
+                    </h2>
+                    <span class="ms-2 small text-muted">days</span>
+                </div>
+                <small class="text-muted">Don't break the chain!</small>
+            </div>
+        </div>
+    </div>
+
+</div>
     </div>
 </div>

@@ -1,0 +1,76 @@
+﻿@{
+    ViewData["Title"] = "Resource Library";
+    var library = ViewBag.Library as IEnumerable<dynamic>;
+}
+
+<div class="container mt-4">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold"><i class="fas fa-photo-video text-danger"></i> Learning Library</h1>
+        <p class="text-muted">Curated videos and guides for your track.</p>
+    </div>
+
+    @if (library == null || !library.Any())
+    {
+        <div class="alert alert-warning">No resources found for your track yet.</div>
+    }
+    else
+    {
+        <div class="accordion shadow-sm" id="libraryAccordion">
+            @foreach (var item in library)
+            {
+                var module = item.Module as SPT.Models.SyllabusModule;
+                var resources = item.Resources as List<SPT.Models.ModuleResource>;
+                var collapseId = "collapse" + module.Id;
+
+                // Only show modules that actually HAVE resources
+                if (resources != null && resources.Any())
+                {
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">
+                                <span class="badge bg-secondary me-2">@module.ModuleCode</span>
+                                @module.ModuleName
+                                <span class="badge bg-light text-dark ms-auto border">@resources.Count Resources</span>
+                            </button>
+                        </h2>
+                        <div id="@collapseId" class="accordion-collapse collapse" data-bs-parent="#libraryAccordion">
+                            <div class="accordion-body bg-light">
+                                <div class="row">
+                                    @foreach (var res in resources)
+                                    {
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card h-100 border-0 shadow-sm">
+                                                <div class="card-body d-flex align-items-center">
+                                                    <div class="me-3">
+                                                        @if (res.Type == "Video")
+                                                        {
+                                                            <i class="fab fa-youtube fa-2x text-danger"></i>
+                                                        }
+                                                        else if (res.Type == "GitRepo")
+                                                        {
+                                                            <i class="fab fa-github fa-2x text-dark"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="fas fa-file-alt fa-2x text-primary"></i>
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-1 fw-bold">@res.Title</h6>
+                                                        <a href="@res.Url" target="_blank" class="text-decoration-none small stretched-link">
+                                                            Open Resource <i class="fas fa-external-link-alt"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>

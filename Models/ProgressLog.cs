@@ -22,6 +22,11 @@ namespace SPT.Models
         public DateTime Date { get; set; }
 
         [Required]
+        [Display(Name = "Work Location")]
+        public string Location { get; set; } = "Remote"; // Default to Remote
+
+
+        [Required]
         [Range(0, 24)]
         public decimal Hours { get; set; }
 

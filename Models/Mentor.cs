@@ -147,55 +147,6 @@ namespace SPT.Models
     }
 
     // =========================
-    // PROGRESS LOG (CORE TABLE)
-    // =========================
-    
-
-    // =========================
-    // STUDENT REFLECTION
-    // =========================
-    public class StudentReflection
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required]
-        public int StudentId { get; set; }
-
-        [ForeignKey(nameof(StudentId))]
-        public Student Student { get; set; } = null!;
-
-        [Required]
-        public DateTime Date { get; set; }
-
-        [Required]
-        [Display(Name = "What I Learned Today")]
-        public string WhatILearned { get; set; } = string.Empty;
-
-        [Required]
-        [Display(Name = "My Struggle")]
-        public string MyStruggle { get; set; } = string.Empty;
-
-        [Required]
-        [Display(Name = "My Goal Tomorrow")]
-        public string MyGoalTomorrow { get; set; } = string.Empty;
-
-        [Display(Name = "Mood")]
-        public string Mood { get; set; } = "😐"; // 😊 😐 😞
-
-        [Display(Name = "Self-Rated Understanding (1-5)")]
-        [Range(1, 5)]
-        public int? SelfRatedUnderstanding { get; set; }
-
-        [Display(Name = "Evidence Link")]
-        [Url]
-        public string? EvidenceLink { get; set; }
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    }
-
-    // =========================
     // MENTOR REVIEW
     // =========================
     public class MentorReview

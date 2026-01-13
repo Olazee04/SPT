@@ -19,10 +19,16 @@ namespace SPT.Data
         public DbSet<Mentor> Mentors { get; set; }
         public DbSet<SyllabusModule> SyllabusModules { get; set; }
         public DbSet<ProgressLog> ProgressLogs { get; set; }
-        public DbSet<StudentReflection> StudentReflections { get; set; }
         public DbSet<MentorReview> MentorReviews { get; set; }
         public DbSet<ModuleCompletion> ModuleCompletions { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<QuizQuestion> QuizQuestions { get; set; }
+        public DbSet<QuizOption> QuizOptions { get; set; }
+        public DbSet<StudentReflection> StudentReflections { get; set; }
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<Announcement> Announcements { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<ModuleResource> ModuleResources { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

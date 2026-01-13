@@ -438,5 +438,65 @@ namespace SPT.Controllers
             TempData["Success"] = $"✅ Mentor Created! Login: <strong>{username}</strong>";
             return RedirectToAction("Dashboard");
         }
+
+        // =========================
+        // GET: Create Announcement
+        // =========================
+        [HttpGet]
+        public IActionResult CreateAnnouncement()
+        {
+            return View();
+        }
+
+        // =========================
+        // POST: Send Announcement (Broadcast)
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAnnouncement(Announcement model)
+        {
+            if (ModelState.IsValid)
+            {
+                model.PostedBy = User.Identity?.Name ?? "Admin";
+                model.CreatedAt = DateTime.UtcNow;
+                _context.Announcements.Add(model);
+                await _context.SaveChangesAsync();
+
+                // 🔔 TRIGGER NOTIFICATIONS 🔔
+                // 1. Find Target Users
+                var users = new List<ApplicationUser>();
+
+                if (model.Audience == "Students" || model.Audience == "All")
+                {
+                    var students = await _userManager.GetUsersInRoleAsync("Student");
+                    users.AddRange(students);
+                }
+                if (model.Audience == "Mentors" || model.Audience == "All")
+                {
+                    var mentors = await _userManager.GetUsersInRoleAsync("Mentor");
+                    users.AddRange(mentors);
+                }
+
+                // 2. Create a Notification for each user
+                // (Using distinct to avoid duplicates if user has multiple roles)
+                foreach (var user in users.DistinctBy(u => u.Id))
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        UserId = user.Id,
+                        Message = $"📢 {model.Title}: {model.Message}",
+                        Type = "Info",
+                        IsRead = false,
+                        Url = "/Notification/Index", // Link to view full list
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Success"] = $"📢 Announcement sent to {users.Count} users!";
+                return RedirectToAction("Dashboard");
+            }
+            return View(model);
+        }
     }
 }

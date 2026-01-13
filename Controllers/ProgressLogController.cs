@@ -21,7 +21,7 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // GET: Show the Logging Form
+        // GET: Show the Logging Form (With Barrier Logic)
         // =========================
         [HttpGet]
         public async Task<IActionResult> Create()
@@ -32,35 +32,55 @@ namespace SPT.Controllers
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return RedirectToAction("Dashboard", "Student");
+            var assignmentModuleIds = await _context.SyllabusModules
+                    .Where(m => m.TrackId == student.TrackId && m.HasProject)
+                    .Select(m => m.Id)
+                    .ToListAsync();
 
-            // 1. Fetch Modules for Dropdown
-            var modules = await _context.SyllabusModules
+            ViewBag.AssignmentModules = assignmentModuleIds;
+
+            var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
                 .ToListAsync();
 
-            ViewBag.ModuleId = new SelectList(modules, "Id", "ModuleName");
+            var completedIds = await _context.ModuleCompletions
+                .Where(mc => mc.StudentId == student.Id && mc.IsCompleted)
+                .Select(mc => mc.ModuleId)
+                .ToListAsync();
+
+            
+            var allowedModules = new List<SyllabusModule>();
+            bool unlockNext = true;
+
+            foreach (var module in allModules)
+            {
+                if (unlockNext)
+                {
+                    allowedModules.Add(module);
+
+                    if (!completedIds.Contains(module.Id))
+                    {
+                        unlockNext = false;
+                    }
+                }
+            }
+
+            var dropdownList = allowedModules.Select(m => new
+            {
+                Id = m.Id,
+                DisplayText = $"{m.ModuleCode}: {m.ModuleName} ({m.DifficultyLevel})"
+            });
+
+            ViewBag.ModuleId = new SelectList(dropdownList, "Id", "DisplayText");
             ViewBag.StudentName = student.FullName;
 
-            // 2. CALCULATE COMPLETION % (The "Gatekeeper")
-            // Count total modules in their track
-            int totalModules = await _context.SyllabusModules
-                .CountAsync(m => m.TrackId == student.TrackId && m.IsActive);
-
-            // Count how many this student has completed
-            int completedModules = await _context.ModuleCompletions
-                .CountAsync(m => m.StudentId == student.Id && m.IsCompleted);
-
-            // Calculate percentage (Protect against divide by zero)
-            double percentage = totalModules == 0 ? 0 : ((double)completedModules / totalModules) * 100;
-
-            // 3. Set the Flag: Only unlock if > 75% done
-            ViewBag.UnlockProject = percentage >= 75;
-            ViewBag.CurrentProgress = Math.Round(percentage, 1); // Pass the number so we can show them
+           
+            ViewBag.UnlockProject = false;
+            ViewBag.CurrentProgress = 0;
 
             return View();
         }
-
         // =========================
         // POST: Save the Log
         // =========================
@@ -73,15 +93,23 @@ namespace SPT.Controllers
 
             if (student == null) return RedirectToAction("Login", "Account");
 
-            // 1. Ignore fields the student doesn't fill manually
             ModelState.Remove("Student");
             ModelState.Remove("Module");
             ModelState.Remove("LoggedBy");
             ModelState.Remove("LoggedByUserId");
 
+            var module = await _context.SyllabusModules.FindAsync(model.ModuleId);
+
+            if (module != null && module.HasProject) // If module requires assignment
+            {
+                if (string.IsNullOrWhiteSpace(model.EvidenceLink))
+                {
+                    ModelState.AddModelError("EvidenceLink", "⚠️ You cannot submit this log without an Evidence Link because this module has a required assignment.");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
-                // Reload dropdown if validation fails
                 var modules = await _context.SyllabusModules
                     .Where(m => m.TrackId == student.TrackId && m.IsActive)
                     .OrderBy(m => m.DisplayOrder)
@@ -90,7 +118,6 @@ namespace SPT.Controllers
                 return View(model);
             }
 
-            // 2. Set Automated Fields
             model.StudentId = student.Id;
             model.LoggedBy = "Student";
             model.LoggedByUserId = user.Id;
