@@ -1,0 +1,47 @@
+﻿@model SPT.Models.Resource
+@{
+    ViewData["Title"] = "Add Resource";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="custom-card">
+            <h5 class="card-title-custom">Add New Resource</h5>
+            <form asp-action="CreateResource" method="post">
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Title</label>
+                    <input asp-for="Title" class="form-control" placeholder="e.g. C# Cheat Sheet" required />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description</label>
+                    <input asp-for="Description" class="form-control" placeholder="Short description..." />
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Type</label>
+                        <select asp-for="Type" class="form-select">
+                            <option value="Link">Website Link</option>
+                            <option value="Video">Video Tutorial</option>
+                            <option value="PDF">PDF Document</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Assign to Track</label>
+                        <select asp-for="TrackId" class="form-select" asp-items="ViewBag.Tracks"></select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">URL / Link</label>
+                    <input asp-for="Url" type="url" class="form-control" placeholder="https://..." required />
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">Add to Library</button>
+                <a asp-action="ManageLibrary" class="btn btn-link w-100 mt-2 text-muted">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>

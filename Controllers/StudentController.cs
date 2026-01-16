@@ -108,7 +108,50 @@ namespace SPT.Controllers
             ViewBag.Consistency = consistencyScore;
             ViewBag.Rank = rank;
 
+            // 👇 NEW: PASS MODULES FOR THE LOG WORK DROPDOWN 👇
+            ViewBag.CurrentModules = await _context.SyllabusModules
+                .Where(m => m.TrackId == student.TrackId && m.IsActive)
+                .OrderBy(m => m.DisplayOrder)
+                .Select(m => new { Id = m.Id, Code = m.ModuleCode, Name = m.ModuleName })
+                .ToListAsync();
+
             return View(student);
+        }
+
+        // =========================
+        // POST: Log Work (Daily Standup)
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LogWork(int moduleId, decimal hours, string description, string evidenceUrl, string location)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+
+            if (student == null) return NotFound();
+
+            // 1. Create Log Entry
+            var log = new ProgressLog
+            {
+                StudentId = student.Id,
+                ModuleId = moduleId,
+                Date = DateTime.UtcNow,
+                Hours = hours,
+                Location = location, // "Office" or "Remote"
+
+                // 🆕 NEW FIELDS
+                ActivityDescription = description,
+                EvidenceUrl = evidenceUrl,
+
+                IsApproved = false, // Admin/Mentor must approve
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.ProgressLogs.Add(log);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "✅ Work logged successfully! Waiting for approval.";
+            return RedirectToAction(nameof(Dashboard));
         }
 
         // =========================
@@ -431,6 +474,7 @@ namespace SPT.Controllers
             return View(leaderboard);
         }
 
+        
         // =========================
         // GET: Certificate of Completion
         // =========================
@@ -463,6 +507,12 @@ namespace SPT.Controllers
             ViewBag.TotalModules = totalModules;
 
             return View(student);
+        }
+
+        [HttpGet]
+        public IActionResult Settings()
+        {
+            return View();
         }
     }
 }

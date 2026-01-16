@@ -30,6 +30,7 @@ namespace SPT.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<ModuleResource> ModuleResources { get; set; }
         public DbSet<SyllabusModule> SyllabusModules { get; set; }
+         public DbSet<Resource> Resources { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

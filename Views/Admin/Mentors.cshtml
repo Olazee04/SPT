@@ -1,0 +1,44 @@
+﻿@model List<SPT.Models.Mentor>
+@{
+    ViewData["Title"] = "Mentors Directory";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold"><i class="fas fa-chalkboard-teacher me-2"></i> Mentors Directory</h4>
+
+    @if (User.IsInRole("Admin"))
+    {
+        <a asp-action="CreateMentor" class="btn btn-dark"><i class="fas fa-plus"></i> Add Mentor</a>
+    }
+</div>
+
+<div class="row g-4">
+    @foreach (var mentor in Model)
+    {
+        <div class="col-md-4">
+            <div class="custom-card h-100 text-center position-relative">
+                <div class="avatar-circle bg-dark text-white mx-auto mb-3 d-flex align-items-center justify-content-center fw-bold"
+                     style="width:80px; height:80px; font-size: 2rem;">
+                    @mentor.FullName.Substring(0, 1)
+                </div>
+
+                <h5 class="fw-bold mb-1">@mentor.FullName</h5>
+                <p class="text-muted small mb-2">@mentor.Specialization</p>
+                <span class="badge bg-light text-dark border mb-3">@mentor.User?.Email</span>
+
+                <hr />
+
+                <div class="d-flex justify-content-around text-start">
+                    <div>
+                        <small class="text-muted d-block uppercase" style="font-size:0.7rem;">STUDENTS</small>
+                        <span class="fw-bold h5">@mentor.Students.Count</span>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block uppercase" style="font-size:0.7rem;">STATUS</small>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

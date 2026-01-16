@@ -4,184 +4,200 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SPT Portal</title>
-
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-
     <div id="wrapper">
-        <div id="sidebar-wrapper">
-            <div class="sidebar-logo">
-                <i class="fas fa-graduation-cap"></i> SPT <span class="badge bg-primary ms-2" style="font-size:0.5em;">v1.0</span>
-            </div>
-
-            <div class="list-group list-group-flush flex-grow-1">
-
-                @if (User.IsInRole("Student"))
-
-                {
-                    <a asp-controller="Student" asp-action="Dashboard" class="list-group-item list-group-item-action">
-                        <i class="fas fa-home me-3"></i> Dashboard
-                    </a>
-                    <a asp-controller="Student" asp-action="Curriculum" class="list-group-item list-group-item-action">
-                        <i class="fas fa-book-open me-3"></i> Curriculum
-                    </a>
-                    <a asp-controller="Student" asp-action="Attendance" class="list-group-item list-group-item-action">
-                        <i class="fas fa-calendar-check me-3"></i> Attendance
-                    </a>
-                    <a asp-controller="Library" asp-action="Index" class="list-group-item list-group-item-action">
-                        <i class="fas fa-folder me-3"></i> Library
-                    </a>
-                    <a asp-controller="Student" asp-action="Leaderboard" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chart-line me-3"></i> Leaderboard
-                    </a>
-                    <a asp-controller="Student" asp-action="Certificate" class="list-group-item list-group-item-action">
-                        <i class="fas fa-award me-3"></i> Certificate
-                    </a>
-                    <a asp-controller="Support" asp-action="Index" class="list-group-item list-group-item-action">
-                        <i class="fas fa-headset me-3"></i> Support
-                    </a>
-                    <a asp-controller="Student" asp-action="Profile" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-circle me-3"></i> Profile
-                    </a>
-                }
-
-                @if (User.IsInRole("Admin"))
-
-                {
-                    <div class="sidebar-heading mt-3 mb-1 px-3 text-uppercase small text-muted fw-bold">Administration</div>
-                    <a asp-controller="Admin" asp-action="Dashboard" class="list-group-item list-group-item-action">
-                        <i class="fas fa-tachometer-alt me-3"></i> Dashboard
-                    </a>
-                    <a asp-controller="Admin" asp-action="CreateStudent" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-plus me-3"></i> Create Student
-                    </a>
-                    <a asp-controller="Quiz" asp-action="Index" class="list-group-item list-group-item-action">
-                        <i class="fas fa-question-circle me-3"></i> Manage Quizzes
-                    </a>
-                }
-
-                @if (User.IsInRole("Mentor"))
-
-                {
-                    <div class="sidebar-heading mt-3 mb-1 px-3 text-uppercase small text-muted fw-bold">Mentorship</div>
-                    <a asp-controller="Mentor" asp-action="Dashboard" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chalkboard-teacher me-3"></i> Mentor Dashboard
-                    </a>
-                }
-            </div>
-
-            @if (User.Identity.IsAuthenticated)
-            {
-                <div class="logout-btn">
-                    <form asp-controller="Account" asp-action="Logout" method="post">
-                        <button class="btn btn-light w-100 fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-sign-out-alt"></i> Log Out
-                        </button>
-                    </form>
+        
+        @if (User.Identity.IsAuthenticated)
+        {
+            <div id="sidebar-wrapper">
+                <div class="sidebar-logo">
+                    <i class="fas fa-graduation-cap me-2"></i> SPT <span class="badge bg-primary ms-2" style="font-size:0.5em;">v1.0</span>
                 </div>
-            }
-        </div>
+
+                <div class="list-group list-group-flush flex-grow-1">
+                    
+                    @if (User.IsInRole("Student"))
+                    {
+                        <div class="sidebar-heading">Main</div>
+                        <a asp-controller="Student" asp-action="Dashboard" class="list-group-item list-group-item-action">
+                            <i class="fas fa-home me-3"></i> Dashboard
+                        </a>
+                        <a asp-controller="Student" asp-action="Curriculum" class="list-group-item list-group-item-action">
+                            <i class="fas fa-book-open me-3"></i> Curriculum
+                        </a>
+                        <a asp-controller="Student" asp-action="Attendance" class="list-group-item list-group-item-action">
+                            <i class="fas fa-calendar-check me-3"></i> Attendance
+                        </a>
+
+                        <div class="sidebar-heading">Growth</div>
+                        <a asp-controller="Library" asp-action="Index" class="list-group-item list-group-item-action">
+                            <i class="fas fa-folder-open me-3"></i> Resources
+                        </a>
+                        <a asp-controller="Student" asp-action="Leaderboard" class="list-group-item list-group-item-action">
+                            <i class="fas fa-chart-line me-3"></i> Leaderboard
+                        </a>
+                        <a asp-controller="Student" asp-action="Certificate" class="list-group-item list-group-item-action">
+                            <i class="fas fa-award me-3"></i> Certificate
+                        </a>
+
+                        <div class="sidebar-heading">Account</div>
+                        <a asp-controller="Support" asp-action="Index" class="list-group-item list-group-item-action">
+                            <i class="fas fa-headset me-3"></i> Support & Reflection
+                        </a>
+                        <a asp-controller="Student" asp-action="Profile" class="list-group-item list-group-item-action">
+                            <i class="fas fa-user-circle me-3"></i> Profile
+                        </a>
+                        <a asp-controller="Student" asp-action="Settings" class="list-group-item list-group-item-action">
+                            <i class="fas fa-cog me-3"></i> Settings
+                        </a>
+                    }
+
+                    @if (User.IsInRole("Admin") || User.IsInRole("Mentor"))
+{
+    <div class="sidebar-heading">Management</div>
+    <a asp-controller="Admin" asp-action="Dashboard" class="list-group-item list-group-item-action">
+        <i class="fas fa-th-large me-3"></i> Dashboard
+    </a>
+    <a asp-controller="Admin" asp-action="Students" class="list-group-item list-group-item-action">
+        <i class="fas fa-users me-3"></i> Students
+    </a>
+
+    <div class="sidebar-heading">Academic & Logs</div>
+    
+    <a asp-controller="Admin" asp-action="ManageLibrary" class="list-group-item list-group-item-action">
+        <i class="fas fa-book me-3"></i> Manage Library
+    </a>
+
+    <a asp-controller="Admin" asp-action="ProgressLogs" class="list-group-item list-group-item-action">
+        <i class="fas fa-clipboard-check me-3"></i> Review Logs
+    </a>
+    
+    <a asp-controller="Admin" asp-action="SupportTickets" class="list-group-item list-group-item-action">
+        <i class="fas fa-headset me-3"></i> Help Desk
+    </a>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="sidebar-heading">Admin</div>
+        <a asp-controller="Admin" asp-action="CreateStudent" class="list-group-item list-group-item-action">
+            <i class="fas fa-user-plus me-3"></i> Create Student
+        </a>
+        <a asp-controller="Admin" asp-action="CreateMentor" class="list-group-item list-group-item-action">
+            <i class="fas fa-chalkboard-teacher me-3"></i> Add Mentor
+        </a>
+        <a asp-controller="Quiz" asp-action="Index" class="list-group-item list-group-item-action">
+            <i class="fas fa-question-circle me-3"></i> Manage Quizzes
+        </a>
+        <a asp-controller="Admin" asp-action="CreateAnnouncement" class="list-group-item list-group-item-action">
+            <i class="fas fa-bullhorn me-3"></i> Announcement
+        </a>
+    }
+}
+                        
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <div class="sidebar-heading">Admin</div>
+                            <a asp-controller="Admin" asp-action="CreateStudent" class="list-group-item list-group-item-action">
+                                <i class="fas fa-user-plus me-3"></i> Create Student
+                            </a>
+                            <a asp-controller="Admin" asp-action="CreateMentor" class="list-group-item list-group-item-action">
+                                <i class="fas fa-chalkboard-teacher me-3"></i> Add Mentor
+                            </a>
+                            <a asp-controller="Quiz" asp-action="Index" class="list-group-item list-group-item-action">
+                                <i class="fas fa-question-circle me-3"></i> Quizzes
+                            </a>
+                            <a asp-controller="Admin" asp-action="CreateAnnouncement" class="list-group-item list-group-item-action">
+                                <i class="fas fa-bullhorn me-3"></i> Announcement
+                            </a>
+                        }
+                    }
+
+                    <div class="logout-btn">
+                        <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                            <button type="submit" class="btn btn-outline-light w-100 btn-sm fw-bold">
+                                <i class="fas fa-sign-out-alt me-2"></i> Log Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
 
         <div id="page-content-wrapper">
+            
             <div class="top-navbar">
-                <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
-
+                <h5 class="m-0 fw-bold text-dark">@ViewData["Title"]</h5>
+                
                 <div class="d-flex align-items-center">
                     @if (User.Identity.IsAuthenticated)
-
                     {
-                        <a asp-controller="Notification" asp-action="Index" class="icon-btn position-relative me-2">
+                        <a asp-controller="Notification" asp-action="Index" class="icon-btn position-relative me-3">
                             <i class="fas fa-bell"></i>
                             <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none; font-size: 0.5em;">0</span>
                         </a>
 
-                        <div class="d-flex align-items-center ms-3">
-                            <div class="text-end me-3 d-none d-md-block">
-                                <span class="d-block fw-bold text-dark small">@User.Identity.Name</span>
-                                <span class="d-block text-muted small" style="font-size:0.75rem;">
-                                    @if (User.IsInRole("Admin"))
-                                    {
-                                        <text>Administrator</text>
-                                    }
-
-                                    else if (User.IsInRole("Mentor"))
-                                    {
-                                        <text>Mentor</text>
-                                    }
-
-                                    else
-                                    {
-                                        <text>Student</text>
-                                    }
-                                </span>
+                        <div class="d-flex align-items-center">
+                            <span class="me-2 text-muted small">Hello,</span>
+                            <span class="fw-bold text-dark me-2">@User.Identity.Name</span>
+                            <div class="avatar-circle bg-primary text-white" style="width:35px; height:35px; display:flex; align-items:center; justify-content:center; border-radius:50%;">
+                                @(User.Identity.Name?.Substring(0,1).ToUpper() ?? "U")
                             </div>
-                            <img src="/images/default-avatar.png" class="rounded-circle border" style="width:40px;height:40px; object-fit: cover;">
                         </div>
                     }
-
                     else
-
                     {
-                        <a class="btn btn-primary btn-sm px-4" asp-controller="Account" asp-action="Login">Login</a>
+                        <a class="btn btn-primary btn-sm px-4" asp-area="Identity" asp-page="/Account/Login">Login</a>
                     }
                 </div>
             </div>
 
-            <div class="container-fluid p-4">
+            <div class="container-fluid">
                 @if (TempData["Success"] != null)
-
                 {
                     <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                        <i class="fas fa-check-circle"></i> @TempData["Success"]
+                        <i class="fas fa-check-circle me-2"></i> @Html.Raw(TempData["Success"])
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 }
                 @if (TempData["Error"] != null)
-
                 {
                     <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-                        <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+                        <i class="fas fa-exclamation-circle me-2"></i> @Html.Raw(TempData["Error"])
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 }
 
                 @RenderBody()
             </div>
-
-            <footer class="text-center py-3 text-muted small mt-auto">
-                &copy; 2026 - Student Progress Tracking (SPT)
-            </footer>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
-
+    
     @if (User.Identity.IsAuthenticated)
-
     {
         <script>
+            // Notification Badge Logic
             document.addEventListener("DOMContentLoaded", function () {
                 fetch('/Notification/GetUnreadCount')
                     .then(response => response.json())
                     .then(count => {
                         const badge = document.getElementById('notif-badge');
-                        if (badge) {
-                            if (count > 0) {
-                                badge.innerText = count;
-                                badge.style.display = 'inline-block';
-                            } else {
-                                badge.style.display = 'none';
-                            }
+                        if (badge && count > 0) {
+                            badge.innerText = count;
+                            badge.style.display = 'inline-block';
                         }
                     })
-                    .catch(err => console.log("Notification error:", err));
+                    .catch(e => console.log(e));
             });
         </script>
     }
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

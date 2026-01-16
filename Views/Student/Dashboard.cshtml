@@ -56,11 +56,11 @@
                 <span class="text-success">@Model.EnrollmentStatus</span>
             </p>
         </div>
-        <a href="#" class="btn btn-primary btn-lg shadow-sm">
 
-            <a asp-controller="ProgressLog" asp-action="Create" class="btn btn-primary btn-lg shadow-sm">
-                <i class="fas fa-plus-circle"></i> Log Daily Progress
-            </a>
+        <button type="button" class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#logWorkModal">
+        <i class="fas fa-plus-circle"></i> Log Daily Progress
+    </button>
+
     </div>
 
     <div class="row g-3 mb-4">
@@ -263,5 +263,77 @@
     </div>
 
 </div>
+    </div>
+
+    <div class="modal fade" id="logWorkModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Log Daily Progress</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form asp-action="LogWork" method="post">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Current Module</label>
+                            <select name="moduleId" class="form-select" required>
+                                @if (ViewBag.CurrentModules != null)
+
+                                {
+
+                                    foreach (var m in (IEnumerable<dynamic>)ViewBag.CurrentModules)
+
+                                    {
+                                        <option value="@m.Id">@m.Code - @m.Name</option>
+                                    }
+
+                                }
+
+                                else
+
+                                {
+                                    <option value="">No modules found</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Hours Spent</label>
+                                <input type="number" step="0.5" min="0.5" max="24" name="hours" class="form-control" required placeholder="e.g. 4.5">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Location</label>
+                                <select name="location" class="form-select">
+                                    <option value="Remote">🏠 Remote</option>
+                                    <option value="Office">🏢 Office / Hub</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-muted">What did you learn?</label>
+                            <textarea name="description" class="form-control" rows="3" required placeholder="Briefly describe what you studied or built today..."></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Proof of Work (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fab fa-github"></i></span>
+                                <input type="url" name="evidenceUrl" class="form-control" placeholder="https://github.com/..." />
+                            </div>
+                            <div class="form-text">Link to GitHub commit, PR, or hosted project.</div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Submit Log</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

@@ -22,32 +22,29 @@ namespace SPT.Controllers
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            // Get all modules with their resources
-            // If Student: Filter by Track. If Admin: Show All.
-            var modulesQuery = _context.SyllabusModules
-                .Include(m => m.Track)
-                .AsQueryable();
-
-            if (User.IsInRole("Student") && student != null)
+            // 1. ADMIN CHECK: If Admin clicks "Library", send them to the Management page
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
             {
-                modulesQuery = modulesQuery.Where(m => m.TrackId == student.TrackId);
+                return RedirectToAction("ManageLibrary", "Admin");
             }
 
-            // Fetch resources linked to these modules
-            var libraryData = await modulesQuery
-                .OrderBy(m => m.DisplayOrder)
-                .Select(m => new
-                {
-                    Module = m,
-                    Resources = _context.ModuleResources.Where(r => r.ModuleId == m.Id && r.IsActive).ToList()
-                })
+            // 2. STUDENT CHECK: Get student profile to find their Track
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+
+            if (student == null)
+            {
+                return RedirectToAction("Dashboard", "Student");
+            }
+
+            // 3. FETCH RESOURCES: Filter by the Student's TrackId
+            // This replaces your old "ModuleResources" logic with the new "Resource" table
+            var resources = await _context.Resources
+                .Where(r => r.TrackId == student.TrackId)
+                .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // We use ViewBag to pass this anonymous object list comfortably
-            ViewBag.Library = libraryData;
-            return View();
+            return View(resources);
         }
     }
 }

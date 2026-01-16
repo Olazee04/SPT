@@ -1,169 +1,66 @@
 ﻿@model SPT.Models.Student
-
 @{
-    ViewData["Title"] = "Student Details";
+    ViewData["Title"] = "Student Profile";
 }
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-10 offset-md-1">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">
-                        <i class="fas fa-id-card"></i> Student Details
-                    </h3>
-                    <span class="badge bg-light text-dark">@Model.EnrollmentStatus</span>
+<div class="mb-3">
+    <a asp-action="Students" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to List</a>
+    <a asp-action="EditStudent" asp-route-id="@Model.Id" class="btn btn-primary btn-sm float-end"><i class="fas fa-edit"></i> Edit Student</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4 d-flex flex-column gap-4">
+        <div class="custom-card text-center">
+            <h5 class="card-title-custom text-start">Profile</h5>
+            <div class="profile-img-container mx-auto">
+                <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")" style="width:100%; height:100%; object-fit:cover;">
+            </div>
+            <h5 class="mt-3">@Model.FullName</h5>
+            <span class="badge bg-success">@Model.EnrollmentStatus</span>
+        </div>
+
+        <div class="custom-card">
+            <h5 class="card-title-custom">Emergency Contact</h5>
+            <div class="d-flex flex-column gap-3">
+                <div class="p-3 bg-light rounded">
+                    <small class="text-muted d-block">Name</small>
+                    <strong>@Model.EmergencyContactName</strong>
                 </div>
-                <div class="card-body">
+                <div class="p-3 bg-light rounded">
+                    <small class="text-muted d-block">Phone</small>
+                    <strong>@Model.EmergencyContactPhone</strong>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">📋 Personal Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Full Name</label>
-                                    <input value="@Model.FullName" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Username</label>
-                                    <input value="@Model.User?.UserName" class="form-control bg-light" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Email</label>
-                                    <input value="@Model.Email" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Phone Number</label>
-                                    <input value="@Model.Phone" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">Address</label>
-                                    <textarea class="form-control bg-white" rows="2" readonly>@Model.Address</textarea>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Profile Picture</label>
-                                    <div class="mt-2">
-                                        @if (!string.IsNullOrEmpty(Model.ProfilePicture))
-                                        {
-                                            <img src="@Model.ProfilePicture" alt="Profile" class="img-thumbnail rounded-circle" style="width: 100px; height: 100px; object-fit: cover;" />
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">No image uploaded</span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">🎓 Academic Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Track / Course</label>
-                                    <input value="@Model.Track?.Name" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Start Date</label>
-                                    <input value="@Model.DateJoined.ToString("yyyy-MM-dd")" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Cohort</label>
-                                    <input value="@Model.Cohort?.Name" class="form-control bg-light" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Assigned Mentor</label>
-                                    <input value="@(Model.Mentor?.FullName ?? "Not Assigned")" class="form-control bg-white" readonly />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">🚨 Emergency Contact</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Contact Name</label>
-                                    <input value="@Model.EmergencyContactName" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Contact Phone</label>
-                                    <input value="@Model.EmergencyContactPhone" class="form-control bg-white" readonly />
-                                </div>
-
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">Contact Address</label>
-                                    <textarea class="form-control bg-white" rows="2" readonly>@Model.EmergencyContactAddress</textarea>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">🔗 Optional Links</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">GitHub</label>
-                                    @if (!string.IsNullOrEmpty(Model.GitHubUrl))
-                                    {
-                                        <div class="input-group">
-                                            <input value="@Model.GitHubUrl" class="form-control bg-white" readonly />
-                                            <a href="@Model.GitHubUrl" target="_blank" class="btn btn-outline-secondary"><i class="fas fa-external-link-alt"></i></a>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <input value="N/A" class="form-control bg-white" readonly />
-                                    }
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Portfolio</label>
-                                    @if (!string.IsNullOrEmpty(Model.PortfolioUrl))
-                                    {
-                                        <div class="input-group">
-                                            <input value="@Model.PortfolioUrl" class="form-control bg-white" readonly />
-                                            <a href="@Model.PortfolioUrl" target="_blank" class="btn btn-outline-secondary"><i class="fas fa-external-link-alt"></i></a>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <input value="N/A" class="form-control bg-white" readonly />
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                        <a asp-action="Students" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
-                        <a asp-action="EditStudent" asp-route-id="@Model.Id" class="btn btn-warning btn-lg">
-                            <i class="fas fa-edit"></i> Edit Student
-                        </a>
-                    </div>
-
+    <div class="col-lg-8">
+        <div class="custom-card">
+            <h5 class="card-title-custom">Academic Information</h5>
+            <div class="mt-4">
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-md-4 text-muted fw-bold">Track</div>
+                    <div class="col-md-8">@Model.Track?.Name</div>
+                </div>
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-md-4 text-muted fw-bold">Cohort</div>
+                    <div class="col-md-8">@Model.Cohort?.Name</div>
+                </div>
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-md-4 text-muted fw-bold">Mentor</div>
+                    <div class="col-md-8">@Model.Mentor?.FullName</div>
+                </div>
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-md-4 text-muted fw-bold">Email</div>
+                    <div class="col-md-8">@Model.Email</div>
+                </div>
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-md-4 text-muted fw-bold">Phone</div>
+                    <div class="col-md-8">@Model.Phone</div>
+                </div>
+                <div class="row mb-3 border-bottom pb-2">
+                    <div class="col-md-4 text-muted fw-bold">Joined</div>
+                    <div class="col-md-8">@Model.DateJoined.ToString("D")</div>
                 </div>
             </div>
         </div>

@@ -1,0 +1,197 @@
+﻿@model List<SPT.Models.ProgressLog>
+@{
+    ViewData["Title"] = "Master Progress Logs";
+    string status = ViewBag.CurrentStatus as string;
+}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h4 class="fw-bold mb-0"><i class="fas fa-list-alt me-2"></i> Student Activity Logs</h4>
+        <p class="text-muted small mb-0">Audit and verify daily progress submissions.</p>
+    </div>
+
+    <div class="btn-group shadow-sm">
+        <a asp-action="ProgressLogs" asp-route-status="All"
+           class="btn btn-sm @(status == "All" ? "btn-primary" : "btn-light border")">All</a>
+        <a asp-action="ProgressLogs" asp-route-status="Pending"
+           class="btn btn-sm @(status == "Pending" ? "btn-warning text-dark" : "btn-light border")">Pending</a>
+        <a asp-action="ProgressLogs" asp-route-status="Approved"
+           class="btn btn-sm @(status == "Approved" ? "btn-success" : "btn-light border")">Approved</a>
+    </div>
+
+    <form method="get" class="d-flex">
+        <input type="hidden" name="status" value="@status" />
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" name="search" class="form-control border-start-0 ps-0"
+                   placeholder="Search student..." value="@ViewBag.CurrentSearch" style="max-width: 200px;">
+            <button type="submit" class="btn btn-dark">Search</button>
+        </div>
+    </form>
+</div>
+
+<div class="custom-card p-0 overflow-hidden shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-muted small text-uppercase">
+                <tr>
+                    <th class="ps-4">Student</th>
+                    <th>Date Logged</th>
+                    <th>Module / Topic</th>
+                    <th class="text-center">Hours</th>
+                    <th class="text-center">Evidence</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Any())
+                {
+                    foreach (var log in Model)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle bg-light text-primary me-2 fw-bold border"
+                                         style="width:35px;height:35px;display:flex;align-items:center;justify-content:center;border-radius:50%;">
+                                        @(log.Student?.FullName.Substring(0, 1) ?? "?")
+                                    </div>
+                                    <div>
+                                        <span class="d-block fw-bold text-dark small">@log.Student?.FullName</span>
+                                        <span class="badge bg-light text-dark border" style="font-size:0.65rem;">@log.Student?.Track?.Code</span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="small text-muted">
+                                <i class="far fa-calendar me-1"></i> @log.Date.ToString("MMM dd, yyyy")
+                            </td>
+
+                            <td>
+                                <span class="d-block text-truncate" style="max-width: 180px;" title="@log.ActivityDescription">
+                                    @(string.IsNullOrEmpty(log.ActivityDescription) ? "No description" : log.ActivityDescription)
+                                </span>
+                                @if (log.Module != null)
+                                {
+                                    <small class="text-primary">@log.Module.ModuleCode</small>
+                                }
+                            </td>
+
+                            <td class="text-center fw-bold">@log.Hours</td>
+
+                            <td class="text-center">
+                                @if (!string.IsNullOrEmpty(log.EvidenceUrl))
+                                {
+                                    <a href="@log.EvidenceUrl" target="_blank" class="btn btn-sm btn-light border text-primary" title="Open Link">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                @if (log.IsApproved)
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">Verified</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">Pending</span>
+                                }
+                            </td>
+
+                            <td class="text-end pe-4">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-bs-toggle="modal" data-bs-target="#logModal_@log.Id">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                            </td>
+                        </tr>
+
+                        <div class="modal fade" id="logModal_@log.Id" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h5 class="modal-title fw-bold">Log Details</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded">
+                                            <div class="me-3">
+                                                <h6 class="mb-0 fw-bold">@log.Student?.FullName</h6>
+                                                <small class="text-muted">@log.Date.ToString("dddd, MMMM dd, yyyy")</small>
+                                            </div>
+                                            <div class="ms-auto text-end">
+                                                <span class="display-6 fw-bold text-primary">@log.Hours</span>
+                                                <span class="small text-muted d-block" style="margin-top:-5px;">Hours</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="small text-muted text-uppercase fw-bold">Activity Description</label>
+                                            <p class="p-3 border rounded bg-white mt-1">
+                                                @(string.IsNullOrEmpty(log.ActivityDescription) ? "No description provided." : log.ActivityDescription)
+                                            </p>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="small text-muted text-uppercase fw-bold">Evidence / Project Link</label>
+                                            @if (!string.IsNullOrEmpty(log.EvidenceUrl))
+                                            {
+                                                <div class="mt-1">
+                                                    <a href="@log.EvidenceUrl" target="_blank" class="text-break">
+                                                        <i class="fas fa-link me-1"></i> @log.EvidenceUrl
+                                                    </a>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <p class="small text-muted mt-1">No link provided.</p>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer border-0 pt-0">
+                                        @if (!log.IsApproved)
+                                        {
+                                            <form asp-action="ApproveLog" method="post" class="w-100 d-flex gap-2">
+                                                <input type="hidden" name="id" value="@log.Id" />
+
+                                                <button type="submit" name="action" value="Reject"
+                                                        class="btn btn-outline-danger flex-grow-1">
+                                                    <i class="fas fa-times me-1"></i> Reject
+                                                </button>
+
+                                                <button type="submit" name="action" value="Approve"
+                                                        class="btn btn-success flex-grow-1">
+                                                    <i class="fas fa-check me-1"></i> Approve
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Close</button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="fas fa-clipboard-list fa-3x text-muted opacity-25 mb-3"></i>
+                            <h5 class="text-muted">No logs found</h5>
+                            <p class="small text-muted">Try changing the filter or search terms.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

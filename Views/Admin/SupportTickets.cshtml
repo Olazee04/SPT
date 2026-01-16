@@ -1,0 +1,95 @@
+﻿@model List<SPT.Models.SupportTicket>
+@{
+    ViewData["Title"] = "Help Desk";
+    string status = ViewBag.CurrentStatus as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold"><i class="fas fa-headset me-2"></i> Support Tickets</h4>
+    <div class="btn-group">
+        <a asp-action="SupportTickets" asp-route-status="Open"
+           class="btn btn-sm @(status == "Open" ? "btn-danger" : "btn-outline-secondary")">Open</a>
+        <a asp-action="SupportTickets" asp-route-status="Resolved"
+           class="btn btn-sm @(status == "Resolved" ? "btn-success" : "btn-outline-secondary")">Resolved</a>
+        <a asp-action="SupportTickets" asp-route-status="All"
+           class="btn btn-sm @(status == "All" ? "btn-primary" : "btn-outline-secondary")">All History</a>
+    </div>
+</div>
+
+<div class="custom-card p-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">Student</th>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th class="text-end pe-4">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Any())
+                {
+                    foreach (var ticket in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold">@ticket.Student?.FullName</td>
+                            <td>
+                                @ticket.Subject
+                                <div class="small text-muted text-truncate" style="max-width: 250px;">@ticket.Message</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">@ticket.Category</span></td>
+                            <td class="small text-muted">@ticket.CreatedAt.ToString("MMM dd")</td>
+                            <td class="text-end pe-4">
+                                @if (!ticket.IsResolved)
+                                {
+                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ticketModal_@ticket.Id">
+                                        Reply & Resolve
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Done</span>
+                                }
+                            </td>
+                        </tr>
+
+                        <div class="modal fade" id="ticketModal_@ticket.Id" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Reply to @ticket.Student?.FullName</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form asp-action="ResolveTicket" method="post">
+                                        <div class="modal-body">
+                                            <div class="p-3 bg-light rounded mb-3">
+                                                <small class="text-muted fw-bold">ISSUE:</small>
+                                                <p class="mb-0">@ticket.Message</p>
+                                            </div>
+                                            <input type="hidden" name="id" value="@ticket.Id" />
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Your Response</label>
+                                                <textarea name="response" class="form-control" rows="4" required placeholder="Type solution here..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-success w-100">Send & Mark Resolved</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">No tickets found in this category.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

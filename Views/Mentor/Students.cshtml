@@ -1,18 +1,10 @@
 ﻿@model List<SPT.Models.ViewModels.StudentPerformanceViewModel>
 @{
-    ViewData["Title"] = "Student Management";
+    ViewData["Title"] = "My Students";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold"><i class="fas fa-user-graduate me-2"></i> Students Directory</h4>
-
-    <div class="d-flex gap-2">
-        <form method="get" class="d-flex">
-            <input type="text" name="searchString" class="form-control me-2" placeholder="Search students..." style="width: 250px;">
-            <button type="submit" class="btn btn-primary">Search</button>
-        </form>
-        <a asp-action="CreateStudent" class="btn btn-success"><i class="fas fa-plus"></i> New Student</a>
-    </div>
+    <h4 class="fw-bold"><i class="fas fa-chalkboard-teacher me-2"></i> My Assigned Students</h4>
 </div>
 
 <div class="custom-card p-0 overflow-hidden">
@@ -23,33 +15,27 @@
                     <th class="ps-4">Student Name</th>
                     <th>Cohort</th>
                     <th>Track</th>
-                    <th>Mentor</th>
                     <th class="text-center">Hrs (7d)</th>
                     <th>Progress</th>
                     <th>Status</th>
                     <th>Consistency</th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var s in Model)
-
                 {
                     <tr>
                         <td class="ps-4">
-                            <a asp-action="Details" asp-route-id="@s.StudentId" class="text-decoration-none text-dark">
-                                <div class="d-flex align-items-center">
-                                    <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle me-3 border" style="width:35px;height:35px;object-fit:cover;">
-                                    <div>
-                                        <span class="d-block fw-bold">@s.FullName</span>
-                                        <small class="text-muted">@s.Email</small>
-                                    </div>
+                            <div class="d-flex align-items-center">
+                                <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle me-3 border" style="width:35px;height:35px;object-fit:cover;">
+                                <div>
+                                    <span class="d-block fw-bold">@s.FullName</span>
+                                    <small class="text-muted">@s.Email</small>
                                 </div>
-                            </a>
+                            </div>
                         </td>
                         <td>@s.CohortName</td>
                         <td><span class="badge bg-light text-dark border">@s.TrackCode</span></td>
-                        <td>@s.MentorName</td>
 
                         <td class="text-center">
                             <strong>@s.HoursLast7Days</strong>
@@ -73,12 +59,10 @@
                             {
                                 <span class="badge bg-success">Active</span>
                             }
-
                             else if (s.Status == "At Risk")
                             {
                                 <span class="badge bg-danger">At Risk</span>
                             }
-
                             else
                             {
                                 <span class="badge bg-secondary">Inactive</span>
@@ -95,10 +79,6 @@
                                 </div>
                                 <small class="fw-bold">@s.ConsistencyScore%</small>
                             </div>
-                        </td>
-
-                        <td class="text-end pe-4">
-                            <a asp-action="Details" asp-route-id="@s.StudentId" class="btn btn-sm btn-light text-muted"><i class="fas fa-ellipsis-v"></i></a>
                         </td>
                     </tr>
                 }

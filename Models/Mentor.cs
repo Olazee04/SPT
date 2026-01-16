@@ -87,6 +87,9 @@ namespace SPT.Models
         [ForeignKey(nameof(TrackId))]
         public Track? Track { get; set; }
 
+        public string? Specialization { get; set; } // e.g. "Backend", "Data Science"
+        public string? Bio { get; set; }
+
         public ICollection<Student> Students { get; set; } = new List<Student>();
         public ICollection<MentorReview> Reviews { get; set; } = new List<MentorReview>();
     }

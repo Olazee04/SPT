@@ -11,7 +11,7 @@ namespace SPT.Models
         [Required]
         public int StudentId { get; set; }
         [ForeignKey("StudentId")]
-        public Student Student { get; set; } = null!;
+        public Student? Student { get; set; }
 
         public DateTime Date { get; set; } = DateTime.UtcNow;
 

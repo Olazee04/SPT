@@ -20,7 +20,7 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // 1. INDEX (Dashboard for Support)
+        // 1. INDEX (Dashboard for Support & Reflection)
         // =========================
         public async Task<IActionResult> Index()
         {
@@ -28,11 +28,13 @@ namespace SPT.Controllers
             var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
             if (student == null) return RedirectToAction("Dashboard", "Student");
 
+            // Fetch Tickets (Convert ID to string if needed by your model)
             var tickets = await _context.SupportTickets
                 .Where(t => t.StudentId == student.Id)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
+            // Fetch Reflections
             var recentReflections = await _context.StudentReflections
                 .Where(r => r.StudentId == student.Id)
                 .OrderByDescending(r => r.Date)
@@ -55,19 +57,24 @@ namespace SPT.Controllers
             var user = await _userManager.GetUserAsync(User);
             var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            if (ModelState.IsValid)
+            // Manually bind the student ID
+            if (student != null)
             {
+                // Clear validation for Student navigation property
+                ModelState.Remove("Student");
+
                 model.StudentId = student.Id;
                 model.Status = "Open";
                 model.CreatedAt = DateTime.UtcNow;
 
                 _context.SupportTickets.Add(model);
                 await _context.SaveChangesAsync();
-                TempData["Success"] = "Ticket submitted! A mentor will review it soon.";
+
+                TempData["Success"] = "Ticket submitted successfully!";
             }
             else
             {
-                TempData["Error"] = "Please fill in all fields.";
+                TempData["Error"] = "Could not identify student account.";
             }
             return RedirectToAction(nameof(Index));
         }
@@ -82,22 +89,22 @@ namespace SPT.Controllers
             var user = await _userManager.GetUserAsync(User);
             var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            // Remove validation for Student relation
-            ModelState.Remove("Student");
+            ModelState.Remove("Student"); // Prevent validation error on navigation prop
 
-            if (ModelState.IsValid)
+            if (student != null)
             {
                 model.StudentId = student.Id;
                 model.Date = DateTime.UtcNow;
+                model.CreatedAt = DateTime.UtcNow;
 
                 _context.StudentReflections.Add(model);
                 await _context.SaveChangesAsync();
+
                 TempData["Success"] = "Reflection saved. Good job being self-aware!";
             }
             else
             {
-                var errors = string.Join(" | ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                TempData["Error"] = "Failed to save reflection: " + errors;
+                TempData["Error"] = "Failed to save reflection.";
             }
             return RedirectToAction(nameof(Index));
         }

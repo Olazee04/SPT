@@ -62,6 +62,6 @@ namespace SPT.Models
         public ICollection<ModuleResource> Resources { get; set; } = new List<ModuleResource>();
 
         // 🆕 NEW: Links to the Quiz Questions
-        public ICollection<QuizQuestion> QuizQuestions { get; set; } = new List<QuizQuestion>();
+        public ICollection<QuizQuestion> Questions { get; set; } = new List<QuizQuestion>();
     }
 }

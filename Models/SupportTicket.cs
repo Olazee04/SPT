@@ -24,9 +24,12 @@ namespace SPT.Models
 
         public string Status { get; set; } = "Open"; // Open, In Progress, Resolved
 
-        public string? AdminResponse { get; set; } // Reply from Mentor/Admin
+        public string Priority { get; set; } = "Medium"; // Low, Medium, High
+        public bool IsResolved { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ResolvedAt { get; set; }
+
+        public string? AdminResponse { get; set; }
     }
 }

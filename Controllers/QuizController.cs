@@ -23,11 +23,15 @@ namespace SPT.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            // List all tracks so Admin can pick a module to edit
-            var tracks = await _context.Tracks
-                .Include(t => t.Modules)
+            // List all modules so Admin can pick one to manage
+            var modules = await _context.SyllabusModules
+                .Include(m => m.Track)
+                .Include(m => m.Questions)
+                .OrderBy(m => m.Track.Name)
+                .ThenBy(m => m.DisplayOrder)
                 .ToListAsync();
-            return View(tracks);
+
+            return View(modules);
         }
 
         // =========================

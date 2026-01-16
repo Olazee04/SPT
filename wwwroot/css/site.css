@@ -1,126 +1,112 @@
 :root {
-    /* Color Palette from Image */
-    --primary-color: #4361ee; /* Bright Blue Buttons */
-    --sidebar-bg: #0d0d0d; /* Pitch Black Sidebar */
-    --sidebar-text: #b0b0b0; /* Grey text for inactive */
-    --sidebar-active-bg: #ffffff; /* White active item */
-    --sidebar-active-text: #000000;
-    --body-bg: #f3f4f6; /* Light grey background */
-    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    --border-radius-lg: 15px;
+    --primary-color: #4361ee;
     --sidebar-width: 260px;
+    --body-bg: #f4f6f9;
 }
 
-body {
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--body-bg);
     overflow-x: hidden;
 }
 
 /* ===========================
-   DARK SIDEBAR
+   1. LAYOUT WRAPPER
    =========================== */
 #wrapper {
     display: flex;
     width: 100%;
+    min-height: 100vh;
+    align-items: stretch;
 }
 
 #sidebar-wrapper {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
-    background-color: var(--sidebar-bg);
+    background-color: #212529; /* Dark Sidebar */
     color: #fff;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
+    transition: all 0.3s;
 }
 
-.sidebar-logo {
-    padding: 25px;
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #fff;
+#page-content-wrapper {
+    width: 100%;
+    flex-grow: 1;
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    min-width: 0; /* Critical for Flexbox */
+}
+
+/* ===========================
+   2. SIDEBAR STYLING
+   =========================== */
+.sidebar-logo {
+    padding: 20px;
+    font-size: 1.25rem;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .list-group-item {
     background-color: transparent;
+    color: rgba(255, 255, 255, 0.7);
     border: none;
-    color: var(--sidebar-text);
     padding: 12px 25px;
-    font-weight: 500;
-    margin: 4px 15px;
-    border-radius: 8px; /* Rounded items */
     transition: all 0.2s;
     font-size: 0.95rem;
 }
 
-    .list-group-item:hover {
-        background-color: rgba(255,255,255,0.1);
+    .list-group-item:hover, .list-group-item-action:hover {
+        background-color: rgba(255, 255, 255, 0.1);
         color: #fff;
+        text-decoration: none;
+        border-left: 4px solid var(--primary-color);
     }
 
-    /* The Active State (White Box) */
-    .list-group-item.active {
-        background-color: var(--sidebar-active-bg);
-        color: var(--sidebar-active-text);
-        font-weight: 700;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
+.sidebar-heading {
+    padding: 15px 25px 5px 25px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: bold;
+}
 
 .logout-btn {
     margin-top: auto;
-    margin-bottom: 20px;
-    padding: 0 20px;
+    padding: 20px;
 }
 
 /* ===========================
-   MAIN CONTENT AREA
+   3. COMPONENT STYLES (Cards, Profile, Buttons)
    =========================== */
-#page-content-wrapper {
-    width: 100%;
-    padding: 0;
-}
-
 .top-navbar {
     background: #fff;
     padding: 15px 30px;
+    border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #e0e0e0;
 }
 
-.icon-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #f0f2f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-    margin-left: 10px;
-    text-decoration: none;
-    transition: 0.2s;
+.container-fluid {
+    padding: 30px;
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
-    .icon-btn:hover {
-        background: #e1e4e8;
-        color: #000;
-    }
-
-/* ===========================
-   PROFILE CARDS
-   =========================== */
+/* Custom Cards */
 .custom-card {
     background: #fff;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--card-shadow);
-    padding: 25px;
+    border-radius: 15px;
     border: none;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    padding: 25px;
     height: 100%;
 }
 
@@ -133,42 +119,25 @@ body {
     padding-bottom: 10px;
 }
 
-/* Action Buttons (Big Blue Ones) */
-.btn-action-lg {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    padding: 15px;
-    width: 100%;
-    font-weight: 600;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: transform 0.2s;
-    height: 100px; /* Tall button */
-}
-
-    .btn-action-lg:hover {
-        transform: translateY(-3px);
-        background-color: #304ccb;
-        color: white;
-    }
-
 /* Profile Image Area */
 .profile-img-container {
     width: 150px;
     height: 150px;
     border-radius: 50%;
-    background: #f0f0f0;
     margin: 0 auto 20px;
     overflow: hidden;
-    border: 4px solid #fff;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border: 5px solid #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    background-color: #f0f0f0;
 }
 
+    .profile-img-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+/* Custom Form Rows in Profile */
 .form-row-custom {
     display: flex;
     border-bottom: 1px solid #eee;
@@ -178,11 +147,59 @@ body {
 .form-label-custom {
     width: 140px;
     font-weight: 600;
-    color: #555;
+    color: #6c757d;
+    font-size: 0.9rem;
 }
 
 .form-value-custom {
     flex: 1;
     font-weight: 500;
-    color: #000;
+    color: #212529;
 }
+
+/* Big Action Buttons */
+.btn-action-lg {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    display: block;
+    transition: transform 0.2s;
+    border: none;
+}
+
+    .btn-action-lg:hover {
+        transform: translateY(-3px);
+        background-color: #304ccb;
+        color: white;
+    }
+
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+    .icon-btn:hover {
+        background: #f0f0f0;
+        color: #000;
+    }

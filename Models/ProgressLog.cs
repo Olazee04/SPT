@@ -37,6 +37,8 @@ namespace SPT.Models
         public string? Blocker { get; set; }
         public string? NextGoal { get; set; }
         public string? EvidenceLink { get; set; }
+        public string? ActivityDescription { get; set; }
+        public string? EvidenceUrl { get; set; }
 
         public string LoggedBy { get; set; } = string.Empty;
         public string LoggedByUserId { get; set; } = string.Empty;

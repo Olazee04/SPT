@@ -1,0 +1,195 @@
+﻿@page
+@model SPT.Areas.Identity.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Log in";
+    Layout = null; /* Removes Sidebar */
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - SPT</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', sans-serif;
+            transition: background 0.5s ease;
+        }
+
+        .login-card {
+            width: 900px;
+            max-width: 95%;
+            height: 550px;
+            display: flex;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .visual-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.5s ease;
+        }
+
+        .form-side {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #fff;
+            transition: background 0.5s ease;
+        }
+
+        .theme-student .visual-side {
+            background: #4f46e5;
+        }
+
+        .theme-student .btn-action {
+            background-color: #4f46e5;
+            color: white;
+        }
+
+        .theme-admin .visual-side {
+            background: #0f172a;
+            color: #94a3b8;
+        }
+
+        .theme-admin .form-side {
+            background: #1e293b;
+            color: white;
+        }
+
+        .theme-admin .form-control {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: white;
+        }
+
+        .theme-admin h3 {
+            color: white !important;
+        }
+
+        .theme-admin .btn-action {
+            background-color: #38bdf8;
+            color: #0f172a;
+        }
+
+        .role-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.05);
+            padding: 5px;
+            border-radius: 30px;
+            z-index: 10;
+            display: flex;
+            gap: 5px;
+        }
+
+        .role-btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+            .role-btn.active {
+                background: white;
+                color: #000;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+
+        .btn-action {
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card theme-student" id="loginCard">
+        <div class="role-switch">
+            <button class="role-btn active" onclick="setRole('student', this)">Student</button>
+            <button class="role-btn" onclick="setRole('admin', this)">Admin / Mentor</button>
+        </div>
+        <div class="visual-side">
+            <i class="fas fa-graduation-cap" style="font-size: 5rem; margin-bottom: 20px;" id="visualIcon"></i>
+            <h2 id="visualTitle" class="fw-bold">Welcome Student</h2>
+            <p id="visualText" style="opacity: 0.9;">Access your dashboard, track progress, and learn.</p>
+        </div>
+        <div class="form-side">
+            <div class="mb-4">
+                <h3 class="fw-bold" id="formHeader">Student Login</h3>
+                <p class="text-muted small">Please sign in to continue.</p>
+            </div>
+            <form id="account" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label fw-bold small">Email</label>
+                    <input asp-for="Input.Email" class="form-control" autocomplete="username" required />
+                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label fw-bold small">Password</label>
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" required />
+                    <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                </div>
+                <button id="login-submit" type="submit" class="btn-action shadow-sm">Log In</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        function setRole(role, btn) {
+            const card = document.getElementById('loginCard');
+            const btns = document.querySelectorAll('.role-btn');
+            const visualTitle = document.getElementById('visualTitle');
+            const formHeader = document.getElementById('formHeader');
+            const visualIcon = document.getElementById('visualIcon');
+
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (role === 'student') {
+                card.classList.remove('theme-admin');
+                card.classList.add('theme-student');
+                document.body.style.backgroundColor = "#f0f2f5";
+                visualTitle.innerText = "Welcome Student";
+                formHeader.innerText = "Student Login";
+                visualIcon.className = "fas fa-graduation-cap";
+            } else {
+                card.classList.remove('theme-student');
+                card.classList.add('theme-admin');
+                document.body.style.backgroundColor = "#0f172a";
+                visualTitle.innerText = "Admin Portal";
+                formHeader.innerText = "Admin Access";
+                visualIcon.className = "fas fa-user-shield";
+            }
+        }
+    </script>
+</body>
+</html>

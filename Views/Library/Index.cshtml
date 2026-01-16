@@ -1,76 +1,68 @@
-﻿@{
+﻿@model List<SPT.Models.Resource>
+@{
     ViewData["Title"] = "Resource Library";
-    var library = ViewBag.Library as IEnumerable<dynamic>;
 }
 
 <div class="container mt-4">
     <div class="text-center mb-5">
-        <h1 class="fw-bold"><i class="fas fa-photo-video text-danger"></i> Learning Library</h1>
-        <p class="text-muted">Curated videos and guides for your track.</p>
+        <h1 class="fw-bold"><i class="fas fa-book-reader text-primary"></i> Learning Library</h1>
+        <p class="text-muted">Curated resources specifically for your track.</p>
     </div>
 
-    @if (library == null || !library.Any())
+    @if (Model == null || !Model.Any())
     {
-        <div class="alert alert-warning">No resources found for your track yet.</div>
+        <div class="alert alert-warning text-center p-5">
+            <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
+            <h5>Library Empty</h5>
+            <p>Your mentors haven't uploaded any resources for this track yet.</p>
+        </div>
     }
     else
     {
-        <div class="accordion shadow-sm" id="libraryAccordion">
-            @foreach (var item in library)
+        <div class="row g-4">
+            @foreach (var item in Model)
             {
-                var module = item.Module as SPT.Models.SyllabusModule;
-                var resources = item.Resources as List<SPT.Models.ModuleResource>;
-                var collapseId = "collapse" + module.Id;
-
-                // Only show modules that actually HAVE resources
-                if (resources != null && resources.Any())
-                {
-                    <div class="accordion-item border-0 border-bottom">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">
-                                <span class="badge bg-secondary me-2">@module.ModuleCode</span>
-                                @module.ModuleName
-                                <span class="badge bg-light text-dark ms-auto border">@resources.Count Resources</span>
-                            </button>
-                        </h2>
-                        <div id="@collapseId" class="accordion-collapse collapse" data-bs-parent="#libraryAccordion">
-                            <div class="accordion-body bg-light">
-                                <div class="row">
-                                    @foreach (var res in resources)
-                                    {
-                                        <div class="col-md-6 mb-3">
-                                            <div class="card h-100 border-0 shadow-sm">
-                                                <div class="card-body d-flex align-items-center">
-                                                    <div class="me-3">
-                                                        @if (res.Type == "Video")
-                                                        {
-                                                            <i class="fab fa-youtube fa-2x text-danger"></i>
-                                                        }
-                                                        else if (res.Type == "GitRepo")
-                                                        {
-                                                            <i class="fab fa-github fa-2x text-dark"></i>
-                                                        }
-                                                        else
-                                                        {
-                                                            <i class="fas fa-file-alt fa-2x text-primary"></i>
-                                                        }
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-1 fw-bold">@res.Title</h6>
-                                                        <a href="@res.Url" target="_blank" class="text-decoration-none small stretched-link">
-                                                            Open Resource <i class="fas fa-external-link-alt"></i>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
+                <div class="col-md-4">
+                    <div class="custom-card h-100 d-flex flex-column border-0 shadow-sm transition-hover">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="icon-btn bg-light text-primary" style="width:50px; height:50px; font-size:1.2rem;">
+                                @if (item.Type == "Video")
+                                {
+                                    <i class="fab fa-youtube text-danger"></i>
+                                }
+                                else if (item.Type == "PDF")
+                                {
+                                    <i class="fas fa-file-pdf text-warning"></i>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-link text-info"></i>
+                                }
                             </div>
+                            <span class="badge bg-light text-dark border">@item.CreatedAt.ToString("MMM dd")</span>
                         </div>
+
+                        <h5 class="fw-bold text-dark mb-2">@item.Title</h5>
+                        <p class="text-muted small flex-grow-1">
+                            @(string.IsNullOrEmpty(item.Description) ? "No description available." : item.Description)
+                        </p>
+
+                        <a href="@item.Url" target="_blank" class="btn btn-outline-primary w-100 fw-bold mt-3">
+                            View Resource <i class="fas fa-external-link-alt ms-2"></i>
+                        </a>
                     </div>
-                }
+                </div>
             }
         </div>
     }
 </div>
+
+<style>
+    /* Add hover effect for cards */
+    .transition-hover {
+        transition: transform 0.2s ease-in-out;
+    }
+    .transition-hover:hover {
+        transform: translateY(-5px);
+    }
+</style>
