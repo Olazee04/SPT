@@ -32,6 +32,12 @@ namespace SPT.Controllers
                 .ToListAsync();
 
             return View(modules);
+
+            var tracks = await _context.Tracks
+        .Include(t => t.Modules) // Include modules so we can count them
+        .ToListAsync();
+
+            return View(tracks);
         }
 
         // =========================

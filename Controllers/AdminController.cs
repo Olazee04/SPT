@@ -26,68 +26,116 @@ namespace SPT.Controllers
             _userManager = userManager;
             _env = env;
         }
-
         // =========================
-        // ADMIN & MENTOR DASHBOARD
+        // ADMIN DASHBOARD (MERGED)
         // =========================
         public async Task<IActionResult> Dashboard()
         {
-            // 1. High-Level Stats
-            ViewBag.TotalStudents = await _context.Students.CountAsync(s => s.EnrollmentStatus == "Active");
-            ViewBag.TotalMentors = await _context.Mentors.CountAsync();
-
-            // Critical Items
-            ViewBag.PendingLogs = await _context.ProgressLogs.CountAsync(l => !l.IsApproved);
-            ViewBag.OpenTickets = await _context.SupportTickets.CountAsync(t => !t.IsResolved);
-
-            // 2. Fetch Recent Unapproved Logs (The "Inbox")
-            var recentLogs = await _context.ProgressLogs
-                   .Include(l => l.Student)
-                   .Include(l => l.Module)
-                   .Where(l => !l.IsApproved)
-                   .OrderByDescending(l => l.Date)
-                   .Take(5)
-                   .ToListAsync();
-
-            // ==========================================
-            // 📊 CHART DATA PREPARATION
-            // ==========================================
-
-            // CHART 1: Students per Track
-            var studentsPerTrack = await _context.Students
+            // 1. Fetch Core Data
+            var students = await _context.Students
                 .Include(s => s.Track)
-                .Where(s => s.EnrollmentStatus == "Active")
-                .GroupBy(s => s.Track.Code)
-                .Select(g => new { Track = g.Key, Count = g.Count() })
+                .Include(s => s.ProgressLogs)
+                .Include(s => s.ModuleCompletions)
                 .ToListAsync();
 
-            ViewBag.TrackLabels = studentsPerTrack.Select(x => x.Track).ToArray();
-            ViewBag.TrackCounts = studentsPerTrack.Select(x => x.Count).ToArray();
+            var allModules = await _context.SyllabusModules.ToListAsync();
 
-            // CHART 2: Activity (Logs per Day - Last 7 Days)
-            var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6);
-            var logsLast7Days = await _context.ProgressLogs
+            // 2. Initialize ViewModel
+            var model = new AdminDashboardViewModel
+            {
+                PendingLogs = await _context.ProgressLogs.CountAsync(l => !l.IsApproved),
+                OpenTickets = await _context.SupportTickets.CountAsync(t => t.Status == "Open")
+            };
+
+            // ----------------------------------------------------
+            // PART A: Student Analytics Table Calculation
+            // ----------------------------------------------------
+            var performanceList = new List<StudentPerformanceDTO>();
+            var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6); // Ensure 7 day range
+
+            foreach (var s in students)
+            {
+                // Filter Logs for Last 7 Days
+                var recentLogs = s.ProgressLogs
+                    .Where(l => l.Date >= sevenDaysAgo && l.IsApproved)
+                    .ToList();
+
+                // Weekly Stats
+                decimal weeklyHours = recentLogs.Sum(l => l.Hours);
+                int checkIns = recentLogs.Select(l => l.Date.Date).Distinct().Count();
+
+                // Modules
+                int totalTrackModules = allModules.Count(m => m.TrackId == s.TrackId);
+                int completedCount = s.ModuleCompletions.Count(mc => mc.IsCompleted);
+
+                // Mentor Score
+                var ratedLogs = s.ProgressLogs
+                    .Where(l => l.MentorRating.HasValue)
+                    .OrderByDescending(l => l.Date)
+                    .Take(3)
+                    .ToList();
+
+                double avgScore = ratedLogs.Any()
+                    ? ratedLogs.Average(l => l.MentorRating.Value)
+                    : 0;
+
+                performanceList.Add(new StudentPerformanceDTO
+                {
+                    StudentId = s.Id,
+                    FullName = s.FullName,
+                    Track = s.Track?.Code ?? "N/A",
+                    ProfilePicture = s.ProfilePicture,
+                    WeeklyHours = weeklyHours,
+                    WeeklyCheckIns = checkIns,
+                    TotalModules = totalTrackModules,
+                    CompletedModules = completedCount,
+                    AverageMentorScore = Math.Round(avgScore, 1)
+                });
+            }
+
+            model.StudentPerformance = performanceList.OrderByDescending(p => p.ConsistencyScore).ToList();
+            model.ActiveStudents = performanceList.Count(p => p.Status == "Active");
+            if (performanceList.Any())
+            {
+                model.AvgConsistency = (decimal)performanceList.Average(p => p.ConsistencyScore);
+            }
+
+            // ----------------------------------------------------
+            // PART B: Chart Data Preparation
+            // ----------------------------------------------------
+
+            // Chart 1: Students per Track
+            var trackGroups = students
+                .Where(s => s.EnrollmentStatus == "Active")
+                .GroupBy(s => s.Track?.Code ?? "Unassigned")
+                .Select(g => new { Track = g.Key, Count = g.Count() })
+                .ToList();
+
+            model.TrackLabels = trackGroups.Select(x => x.Track).ToArray();
+            model.TrackCounts = trackGroups.Select(x => x.Count).ToArray();
+
+            // Chart 2: Activity (Logs per Day)
+            var allLogsLast7Days = await _context.ProgressLogs
                 .Where(l => l.Date >= sevenDaysAgo)
                 .GroupBy(l => l.Date.Date)
                 .Select(g => new { Date = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            // Fill in missing days
             var dateLabels = new List<string>();
             var logCounts = new List<int>();
 
             for (int i = 0; i < 7; i++)
             {
                 var date = sevenDaysAgo.AddDays(i);
-                var record = logsLast7Days.FirstOrDefault(l => l.Date == date);
+                var record = allLogsLast7Days.FirstOrDefault(l => l.Date == date);
                 dateLabels.Add(date.ToString("MMM dd"));
                 logCounts.Add(record?.Count ?? 0);
             }
 
-            ViewBag.DateLabels = dateLabels.ToArray();
-            ViewBag.LogCounts = logCounts.ToArray();
+            model.ActivityDates = dateLabels.ToArray();
+            model.ActivityCounts = logCounts.ToArray();
 
-            return View(recentLogs);
+            return View(model);
         }
 
         // =========================
@@ -105,46 +153,64 @@ namespace SPT.Controllers
             return View(logs);
         }
         // =========================
-        // APPROVE LOG ACTION (Handles both Simple & Detailed)
+        // =========================
+        // POST: Update, Approve, or Reject Log (Merged Logic)
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ApproveLog(int id, decimal? verifiedHours, int? quizScore, string? action)
+        public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description, int? mentorRating, string? action)
         {
             var log = await _context.ProgressLogs.FindAsync(id);
             if (log == null) return NotFound();
 
-            // Logic 1: Rejection
+            // 🛑 LOGIC 1: REJECTION
             if (action == "Reject")
             {
                 _context.ProgressLogs.Remove(log);
                 await _context.SaveChangesAsync();
                 TempData["Error"] = "❌ Log rejected and removed.";
-                return RedirectToAction(nameof(PendingLogs));
+                return RedirectToAction("ProgressLogs");
             }
 
-            // Logic 2: Approval
-            // If values are null (Simple Dashboard Click), use existing values
-            log.Hours = verifiedHours ?? log.Hours;
-            log.QuizScore = quizScore ?? log.QuizScore;
+            // 🛑 LOGIC 2: ENFORCE 5-HOUR LIMIT
+            // If hours passed (from edit modal), cap at 5. If null (quick approve), check existing.
+            decimal finalHours = hours ?? log.Hours;
+            if (finalHours > 5)
+            {
+                finalHours = 5;
+                TempData["Warning"] = "Hours capped at 5 (Daily Limit).";
+            }
+
+            // 🛑 LOGIC 3: UPDATE & APPROVE
+            log.Hours = finalHours;
+
+            // Only update description if provided (Detailed Edit Mode)
+            if (!string.IsNullOrEmpty(description))
+            {
+                log.ActivityDescription = description;
+            }
+
+            // Update Rating if provided
+            if (mentorRating.HasValue)
+            {
+                log.MentorRating = mentorRating;
+            }
+
+            // Mark as Approved
             log.IsApproved = true;
             log.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                // Capture who verified it
-                // Note: Ensure your ProgressLog model has VerifiedByUserId, or comment this out
-                // log.VerifiedByUserId = _userManager.GetUserId(User); 
-            }
-            catch { }
+            log.VerifiedByUserId = _userManager.GetUserId(User);
 
             await _context.SaveChangesAsync();
-            TempData["Success"] = "✅ Log verified successfully.";
+            TempData["Success"] = "✅ Log updated and verified.";
 
-            // Return to where we came from (Dashboard or List)
+            // Return to referring page (Dashboard or List)
             string referer = Request.Headers["Referer"].ToString();
-            if (referer.Contains("Dashboard")) return RedirectToAction(nameof(Dashboard));
-            return RedirectToAction(nameof(PendingLogs));
+            if (!string.IsNullOrEmpty(referer) && referer.Contains("Dashboard"))
+            {
+                return RedirectToAction("Dashboard");
+            }
+            return RedirectToAction("ProgressLogs");
         }
 
         // =========================
@@ -593,30 +659,49 @@ namespace SPT.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResolveTicket(int id, string response)
+        public async Task<IActionResult> ResolveTicket(int id, string response, string actionType)
         {
-            var ticket = await _context.SupportTickets.FindAsync(id);
+            // ✅ FIX 1: Include Student data to prevent NullReferenceException
+            var ticket = await _context.SupportTickets
+                .Include(t => t.Student)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
             if (ticket == null) return NotFound();
 
+            // Update the Admin Response
             ticket.AdminResponse = response;
-            ticket.IsResolved = true;
-            ticket.Status = "Resolved"; // Ensure string status updates too
-            ticket.ResolvedAt = DateTime.UtcNow; // Ensure you added this field to model, or remove if not using
 
-            // Notify the student
-            var notification = new Notification
+            // ✅ FIX 2: Check which button was clicked
+            if (actionType == "Resolve")
             {
-                UserId = ticket.Student.UserId, // Assuming you can access User via Student navigation
-                Message = $"✅ Your ticket '{ticket.Subject}' has been resolved.",
-                Type = "Success",
-                IsRead = false,
-                Url = "/Support/Index",
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.Notifications.Add(notification);
+                ticket.IsResolved = true;
+                ticket.Status = "Resolved";
+                TempData["Success"] = "Response sent and ticket closed.";
+            }
+            else
+            {
+                // Just a reply, keep it open
+                ticket.IsResolved = false;
+                ticket.Status = "In Progress"; // Change status to show it's being worked on
+                TempData["Success"] = "Response sent. Ticket remains open.";
+            }
+
+            // Send Notification (Only if Student exists)
+            if (ticket.Student != null)
+            {
+                var notification = new Notification
+                {
+                    UserId = ticket.Student.UserId,
+                    Message = $"💬 Admin responded to your ticket: '{ticket.Subject}'",
+                    Type = "Info",
+                    IsRead = false,
+                    Url = "/Support/Index",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(notification);
+            }
 
             await _context.SaveChangesAsync();
-            TempData["Success"] = "Ticket resolved and student notified.";
             return RedirectToAction(nameof(SupportTickets));
         }
         // =========================

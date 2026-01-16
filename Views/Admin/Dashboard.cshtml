@@ -1,70 +1,50 @@
-﻿@model List<SPT.Models.ProgressLog>
+﻿@model SPT.Models.ViewModels.AdminDashboardViewModel
 @{
-    ViewData["Title"] = "Admin Dashboard";
+    ViewData["Title"] = "Admin Analytics";
 }
 
 <div class="row g-4 mb-4">
     <div class="col-md-3">
-        <div class="custom-card d-flex align-items-center justify-content-between p-4 h-100">
-            <div>
-                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Active Students</h6>
-                <h2 class="mb-0 fw-bold text-dark">@ViewBag.TotalStudents</h2>
-            </div>
-            <div class="icon-btn bg-primary text-white" style="width: 50px; height: 50px; font-size: 1.5rem;">
-                <i class="fas fa-user-graduate"></i>
-            </div>
+        <div class="custom-card border-start border-4 border-primary p-3">
+            <h6 class="text-muted text-uppercase small fw-bold">Active Students</h6>
+            <h2 class="fw-bold mb-0 text-primary">@Model.ActiveStudents</h2>
+            <small class="text-muted">Checked in ≥ 3 times/week</small>
         </div>
     </div>
-
     <div class="col-md-3">
-        <div class="custom-card d-flex align-items-center justify-content-between p-4 h-100">
-            <div>
-                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Pending Logs</h6>
-                <h2 class="mb-0 fw-bold text-warning">@ViewBag.PendingLogs</h2>
-            </div>
-            <div class="icon-btn bg-warning text-dark" style="width: 50px; height: 50px; font-size: 1.5rem;">
-                <i class="fas fa-clock"></i>
-            </div>
+        <div class="custom-card border-start border-4 border-warning p-3">
+            <h6 class="text-muted text-uppercase small fw-bold">Pending Logs</h6>
+            <h2 class="fw-bold mb-0 text-warning">@Model.PendingLogs</h2>
+            <small class="text-muted">Need approval</small>
         </div>
     </div>
-
     <div class="col-md-3">
-        <div class="custom-card d-flex align-items-center justify-content-between p-4 h-100">
-            <div>
-                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Open Tickets</h6>
-                <h2 class="mb-0 fw-bold text-danger">@ViewBag.OpenTickets</h2>
-            </div>
-            <div class="icon-btn bg-danger text-white" style="width: 50px; height: 50px; font-size: 1.5rem;">
-                <i class="fas fa-envelope-open-text"></i>
-            </div>
+        <div class="custom-card border-start border-4 border-danger p-3">
+            <h6 class="text-muted text-uppercase small fw-bold">Open Tickets</h6>
+            <h2 class="fw-bold mb-0 text-danger">@Model.OpenTickets</h2>
+            <small class="text-muted">Support requests</small>
         </div>
     </div>
-
     <div class="col-md-3">
-        <div class="custom-card d-flex align-items-center justify-content-between p-4 h-100">
-            <div>
-                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Mentors</h6>
-                <h2 class="mb-0 fw-bold text-success">@ViewBag.TotalMentors</h2>
-            </div>
-            <div class="icon-btn bg-success text-white" style="width: 50px; height: 50px; font-size: 1.5rem;">
-                <i class="fas fa-chalkboard-teacher"></i>
-            </div>
+        <div class="custom-card border-start border-4 border-info p-3">
+            <h6 class="text-muted text-uppercase small fw-bold">Avg Consistency</h6>
+            <h2 class="fw-bold mb-0 text-info">@Math.Round(Model.AvgConsistency)%</h2>
+            <small class="text-muted">Class-wide performance</small>
         </div>
     </div>
 </div>
 
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
-        <div class="custom-card h-100">
+        <div class="custom-card h-100 p-4">
             <h5 class="card-title-custom mb-3 border-0">📈 Learning Activity (Last 7 Days)</h5>
             <div style="height: 300px;">
                 <canvas id="activityChart"></canvas>
             </div>
         </div>
     </div>
-
     <div class="col-lg-4">
-        <div class="custom-card h-100">
+        <div class="custom-card h-100 p-4">
             <h5 class="card-title-custom mb-3 border-0">🎓 Students per Track</h5>
             <div style="height: 250px; position: relative;">
                 <canvas id="trackChart"></canvas>
@@ -73,154 +53,131 @@
     </div>
 </div>
 
-<div class="row g-4">
-
-    <div class="col-lg-8">
-        <div class="custom-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-                <h5 class="card-title-custom mb-0 border-0">📄 Recent Logs Needing Review</h5>
-                <a asp-action="PendingLogs" class="btn btn-sm btn-outline-primary rounded-pill px-3">View All</a>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr class="text-muted small text-uppercase">
-                            <th>Student</th>
-                            <th>Module</th>
-                            <th>Date</th>
-                            <th class="text-center">Hours</th>
-                            <th class="text-end">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model != null && Model.Any())
-
-                        {
-
-                            foreach (var log in Model)
-
-                            {
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar-circle bg-light text-primary me-3 fw-bold shadow-sm" 
-                                                         style="width:35px;height:35px;display:flex;align-items:center;justify-content:center;border-radius:50%;">
-                                                @(log.Student?.FullName.Substring(0, 1) ?? "?")
-                                                    </div>
-                                                    <div>
-                                                        <span class="d-block fw-bold text-dark" style="font-size: 0.9rem;">@log.Student?.FullName</span>
-                                                        <span class="d-block text-muted small" style="font-size:0.75rem;">@log.Student?.Cohort?.Name</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-light text-dark border">@log.Module?.ModuleCode</span>
-                                            </td>
-                                            <td class="text-muted small">@log.Date.ToString("MMM dd")</td>
-                                            <td class="text-center fw-bold">@log.Hours</td>
-                                            <td class="text-end">
-                                                <form asp-action="ApproveLog" method="post" class="d-inline">
-                                                    <input type="hidden" name="id" value="@log.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-success shadow-sm rounded-circle" 
-                                                            style="width: 32px; height: 32px;" title="Quick Approve">
-                                                        <i class="fas fa-check"></i>
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                            }
-
-                        }
-
-                        else
-
-                        {
-                                <tr>
-                                    <td colspan="5" class="text-center py-5 text-muted">
-                                        <div class="mb-3">
-                                            <i class="fas fa-check-circle fa-3x text-success opacity-50"></i>
-                                        </div>
-                                        <h6 class="fw-bold">All Caught Up!</h6>
-                                        <p class="mb-0 small">No pending logs requiring approval.</p>
-                                    </td>
-                                </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="custom-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0">Student Performance Details</h5>
+        <input type="text" class="form-control w-25" placeholder="Search student..." id="studentSearch">
     </div>
 
-    <div class="col-lg-4">
-        <div class="custom-card">
-            <h5 class="card-title-custom">⚡ Quick Actions</h5>
-
-            <div class="d-grid gap-3 mt-3">
-
-                @if (User.IsInRole("Admin"))
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="bg-light">
+                <tr>
+                    <th>Student</th>
+                    <th>Status</th>
+                    <th>Hours (7d)</th>
+                    <th>Consistency</th>
+                    <th>Syllabus Progress</th>
+                    <th>Mentor Rating</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model.StudentPerformance)
 
                 {
-                        <a asp-action="CreateStudent" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                            <div class="icon-btn bg-primary text-white me-3 shadow-sm"><i class="fas fa-user-plus"></i></div>
-                            <div>
-                                <span class="d-block fw-bold text-dark">Create New Student</span>
-                                <small class="text-muted">Register user & assign track</small>
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle me-2 border" width="40" height="40" style="object-fit:cover;">
+                                <div>
+                                    <div class="fw-bold">@s.FullName</div>
+                                    <small class="text-muted badge bg-light text-dark border">@s.Track</small>
+                                </div>
                             </div>
-                        </a>
+                        </td>
+                        <td>
+                            @if (s.Status == "Active")
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success">Active</span>
+                            }
 
-                        <a asp-action="CreateMentor" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                            <div class="icon-btn bg-dark text-white me-3 shadow-sm"><i class="fas fa-chalkboard-teacher"></i></div>
-                            <div>
-                                <span class="d-block fw-bold text-dark">Add Mentor</span>
-                                <small class="text-muted">Onboard new staff</small>
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger">Inactive</span>
+                            }
+                            <div class="small text-muted mt-1">@s.WeeklyCheckIns check-ins</div>
+                        </td>
+                        <td><h6 class="mb-0 fw-bold">@s.WeeklyHours hrs</h6></td>
+                        <td style="width: 15%;">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Score</span><span class="fw-bold">@s.ConsistencyScore%</span>
                             </div>
-                        </a>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar @(s.ConsistencyScore >= 70 ? "bg-success" : "bg-warning")" style="width: @s.ConsistencyScore%"></div>
+                            </div>
+                        </td>
+                        <td style="width: 15%;">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>@s.CompletedModules / @s.TotalModules</span><span class="fw-bold">@s.SyllabusProgress%</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-primary" style="width: @s.SyllabusProgress%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            @if (s.AverageMentorScore > 0)
 
-                        <a asp-action="CreateAnnouncement" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                            <div class="icon-btn bg-warning text-white me-3 shadow-sm"><i class="fas fa-bullhorn"></i></div>
-                            <div>
-                                <span class="d-block fw-bold text-dark">Broadcast News</span>
-                                <small class="text-muted">Notify students/mentors</small>
-                            </div>
-                        </a>
+                            {
+                                <div class="text-warning">
+                                    <span class="fw-bold text-dark me-1">@s.AverageMentorScore</span>
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            }
+
+                            else
+                            {
+                                <span class="text-muted small">No ratings</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="ProgressLogs" asp-route-studentId="@s.StudentId" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i> Logs</a>
+                        </td>
+                    </tr>
                 }
-
-                <a asp-controller="Support" asp-action="Index" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                    <div class="icon-btn bg-secondary text-white me-3 shadow-sm"><i class="fas fa-headset"></i></div>
-                    <div>
-                        <span class="d-block fw-bold text-dark">Support Center</span>
-                        <small class="text-muted">Reply to open tickets</small>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <div class="custom-card mt-4 bg-primary text-white position-relative overflow-hidden border-0">
-            <div style="position: relative; z-index: 2;">
-                <h5 class="fw-bold mb-3">System Status</h5>
-                <div class="d-flex justify-content-between border-bottom border-white border-opacity-25 pb-2 mb-2">
-                    <span>Server Time</span>
-                    <span class="font-monospace">@DateTime.UtcNow.ToString("HH:mm") UTC</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>Database</span>
-                    <span class="badge bg-success">Connected</span>
-                </div>
-            </div>
-            <i class="fas fa-server position-absolute" style="font-size: 8rem; opacity: 0.1; right: -20px; bottom: -20px;"></i>
-        </div>
+            </tbody>
+        </table>
     </div>
 </div>
 
-<style>
-    .transition-hover {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .transition-hover:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-        background-color: #fff !important; 
-        border-color: var(--primary-color) !important;
-    }
-</style>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Data passed from Controller
+        const trackLabels = @Html.Raw(Json.Serialize(Model.TrackLabels));
+        const trackCounts = @Html.Raw(Json.Serialize(Model.TrackCounts));
+        const dateLabels = @Html.Raw(Json.Serialize(Model.ActivityDates));
+        const logCounts = @Html.Raw(Json.Serialize(Model.ActivityCounts));
+
+        // Chart 1: Activity
+        new Chart(document.getElementById('activityChart'), {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [{
+                    label: 'Logs Submitted',
+                    data: logCounts,
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Chart 2: Tracks
+        new Chart(document.getElementById('trackChart'), {
+            type: 'doughnut',
+            data: {
+                labels: trackLabels,
+                datasets: [{
+                    data: trackCounts,
+                    backgroundColor: ['#4361ee', '#3a0ca3', '#7209b7', '#f72585']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    </script>
+}

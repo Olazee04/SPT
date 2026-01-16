@@ -68,14 +68,22 @@
                                                 <small class="text-muted fw-bold">ISSUE:</small>
                                                 <p class="mb-0">@ticket.Message</p>
                                             </div>
+
                                             <input type="hidden" name="id" value="@ticket.Id" />
+
                                             <div class="mb-3">
                                                 <label class="form-label fw-bold">Your Response</label>
-                                                <textarea name="response" class="form-control" rows="4" required placeholder="Type solution here..."></textarea>
+                                                <textarea name="response" class="form-control" rows="4" required placeholder="Type solution here...">@ticket.AdminResponse</textarea>
                                             </div>
                                         </div>
-                                        <div class="modal-footer">
-                                            <button type="submit" class="btn btn-success w-100">Send & Mark Resolved</button>
+                                        <div class="modal-footer justify-content-between">
+                                            <button type="submit" name="actionType" value="Reply" class="btn btn-primary">
+                                                <i class="fas fa-paper-plane me-2"></i> Send Reply (Keep Open)
+                                            </button>
+
+                                            <button type="submit" name="actionType" value="Resolve" class="btn btn-success">
+                                                <i class="fas fa-check-circle me-2"></i> Send & Close Ticket
+                                            </button>
                                         </div>
                                     </form>
                                 </div>

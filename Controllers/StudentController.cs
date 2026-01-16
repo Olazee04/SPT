@@ -29,19 +29,20 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // STUDENT DASHBOARD
+        // GET: STUDENT DASHBOARD (Merged Stats & Locking)
         // =========================
         public async Task<IActionResult> Dashboard()
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
 
-            // 1. Fetch Student Data
+            // 1. Fetch Student Data & Relations
             var student = await _context.Students
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.Mentor)
                 .Include(s => s.ProgressLogs)
+                .Include(s => s.ModuleCompletions)
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return View("ProfilePending");
@@ -51,20 +52,18 @@ namespace SPT.Controllers
             var today = DateTime.UtcNow.Date;
 
             // ---------------------------------------------------------
-            // 📊 NEW STATS ENGINE (Monday Reset)
+            // 📊 STATS ENGINE
             // ---------------------------------------------------------
 
-            // A. Calculate "Start of Week" (Most recent Monday)
-            // DayOfWeek.Monday is 1. If today is Sunday (0), we go back 6 days.
+            // A. Weekly Hours (Reset on Monday)
             int daysSinceMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
             var thisMonday = today.AddDays(-daysSinceMonday);
 
-            // B. Calculate Weekly Hours (From Monday to Now)
             decimal weeklyHours = logs
                 .Where(l => l.Date.Date >= thisMonday)
                 .Sum(l => l.Hours);
 
-            // C. Calculate Consistency (Based on Weekly Target)
+            // B. Consistency Score
             int consistencyScore = 0;
             if (student.TargetHoursPerWeek > 0)
             {
@@ -72,7 +71,7 @@ namespace SPT.Controllers
                 if (consistencyScore > 100) consistencyScore = 100;
             }
 
-            // D. Calculate Streak
+            // C. Streak Calculation
             int currentStreak = 0;
             var logDates = logs.Select(l => l.Date.Date).Distinct().OrderByDescending(d => d).ToList();
             if (logDates.Any())
@@ -89,7 +88,7 @@ namespace SPT.Controllers
                 }
             }
 
-            // E. Calculate Global Rank
+            // D. Global Rank
             decimal myTotalHours = logs.Sum(l => l.Hours);
             var betterStudentsCount = await _context.Students
                 .Where(s => s.EnrollmentStatus == "Active" && s.Id != student.Id)
@@ -98,59 +97,135 @@ namespace SPT.Controllers
                     TotalHours = s.ProgressLogs.Where(p => p.IsApproved).Sum(p => (decimal?)p.Hours) ?? 0
                 })
                 .CountAsync(x => x.TotalHours > myTotalHours);
+
             int rank = betterStudentsCount + 1;
 
-            // ---------------------------------------------------------
-            // PASS DATA TO VIEW
-            // ---------------------------------------------------------
-            ViewBag.WeeklyHours = weeklyHours; // <--- NEW
+            // 3. Pass Stats to View
+            ViewBag.WeeklyHours = weeklyHours;
             ViewBag.Streak = currentStreak;
             ViewBag.Consistency = consistencyScore;
             ViewBag.Rank = rank;
 
-            // 👇 NEW: PASS MODULES FOR THE LOG WORK DROPDOWN 👇
-            ViewBag.CurrentModules = await _context.SyllabusModules
+            // ---------------------------------------------------------
+            // 🔒 MODULE LOCKING LOGIC
+            // ---------------------------------------------------------
+            var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
-                .Select(m => new { Id = m.Id, Code = m.ModuleCode, Name = m.ModuleName })
+                .Select(m => new { m.Id, m.ModuleCode, m.ModuleName, m.DisplayOrder })
                 .ToListAsync();
+
+            var completedModuleIds = student.ModuleCompletions
+                .Where(c => c.IsCompleted)
+                .Select(c => c.ModuleId)
+                .ToList();
+
+            // Find last completed order
+            int lastCompletedOrder = 0;
+            if (completedModuleIds.Any())
+            {
+                var lastCompleted = allModules
+                    .Where(m => completedModuleIds.Contains(m.Id))
+                    .OrderByDescending(m => m.DisplayOrder)
+                    .FirstOrDefault();
+
+                if (lastCompleted != null) lastCompletedOrder = lastCompleted.DisplayOrder;
+            }
+
+            // Allow: All Completed + Immediate Next
+            var unlockedModules = allModules
+                .Where(m => m.DisplayOrder <= lastCompletedOrder + 1)
+                .ToList();
+
+            ViewBag.CurrentModules = unlockedModules;
 
             return View(student);
         }
 
         // =========================
-        // POST: Log Work (Daily Standup)
+        // POST: LOG WORK (Detailed Version)
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> LogWork(int moduleId, decimal hours, string description, string evidenceUrl, string location)
+        public async Task<IActionResult> LogWork(
+            int moduleId,
+            decimal hours,
+            string description,
+            string evidenceUrl,
+            string location,
+            string customTopic,
+            // New Fields 👇
+            bool practiceDone,
+            int? quizScore,
+            int? miniProjectProgress,
+            string? blocker,
+            string? nextGoal
+        )
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            var student = await _context.Students
+                .Include(s => s.ModuleCompletions)
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return NotFound();
 
-            // 1. Create Log Entry
+            // 🛑 ENFORCE 5-HOUR LIMIT
+            if (hours > 5)
+            {
+                TempData["Error"] = "Maximum daily limit is 5 hours.";
+                return RedirectToAction(nameof(Dashboard));
+            }
+
+            // 🛑 HANDLE "OTHER"
+            if (moduleId == -1)
+            {
+                if (string.IsNullOrWhiteSpace(customTopic))
+                {
+                    TempData["Error"] = "Please specify what you learned.";
+                    return RedirectToAction(nameof(Dashboard));
+                }
+
+                var allModules = await _context.SyllabusModules
+                    .Where(m => m.TrackId == student.TrackId)
+                    .OrderBy(m => m.DisplayOrder)
+                    .ToListAsync();
+
+                var completedIds = student.ModuleCompletions.Select(c => c.ModuleId).ToList();
+                var currentModule = allModules.FirstOrDefault(m => !completedIds.Contains(m.Id)) ?? allModules.Last();
+
+                moduleId = currentModule.Id;
+                description = $"[Self-Study: {customTopic}] " + description;
+            }
+
+            // 💾 CREATE LOG
             var log = new ProgressLog
             {
                 StudentId = student.Id,
                 ModuleId = moduleId,
                 Date = DateTime.UtcNow,
                 Hours = hours,
-                Location = location, // "Office" or "Remote"
+                Location = location,
 
-                // 🆕 NEW FIELDS
-                ActivityDescription = description,
+                // Mapped Fields
+                ActivityDescription = description, // aka LessonCovered
+                LessonCovered = description,       // Redundant but safe if model has both
                 EvidenceUrl = evidenceUrl,
 
-                IsApproved = false, // Admin/Mentor must approve
+                // New Detailed Fields
+                PracticeDone = practiceDone,
+                QuizScore = quizScore,
+                MiniProjectProgress = miniProjectProgress,
+                Blocker = blocker,
+                NextGoal = nextGoal,
+
+                IsApproved = false,
                 CreatedAt = DateTime.UtcNow
             };
 
             _context.ProgressLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = "✅ Work logged successfully! Waiting for approval.";
+            TempData["Success"] = "Detailed log submitted successfully!";
             return RedirectToAction(nameof(Dashboard));
         }
 

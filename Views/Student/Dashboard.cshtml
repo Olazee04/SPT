@@ -277,8 +277,10 @@
                     <form asp-action="LogWork" method="post">
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold small text-uppercase text-muted">Current Module</label>
-                            <select name="moduleId" class="form-select" required>
+                            <label class="form-label fw-bold small text-uppercase text-muted">Topic / Module</label>
+                            <select name="moduleId" id="moduleSelect" class="form-select" required onchange="handleModuleChange(this)">
+                                <option value="" selected disabled>Select what you worked on...</option>
+
                                 @if (ViewBag.CurrentModules != null)
 
                                 {
@@ -286,52 +288,112 @@
                                     foreach (var m in (IEnumerable<dynamic>)ViewBag.CurrentModules)
 
                                     {
-                                        <option value="@m.Id">@m.Code - @m.Name</option>
+                                        <option value="@m.Id" data-is-project="@(m.Name.ToString().Contains("Project") ? "true" : "false")">
+                                            @m.Code - @m.Name
+                                        </option>
                                     }
 
                                 }
-
-                                else
-
-                                {
-                                    <option value="">No modules found</option>
-                                }
+                                <option value="-1" class="fw-bold text-primary">➕ Other / Self-Study</option>
                             </select>
+                        </div>
+
+                        <div class="mb-3 d-none" id="customTopicDiv">
+                            <label class="form-label fw-bold small text-primary">Enter Custom Topic</label>
+                            <input type="text" name="customTopic" class="form-control border-primary" placeholder="e.g. C# Delegates (Extra)" />
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-6">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Hours Spent</label>
-                                <input type="number" step="0.5" min="0.5" max="24" name="hours" class="form-control" required placeholder="e.g. 4.5">
+                                <input type="number" step="0.5" min="0.5" max="5" name="hours" class="form-control" required placeholder="Max 5.0"
+                                       oninput="if(this.value > 5) this.value = 5;">
+                                <div class="form-text text-danger small">Daily Max: 5 Hours</div>
                             </div>
                             <div class="col-6">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Location</label>
                                 <select name="location" class="form-select">
                                     <option value="Remote">🏠 Remote</option>
-                                    <option value="Office">🏢 Office / Hub</option>
+                                    <option value="Office">🏢 Office</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold small text-uppercase text-muted">What did you learn?</label>
-                            <textarea name="description" class="form-control" rows="3" required placeholder="Briefly describe what you studied or built today..."></textarea>
+                            <label class="form-label fw-bold small text-uppercase text-muted">What did you learn? (Lesson Covered)</label>
+                            <textarea name="description" class="form-control" rows="2" required placeholder="Briefly describe the lesson..."></textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" name="practiceDone" value="true" id="practiceCheck">
+                                    <label class="form-check-label fw-bold" for="practiceCheck">
+                                        ✅ Practice Done?
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Quiz Score (Optional)</label>
+                                <input type="number" name="quizScore" class="form-control" placeholder="0 - 100" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 d-none bg-light p-3 rounded border" id="projectProgressDiv">
+                            <label class="form-label fw-bold text-primary">🚀 Mini-Project Progress (%)</label>
+                            <input type="range" name="miniProjectProgress" class="form-range" min="0" max="100" step="10" oninput="document.getElementById('progVal').innerText = this.value + '%'">
+                            <div class="text-end fw-bold text-primary" id="progVal">0%</div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Any Blockers?</label>
+                                <input type="text" name="blocker" class="form-control" placeholder="Stuck on..." />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Goal for Tomorrow</label>
+                                <input type="text" name="nextGoal" class="form-control" placeholder="Will finish..." />
+                            </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-uppercase text-muted">Proof of Work (Optional)</label>
+                            <label class="form-label fw-bold small text-uppercase text-muted">Proof of Work (Link)</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fab fa-github"></i></span>
                                 <input type="url" name="evidenceUrl" class="form-control" placeholder="https://github.com/..." />
                             </div>
-                            <div class="form-text">Link to GitHub commit, PR, or hosted project.</div>
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Submit Log</button>
+                            <button type="submit" class="btn btn-primary btn-lg">Submit Detailed Log</button>
                         </div>
 
                     </form>
+
+                    <script>
+                        function handleModuleChange(select) {
+                            var customDiv = document.getElementById("customTopicDiv");
+                            var projectDiv = document.getElementById("projectProgressDiv");
+                            var selectedOption = select.options[select.selectedIndex];
+
+                            // 1. Handle "Other" Custom Topic
+                            if (select.value === "-1") {
+                                customDiv.classList.remove("d-none");
+                                customDiv.querySelector("input").required = true;
+                            } else {
+                                customDiv.classList.add("d-none");
+                                customDiv.querySelector("input").required = false;
+                            }
+
+                            // 2. Handle Project Progress Bar (Only if module name contains "Project")
+                            var isProject = selectedOption.getAttribute("data-is-project") === "true";
+                            if (isProject) {
+                                projectDiv.classList.remove("d-none");
+                            } else {
+                                projectDiv.classList.add("d-none");
+                            }
+                        }
+                    </script>
                 </div>
             </div>
         </div>

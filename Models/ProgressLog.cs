@@ -40,6 +40,9 @@ namespace SPT.Models
         public string? ActivityDescription { get; set; }
         public string? EvidenceUrl { get; set; }
 
+        [Range(1, 5)]
+        public int? MentorRating { get; set; } // 1-5 Star Rating
+
         public string LoggedBy { get; set; } = string.Empty;
         public string LoggedByUserId { get; set; } = string.Empty;
 
