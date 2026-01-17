@@ -43,11 +43,45 @@
                     </div>
                 </div>
 
-                <div class="list-group-item py-4 border-bottom-0">
-                    <h6 class="fw-bold text-danger mb-2">Danger Zone</h6>
-                    <button class="btn btn-light text-danger w-100 text-start border">
-                        <i class="fas fa-trash-alt me-2"></i> Request Account Deletion
-                    </button>
+                <div class="card border-danger shadow-sm mt-4">
+                    <div class="card-header bg-danger text-white fw-bold">
+                        <i class="fas fa-exclamation-triangle"></i> Danger Zone
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">If you wish to leave the program permanently, you must request account deletion from an administrator.</p>
+
+                        <button type="button" class="btn btn-outline-danger w-100 text-start" data-bs-toggle="modal" data-bs-target="#deleteRequestModal">
+                            <i class="fas fa-user-times me-2"></i> Request Account Deletion
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="deleteRequestModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header border-0">
+                                <h5 class="modal-title text-danger fw-bold">⚠️ Request Deletion?</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>This will send a formal request to the Administrator to permanently delete your account and all associated data.</p>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">Reason (Optional)</label>
+                                    <textarea id="deletionReason" class="form-control" rows="2" placeholder="Why are you leaving?"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+
+                                <form asp-action="RequestDeletion" asp-controller="Student" method="post">
+                                    <input type="hidden" name="reason" id="hiddenReason" />
+                                    <button type="submit" class="btn btn-danger fw-bold" onclick="document.getElementById('hiddenReason').value = document.getElementById('deletionReason').value">
+                                        Submit Request
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
             </div>

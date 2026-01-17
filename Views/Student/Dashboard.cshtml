@@ -273,9 +273,22 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <div class="modal-body">
-                    <form asp-action="LogWork" method="post">
+               
+                        <div class="modal-body">
+                            <form asp-action="LogWork" method="post">
 
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-uppercase text-muted">Log Date</label>
+                                    <input type="date" name="logDate" class="form-control" required
+                                           value="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                                           max="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                                           min="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")" />
+                                    <div class="form-text text-muted small">You can only log work for Today or Yesterday.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-uppercase text-muted">Topic / Module</label>
+                                    <select name="moduleId" id="moduleSelect" class="form-select" required onchange="handleModuleChange(this)">
+                                        ```
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-uppercase text-muted">Topic / Module</label>
                             <select name="moduleId" id="moduleSelect" class="form-select" required onchange="handleModuleChange(this)">
@@ -325,17 +338,13 @@
                         </div>
 
                         <div class="row mb-3">
-                            <div class="col-6">
-                                <div class="form-check mt-4">
+                            <div class="col-12">
+                                <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" name="practiceDone" value="true" id="practiceCheck">
                                     <label class="form-check-label fw-bold" for="practiceCheck">
-                                        ✅ Practice Done?
+                                        ✅ I completed the practical exercises for this topic
                                     </label>
                                 </div>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-uppercase text-muted">Quiz Score (Optional)</label>
-                                <input type="number" name="quizScore" class="form-control" placeholder="0 - 100" min="0" max="100">
                             </div>
                         </div>
 

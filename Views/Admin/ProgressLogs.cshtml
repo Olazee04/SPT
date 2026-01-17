@@ -1,6 +1,29 @@
 ﻿@model List<SPT.Models.ProgressLog>
 @{
     ViewData["Title"] = "Master Progress Logs";
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold"><i class="fas fa-clipboard-check text-primary"></i> Review Activity Logs</h2>
+
+            @if (ViewBag.IsFiltered == true)
+            {
+                <div class="badge bg-warning text-dark fs-6 mt-1">
+                    <i class="fas fa-filter"></i> Filtering logs for: <strong>@ViewBag.FilterName</strong>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted">Approve, reject, or edit student submissions.</p>
+            }
+        </div>
+
+        @if (ViewBag.IsFiltered == true)
+        {
+            <a asp-action="ProgressLogs" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Clear Filter (Show All)
+            </a>
+        }
+    </div>
     string status = ViewBag.CurrentStatus as string;
 }
 
@@ -166,6 +189,11 @@
     </select>
 </div>
 
+                                    <div class="col-6">
+                                        <label class="form-label fw-bold text-primary">Quiz Score (0-100)</label>
+                                        <input type="number" name="quizScore" class="form-control" placeholder="If applicable" min="0" max="100">
+                                    </div>
+                                </div>
                                     <div class="modal-footer border-0 pt-0">
                                         @if (!log.IsApproved)
                                         {
@@ -190,7 +218,7 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        
                     }
                 }
                 else

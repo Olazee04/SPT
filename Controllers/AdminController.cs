@@ -153,15 +153,19 @@ namespace SPT.Controllers
             return View(logs);
         }
         // =========================
-        // =========================
         // POST: Update, Approve, or Reject Log (Merged Logic)
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description, int? mentorRating, string? action)
+       public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description, int? mentorRating, int? quizScore, string? action)
         {
+            // 1. Fetch Log with Tracking
             var log = await _context.ProgressLogs.FindAsync(id);
-            if (log == null) return NotFound();
+            if (log == null)
+            {
+                TempData["Error"] = "Log not found.";
+                return RedirectToAction("ProgressLogs");
+            }
 
             // 🛑 LOGIC 1: REJECTION
             if (action == "Reject")
@@ -171,38 +175,59 @@ namespace SPT.Controllers
                 TempData["Error"] = "❌ Log rejected and removed.";
                 return RedirectToAction("ProgressLogs");
             }
-
-            // 🛑 LOGIC 2: ENFORCE 5-HOUR LIMIT
-            // If hours passed (from edit modal), cap at 5. If null (quick approve), check existing.
-            decimal finalHours = hours ?? log.Hours;
+         decimal finalHours = hours ?? log.Hours;
             if (finalHours > 5)
             {
                 finalHours = 5;
-                TempData["Warning"] = "Hours capped at 5 (Daily Limit).";
+                TempData["Warning"] = "Hours capped at 5.";
             }
 
-            // 🛑 LOGIC 3: UPDATE & APPROVE
+            // 🛑 LOGIC 3: UPDATE FIELDS
             log.Hours = finalHours;
 
-            // Only update description if provided (Detailed Edit Mode)
+            // Only update description if provided
             if (!string.IsNullOrEmpty(description))
-            {
                 log.ActivityDescription = description;
-            }
 
-            // Update Rating if provided
-            if (mentorRating.HasValue)
-            {
-                log.MentorRating = mentorRating;
-            }
+            // Update Scores
+            if (mentorRating.HasValue) log.MentorRating = mentorRating;
+            if (quizScore.HasValue) log.QuizScore = quizScore;
 
-            // Mark as Approved
+            // 🛑 LOGIC 4: APPROVE & SAVE
             log.IsApproved = true;
             log.UpdatedAt = DateTime.UtcNow;
             log.VerifiedByUserId = _userManager.GetUserId(User);
 
-            await _context.SaveChangesAsync();
-            TempData["Success"] = "✅ Log updated and verified.";
+            // 💾 FORCE SAVE
+            try
+            {
+                _context.Entry(log).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                // 👇👇👇 ADD NOTIFICATION LOGIC HERE 👇👇👇
+                if (action == "Approve" || log.IsApproved) // Only notify on approval
+                {
+                    var notification = new Notification
+                    {
+                        UserId = log.StudentId.ToString(), // Ensure StudentId is converted to string if needed
+                        Title = "Log Approved",
+                        Message = $"Your log for {log.Date:MMM dd} was approved.",
+                        Type = "Success",
+                        Url = "/Student/Dashboard",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Notifications.Add(notification);
+                    await _context.SaveChangesAsync(); // Save the notification
+                }
+                // 👆👆👆 END NOTIFICATION LOGIC 👆👆👆
+
+                TempData["Success"] = "✅ Log verified successfully.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Database Error: " + ex.Message;
+            }
+           
 
             // Return to referring page (Dashboard or List)
             string referer = Request.Headers["Referer"].ToString();
@@ -210,7 +235,7 @@ namespace SPT.Controllers
             {
                 return RedirectToAction("Dashboard");
             }
-            return RedirectToAction("ProgressLogs");
+            return RedirectToAction("ProgressLogs"); // Fallback to list
         }
 
         // =========================
@@ -564,16 +589,30 @@ namespace SPT.Controllers
         // MASTER PROGRESS LOGS (History & Review)
         // =========================
         [HttpGet]
-        public async Task<IActionResult> ProgressLogs(string status = "All", string search = "")
+        public async Task<IActionResult> ProgressLogs(string status = "All", string search = "", int? studentId = null)
         {
             var query = _context.ProgressLogs
                 .Include(l => l.Student)
                 .ThenInclude(s => s.Track)
                 .Include(l => l.Module)
-                .OrderByDescending(l => l.Date) // Newest first
                 .AsQueryable();
 
-            // 1. Filter by Status
+            // 1. 🔍 FILTER: By Specific Student (clicked from Dashboard)
+            if (studentId.HasValue)
+            {
+                query = query.Where(l => l.StudentId == studentId.Value);
+
+                // Fetch student name for the view title
+                var studentName = await _context.Students
+                    .Where(s => s.Id == studentId)
+                    .Select(s => s.FullName)
+                    .FirstOrDefaultAsync();
+
+                ViewBag.FilterName = studentName;
+                ViewBag.IsFiltered = true;
+            }
+
+            // 2. Filter by Status
             if (status == "Pending")
             {
                 query = query.Where(l => !l.IsApproved);
@@ -583,20 +622,22 @@ namespace SPT.Controllers
                 query = query.Where(l => l.IsApproved);
             }
 
-            // 2. Filter by Student Name (Search)
+            // 3. Filter by Student Name (Search Box)
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(l => l.Student.FullName.Contains(search));
             }
 
-            // Pass current filter state to View for the UI buttons
+            // Order: Newest first
+            query = query.OrderByDescending(l => l.Date);
+
+            // Pass current filter state to View
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentSearch = search;
 
             var logs = await query.ToListAsync();
             return View(logs);
         }
-
         // =========================
         // STUDENT DETAILS (Profile View for Admin)
         // =========================
@@ -753,6 +794,33 @@ namespace SPT.Controllers
             }
             return RedirectToAction(nameof(ManageLibrary));
         }
+        // =========================
+        // GET: MANAGE QUIZZES
+        // =========================
+        public async Task<IActionResult> ManageQuizzes(int? trackId)
+        {
+            // 1. Start Query for Modules
+            var query = _context.SyllabusModules
+                .Include(m => m.Track)
+                .AsQueryable();
 
+            // 2. Filter by Track if selected
+            if (trackId.HasValue)
+            {
+                query = query.Where(m => m.TrackId == trackId.Value);
+            }
+
+            // 3. Execute Query
+            var modules = await query
+                .OrderBy(m => m.Track.Name)
+                .ThenBy(m => m.DisplayOrder)
+                .ToListAsync();
+
+            // 4. Populate Dropdown for filtering
+            ViewBag.Tracks = await _context.Tracks.ToListAsync();
+            ViewBag.SelectedTrackId = trackId;
+
+            return View(modules); // 👈 We are sending "List<SyllabusModule>"
+        }
     }
 }

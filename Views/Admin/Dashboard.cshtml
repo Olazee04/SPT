@@ -5,34 +5,63 @@
 
 <div class="row g-4 mb-4">
     <div class="col-md-3">
-        <div class="custom-card border-start border-4 border-primary p-3">
+        <div class="custom-card border-start border-4 border-primary p-3 h-100">
             <h6 class="text-muted text-uppercase small fw-bold">Active Students</h6>
             <h2 class="fw-bold mb-0 text-primary">@Model.ActiveStudents</h2>
             <small class="text-muted">Checked in ≥ 3 times/week</small>
         </div>
     </div>
+
     <div class="col-md-3">
-        <div class="custom-card border-start border-4 border-warning p-3">
-            <h6 class="text-muted text-uppercase small fw-bold">Pending Logs</h6>
-            <h2 class="fw-bold mb-0 text-warning">@Model.PendingLogs</h2>
-            <small class="text-muted">Need approval</small>
-        </div>
+        <a asp-action="ProgressLogs" class="text-decoration-none">
+            <div class="custom-card border-start border-4 border-warning p-3 h-100 transition-hover">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold">Pending Logs</h6>
+                        <h2 class="fw-bold mb-0 text-warning">@Model.PendingLogs</h2>
+                    </div>
+                    <i class="fas fa-external-link-alt text-warning opacity-50"></i>
+                </div>
+                <small class="text-muted">Click to review approvals</small>
+            </div>
+        </a>
     </div>
+
     <div class="col-md-3">
-        <div class="custom-card border-start border-4 border-danger p-3">
-            <h6 class="text-muted text-uppercase small fw-bold">Open Tickets</h6>
-            <h2 class="fw-bold mb-0 text-danger">@Model.OpenTickets</h2>
-            <small class="text-muted">Support requests</small>
-        </div>
+        <a asp-action="SupportTickets" class="text-decoration-none">
+            <div class="custom-card border-start border-4 border-danger p-3 h-100 transition-hover">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold">Open Tickets</h6>
+                        <h2 class="fw-bold mb-0 text-danger">@Model.OpenTickets</h2>
+                    </div>
+                    <i class="fas fa-external-link-alt text-danger opacity-50"></i>
+                </div>
+                <small class="text-muted">Click to view support requests</small>
+            </div>
+        </a>
     </div>
+
     <div class="col-md-3">
-        <div class="custom-card border-start border-4 border-info p-3">
+        <div class="custom-card border-start border-4 border-info p-3 h-100">
             <h6 class="text-muted text-uppercase small fw-bold">Avg Consistency</h6>
             <h2 class="fw-bold mb-0 text-info">@Math.Round(Model.AvgConsistency)%</h2>
             <small class="text-muted">Class-wide performance</small>
         </div>
     </div>
 </div>
+
+<style>
+    .transition-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+
+        .transition-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+</style>
 
 <div class="row g-4 mb-4">
     <div class="col-lg-8">

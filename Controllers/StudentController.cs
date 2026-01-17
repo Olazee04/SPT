@@ -7,7 +7,9 @@ using SPT.Models;
 using SPT.Models.ViewModels;
 using System;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SPT.Controllers
 {
@@ -107,12 +109,19 @@ namespace SPT.Controllers
             ViewBag.Rank = rank;
 
             // ---------------------------------------------------------
-            // 🔒 MODULE LOCKING LOGIC
+            // 🔒 MODULE LOCKING LOGIC (✅ FIXED SECTION)
             // ---------------------------------------------------------
+
+            // We use .Select() here to rename properties so they match what the View expects (@m.Code, @m.Name)
             var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
-                .Select(m => new { m.Id, m.ModuleCode, m.ModuleName, m.DisplayOrder })
+                .Select(m => new {
+                    Id = m.Id,
+                    Code = m.ModuleCode,      // ✅ Renamed ModuleCode -> Code
+                    Name = m.ModuleName,      // ✅ Renamed ModuleName -> Name
+                    DisplayOrder = m.DisplayOrder
+                })
                 .ToListAsync();
 
             var completedModuleIds = student.ModuleCompletions
@@ -124,6 +133,7 @@ namespace SPT.Controllers
             int lastCompletedOrder = 0;
             if (completedModuleIds.Any())
             {
+                // We filter in memory here because allModules is already a List<AnonymousType>
                 var lastCompleted = allModules
                     .Where(m => completedModuleIds.Contains(m.Id))
                     .OrderByDescending(m => m.DisplayOrder)
@@ -145,38 +155,68 @@ namespace SPT.Controllers
         // =========================
         // POST: LOG WORK (Detailed Version)
         // =========================
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> LogWork(
-            int moduleId,
-            decimal hours,
-            string description,
-            string evidenceUrl,
-            string location,
-            string customTopic,
-            // New Fields 👇
-            bool practiceDone,
-            int? quizScore,
-            int? miniProjectProgress,
-            string? blocker,
-            string? nextGoal
-        )
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> LogWork(
+    int moduleId,
+    decimal hours,
+    string description,
+    string evidenceUrl,
+    string location,
+    string customTopic,
+    DateTime logDate, // 👈 NEW PARAMETER
+    bool practiceDone,
+    int? quizScore,
+    int? miniProjectProgress,
+    string? blocker,
+    string? nextGoal)
         {
             var user = await _userManager.GetUserAsync(User);
             var student = await _context.Students
                 .Include(s => s.ModuleCompletions)
+                .Include(s => s.ProgressLogs) // 👈 Need logs to calculate daily total
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return NotFound();
 
-            // 🛑 ENFORCE 5-HOUR LIMIT
-            if (hours > 5)
+            // ==================================================
+            // 🛡️ RULE 1: DATE RESTRICTION (Today & Yesterday Only)
+            // ==================================================
+            var today = DateTime.UtcNow.Date;
+            var yesterday = today.AddDays(-1);
+
+            // Normalize input date to remove time part
+            logDate = logDate.Date;
+
+            if (logDate < yesterday || logDate > today)
             {
-                TempData["Error"] = "Maximum daily limit is 5 hours.";
+                TempData["Error"] = "🚫 You can only log work for Today or Yesterday.";
                 return RedirectToAction(nameof(Dashboard));
             }
 
-            // 🛑 HANDLE "OTHER"
+            // ==================================================
+            // 🛡️ RULE 2: TOTAL DAILY LIMIT (Max 5 Hours)
+            // ==================================================
+            // 1. Calculate hours already logged for this specific date
+            decimal existingHours = student.ProgressLogs
+                .Where(l => l.Date.Date == logDate)
+                .Sum(l => l.Hours);
+
+            // 2. Check if new total exceeds limit
+            if (existingHours + hours > 5)
+            {
+                decimal remaining = 5 - existingHours;
+                string msg = remaining > 0
+                    ? $"🚫 Daily limit exceeded. You have already logged {existingHours} hours for {logDate:MMM dd}. You can only add {remaining} more."
+                    : $"🚫 Daily limit reached. You cannot log any more hours for {logDate:MMM dd}.";
+
+                TempData["Error"] = msg;
+                return RedirectToAction(nameof(Dashboard));
+            }
+
+            // ==================================================
+            // 🛡️ HANDLE "OTHER" TOPIC
+            // ==================================================
             if (moduleId == -1)
             {
                 if (string.IsNullOrWhiteSpace(customTopic))
@@ -197,27 +237,23 @@ namespace SPT.Controllers
                 description = $"[Self-Study: {customTopic}] " + description;
             }
 
-            // 💾 CREATE LOG
+            // ==================================================
+            // 💾 SAVE LOG
+            // ==================================================
             var log = new ProgressLog
             {
                 StudentId = student.Id,
                 ModuleId = moduleId,
-                Date = DateTime.UtcNow,
+                Date = logDate, // 👈 Use the user-selected date
                 Hours = hours,
                 Location = location,
-
-                // Mapped Fields
-                ActivityDescription = description, // aka LessonCovered
-                LessonCovered = description,       // Redundant but safe if model has both
+                ActivityDescription = description,
                 EvidenceUrl = evidenceUrl,
-
-                // New Detailed Fields
                 PracticeDone = practiceDone,
                 QuizScore = quizScore,
                 MiniProjectProgress = miniProjectProgress,
                 Blocker = blocker,
                 NextGoal = nextGoal,
-
                 IsApproved = false,
                 CreatedAt = DateTime.UtcNow
             };
@@ -225,7 +261,7 @@ namespace SPT.Controllers
             _context.ProgressLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = "Detailed log submitted successfully!";
+            TempData["Success"] = $"✅ Log submitted for {logDate:MMM dd}!";
             return RedirectToAction(nameof(Dashboard));
         }
 
@@ -588,6 +624,49 @@ namespace SPT.Controllers
         public IActionResult Settings()
         {
             return View();
+        }
+
+        // =========================
+        // POST: Request Account Deletion
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestDeletion(string reason)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+
+            if (student == null) return RedirectToAction("Login", "Account");
+
+            // Check if a request is already pending to avoid spam
+            bool alreadyRequested = await _context.SupportTickets.AnyAsync(t =>
+                t.StudentId == student.Id &&
+                t.Subject == "⚠️ ACCOUNT DELETION REQUEST" &&
+                !t.IsResolved);
+
+            if (alreadyRequested)
+            {
+                TempData["Error"] = "You already have a pending deletion request.";
+                return RedirectToAction(nameof(Profile)); // Assuming Profile is the settings page
+            }
+
+            // Create the Support Ticket
+            var ticket = new SupportTicket
+            {
+                StudentId = student.Id,
+                Subject = "⚠️ ACCOUNT DELETION REQUEST",
+                Category = "Account Issue", // Ensure this category exists or use "Other"
+                Message = $"Student has requested account deletion.\n\nReason Provided: {(string.IsNullOrEmpty(reason) ? "No reason given." : reason)}",
+                Status = "Open",
+                IsResolved = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.SupportTickets.Add(ticket);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Deletion request sent to Admin. You will be contacted shortly.";
+            return RedirectToAction(nameof(Profile));
         }
     }
 }

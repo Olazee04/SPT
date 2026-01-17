@@ -97,24 +97,7 @@
         </a>
     }
 }
-                        
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <div class="sidebar-heading">Admin</div>
-                            <a asp-controller="Admin" asp-action="CreateStudent" class="list-group-item list-group-item-action">
-                                <i class="fas fa-user-plus me-3"></i> Create Student
-                            </a>
-                            <a asp-controller="Admin" asp-action="CreateMentor" class="list-group-item list-group-item-action">
-                                <i class="fas fa-chalkboard-teacher me-3"></i> Add Mentor
-                            </a>
-                            <a asp-controller="Quiz" asp-action="Index" class="list-group-item list-group-item-action">
-                                <i class="fas fa-question-circle me-3"></i> Quizzes
-                            </a>
-                            <a asp-controller="Admin" asp-action="CreateAnnouncement" class="list-group-item list-group-item-action">
-                                <i class="fas fa-bullhorn me-3"></i> Announcement
-                            </a>
-                        }
-                    }
+
 
                     <div class="logout-btn">
                         <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">

@@ -12,10 +12,11 @@ public static class SeedData
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // 1. Ensure Database is Created
+        // ==========================================
+        // 1. ENSURE DATABASE & ROLES
+        // ==========================================
         context.Database.EnsureCreated();
 
-        // 2. Seed Roles
         string[] roles = { "Admin", "Student", "Mentor" };
         foreach (var role in roles)
         {
@@ -23,7 +24,9 @@ public static class SeedData
                 await roleManager.CreateAsync(new IdentityRole(role));
         }
 
-        // 3. Seed Admin User
+        // ==========================================
+        // 2. SEED ADMIN USER
+        // ==========================================
         if (await userManager.FindByEmailAsync("admin@spt.com") == null)
         {
             var admin = new ApplicationUser { UserName = "admin", Email = "admin@spt.com", EmailConfirmed = true };
@@ -31,21 +34,39 @@ public static class SeedData
             await userManager.AddToRoleAsync(admin, "Admin");
         }
 
-        // 4. Seed Tracks
+        // ==========================================
+        // 3. SEED TRACKS
+        // ==========================================
         if (!context.Tracks.Any())
         {
             context.Tracks.AddRange(
                 new Track { Name = "Frontend JavaScript", Code = "FEJ" },
                 new Track { Name = "Backend C#", Code = "BEC" },
                 new Track { Name = "Fullstack", Code = "FSC" },
-                new Track { Name = "API Integration & Development", Code = "API" },
+                new Track { Name = "Backend Web API Development", Code = "API" },
                 new Track { Name = "Mobile Game Development", Code = "MGD" },
                 new Track { Name = "Web 3", Code = "WB3" }
             );
             await context.SaveChangesAsync();
         }
 
-        // 5. Seed Mentors
+        // Ensure API Track exists if it was added later
+        var apiTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "API");
+        if (apiTrack == null)
+        {
+            apiTrack = new Track
+            {
+                Name = "Backend Web API Development",
+                Code = "API",
+                Description = "Master C#, .NET Core, and RESTful APIs."
+            };
+            context.Tracks.Add(apiTrack);
+            await context.SaveChangesAsync();
+        }
+
+        // ==========================================
+        // 4. SEED MENTORS
+        // ==========================================
         if (!context.Mentors.Any())
         {
             var m1User = new ApplicationUser { UserName = "azeez", Email = "azeez@spt.com", EmailConfirmed = true };
@@ -68,17 +89,19 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // --- FETCH TRACKS HERE (So they are available for ALL blocks below) ---
+        // --- FETCH TRACKS FOR MODULE SEEDING ---
         var backendTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "BEC");
         var frontendTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "FEJ");
         var fullstackTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "FSC");
 
-        // 6. Seed Syllabus Modules (If empty)
-        if (!context.SyllabusModules.Any())
+        // ==========================================
+        // 5. STANDARD MODULES (Frontend, Backend, Fullstack)
+        // ==========================================
+        if (!context.SyllabusModules.Any(m => m.TrackId == frontendTrack.Id || m.TrackId == backendTrack.Id || m.TrackId == fullstackTrack.Id))
         {
             var modules = new List<SyllabusModule>();
 
-            // --- 1. FRONTEND JS ---
+            // --- A. FRONTEND JS ---
             if (frontendTrack != null)
             {
                 modules.AddRange(new[]
@@ -90,7 +113,7 @@ public static class SeedData
                 });
             }
 
-            // --- 2. BACKEND C# ---
+            // --- B. BACKEND C# ---
             if (backendTrack != null)
             {
                 modules.AddRange(new[]
@@ -103,7 +126,7 @@ public static class SeedData
                 });
             }
 
-            // --- 3. FULLSTACK ---
+            // --- C. FULLSTACK ---
             if (fullstackTrack != null)
             {
                 modules.AddRange(new[]
@@ -133,8 +156,8 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // --- 6b. SEPARATE CHECK FOR CAPSTONE (Module 19) ---
-        // We do this separately so it gets added even if modules 1-18 already exist.
+        // --- SEPARATE CHECK FOR CAPSTONE (Module 19) ---
+        // Ensure this is added even if other modules exist
         if (fullstackTrack != null && !context.SyllabusModules.Any(m => m.ModuleCode == "CAP-01"))
         {
             context.SyllabusModules.Add(new SyllabusModule
@@ -152,13 +175,53 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // --- 7. SEED RESOURCES ---
+        // ==========================================
+        // 6. API MODULES (Separate Block - Fixed Variable Name)
+        // ==========================================
+        if (apiTrack != null && !context.SyllabusModules.Any(m => m.TrackId == apiTrack.Id))
+        {
+            // Renamed 'modules' to 'apiModules' to avoid CS0136 Error
+            var apiModules = new List<SyllabusModule>
+            {
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "C#-01", ModuleName = "C# Fundamentals", Topics = "Syntax, Variables, Methods", RequiredHours = 10, DisplayOrder = 1, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "C#-02", ModuleName = "Object Oriented Programming", Topics = "Classes, Inheritance, SOLID", RequiredHours = 15, DisplayOrder = 2, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "DB-01", ModuleName = "Database Design & SQL", Topics = "Relational DBs, SQL Queries", RequiredHours = 10, DisplayOrder = 3, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "NET-01", ModuleName = "Entity Framework Core", Topics = "ORM, DbContext, Migrations", RequiredHours = 15, DisplayOrder = 4, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "API-01", ModuleName = "Building REST APIs", Topics = "Controllers, Routing, HTTP", RequiredHours = 20, DisplayOrder = 5, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "API-02", ModuleName = "Advanced API Concepts", Topics = "JWT Auth, Middleware, Swagger", RequiredHours = 20, DisplayOrder = 6, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "TST-01", ModuleName = "Testing & Deployment", Topics = "Unit Testing, CI/CD, Azure", RequiredHours = 15, DisplayOrder = 7, IsActive = true },
+                new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "PROJ-API", ModuleName = "Capstone Project: E-Commerce API", Topics = "Full Backend with Auth & Payments", RequiredHours = 40, DisplayOrder = 8, IsActive = true, HasProject = true }
+            };
+
+            context.SyllabusModules.AddRange(apiModules);
+            await context.SaveChangesAsync();
+        }
+
+        // ==========================================
+        // 7. SEED RESOURCES (API & Others)
+        // ==========================================
+        if (apiTrack != null && !context.Resources.Any(r => r.TrackId == apiTrack.Id))
+        {
+            var apiResources = new List<Resource>
+            {
+                new Resource { TrackId = apiTrack.Id, Title = "C# 101 Video Series", Description = "Official Microsoft guide.", Url = "https://dotnet.microsoft.com/en-us/learn/csharp", Type = "Video", CreatedAt = DateTime.UtcNow },
+                new Resource { TrackId = apiTrack.Id, Title = "EF Core Guide", Description = "Connect C# to SQL.", Url = "https://www.entityframeworktutorial.net/efcore/entity-framework-core.aspx", Type = "Link", CreatedAt = DateTime.UtcNow },
+                new Resource { TrackId = apiTrack.Id, Title = "Build a REST API", Description = "Step-by-step tutorial.", Url = "https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-web-api", Type = "Link", CreatedAt = DateTime.UtcNow },
+                new Resource { TrackId = apiTrack.Id, Title = "E-Commerce Starter Kit", Description = "Capstone Boilerplate.", Url = "https://github.com/dotnet-architecture/eShopOnWeb", Type = "GitRepo", CreatedAt = DateTime.UtcNow }
+            };
+
+            context.Resources.AddRange(apiResources);
+            await context.SaveChangesAsync();
+        }
+
+        // ==========================================
+        // 8. SEED MODULE RESOURCES (Old Table - ModuleResources)
+        // ==========================================
         if (!context.ModuleResources.Any())
         {
             var resources = new List<ModuleResource>();
 
             // Helper function to find module ID by code
-            // We use .FirstOrDefault() here because we are inside a static method
             int GetModId(string code) => context.SyllabusModules.FirstOrDefault(m => m.ModuleCode == code)?.Id ?? 0;
 
             // 1. Syntax & Basics

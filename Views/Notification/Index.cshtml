@@ -1,0 +1,84 @@
+﻿@model IEnumerable<SPT.Models.Notification>
+
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold"><i class="fas fa-bell text-warning"></i> Notifications</h2>
+            <p class="text-muted">Stay updated with your latest activities.</p>
+        </div>
+        @if (Model.Any(n => !n.IsRead))
+        {
+            <form asp-action="MarkAllAsRead" method="post">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-check-double"></i> Mark All as Read
+                </button>
+            </form>
+        }
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="list-group list-group-flush">
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3 opacity-25"></i>
+                    <p class="text-muted">No notifications yet.</p>
+                </div>
+            }
+            else
+            {
+                foreach (var item in Model)
+                {
+                    <a href="@(string.IsNullOrEmpty(item.Url) ? "#" : item.Url)"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 @(item.IsRead ? "bg-light text-muted" : "fw-bold border-start border-4 border-primary")"
+                       onclick="markRead(@item.Id)">
+
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="mt-1">
+                                @if (item.Type == "Success")
+                                {
+                                    <i class="fas fa-check-circle text-success fs-4"></i>
+                                }
+                                else if (item.Type == "Warning")
+                                {
+                                    <i class="fas fa-exclamation-triangle text-warning fs-4"></i>
+                                }
+                                else if (item.Type == "Danger")
+                                {
+                                    <i class="fas fa-times-circle text-danger fs-4"></i>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-info-circle text-info fs-4"></i>
+                                }
+                            </div>
+                            <div>
+                                <h6 class="mb-1">@item.Title</h6>
+                                <p class="mb-1 small text-muted">@item.Message</p>
+                                <small class="text-secondary" style="font-size: 0.75rem;">
+                                    <i class="far fa-clock me-1"></i> @item.CreatedAt.ToLocalTime().ToString("MMM dd, hh:mm tt")
+                                </small>
+                            </div>
+                        </div>
+
+                        @if (!item.IsRead)
+                        {
+                            <span class="badge bg-primary rounded-pill">New</span>
+                        }
+                    </a>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    function markRead(id) {
+        // Send AJAX request to mark as read without reloading
+        fetch('/Notification/MarkAsRead?id=' + id, { method: 'POST' });
+    }
+</script>

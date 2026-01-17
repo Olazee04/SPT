@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SPT.Controllers
 {
@@ -19,44 +21,49 @@ namespace SPT.Controllers
             _userManager = userManager;
         }
 
-        // 1. View All Notifications
+        // GET: /Notification/Index
         public async Task<IActionResult> Index()
         {
-            var userId = _userManager.GetUserId(User);
-            var notifs = await _context.Notifications
-                .Where(n => n.UserId == userId)
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
+
+            var notifications = await _context.Notifications
+                .Where(n => n.UserId == user.Id)
                 .OrderByDescending(n => n.CreatedAt)
-                .Take(50)
                 .ToListAsync();
 
-            return View(notifs);
+            return View(notifications);
         }
 
-        // 2. Mark All as Read (When page opens)
+        // POST: Mark as Read (AJAX)
         [HttpPost]
-        public async Task<IActionResult> MarkAllRead()
+        public async Task<IActionResult> MarkAsRead(int id)
         {
-            var userId = _userManager.GetUserId(User);
-            var unread = await _context.Notifications
-                .Where(n => n.UserId == userId && !n.IsRead)
-                .ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.Id == id && n.UserId == user.Id);
 
-            if (unread.Any())
+            if (notification != null)
             {
-                foreach (var n in unread) n.IsRead = true;
+                notification.IsRead = true;
                 await _context.SaveChangesAsync();
             }
+
             return Ok();
         }
 
-        // 3. API: Get Unread Count (For the Badge)
-        [HttpGet]
-        public async Task<IActionResult> GetUnreadCount()
+        // POST: Mark All as Read
+        [HttpPost]
+        public async Task<IActionResult> MarkAllAsRead()
         {
-            var userId = _userManager.GetUserId(User);
-            var count = await _context.Notifications
-                .CountAsync(n => n.UserId == userId && !n.IsRead);
-            return Json(count);
+            var user = await _userManager.GetUserAsync(User);
+            var unread = await _context.Notifications.Where(n => n.UserId == user.Id && !n.IsRead).ToListAsync();
+
+            foreach (var n in unread)
+            {
+                n.IsRead = true;
+            }
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
     }
 }

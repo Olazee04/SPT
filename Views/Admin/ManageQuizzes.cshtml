@@ -1,0 +1,98 @@
+﻿@model IEnumerable<SPT.Models.SyllabusModule>
+
+@{
+    ViewData["Title"] = "Manage Quizzes";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary"><i class="fas fa-tasks"></i> Manage Quizzes</h2>
+            <p class="text-muted">Enable quizzes or update quiz links for modules.</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light rounded">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="fw-bold text-uppercase small text-muted">Filter by Track:</label>
+                </div>
+                <div class="col-auto">
+                    <select name="trackId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Show All Tracks --</option>
+                        @if (ViewBag.Tracks != null)
+                        {
+                            foreach (var track in ViewBag.Tracks)
+                            {
+                                if (ViewBag.SelectedTrackId != null && (int)ViewBag.SelectedTrackId == track.Id)
+                                {
+                                    <option value="@track.Id" selected>@track.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@track.Id">@track.Name</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th class="ps-4">Track</th>
+                            <th>Code</th>
+                            <th>Module Name</th>
+                            <th>Quiz Status</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
+                                    <p>No modules found for this selection.</p>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-4"><span class="badge bg-secondary">@item.Track.Code</span></td>
+                                    <td class="fw-bold">@item.ModuleCode</td>
+                                    <td>@item.ModuleName</td>
+                                    <td>
+                                        @if (item.HasQuiz)
+                                        {
+                                            <span class="badge bg-success"><i class="fas fa-check-circle"></i> Enabled</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border">No Quiz</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Edit feature coming soon for @item.ModuleCode')">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

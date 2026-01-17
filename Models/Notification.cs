@@ -10,7 +10,11 @@ namespace SPT.Models
 
         [Required]
         public string UserId { get; set; } = string.Empty; // Who receives it
+        [ForeignKey("UserId")]
 
+        public ApplicationUser User { get; set; }
+
+        public string Title { get; set; }
         [Required]
         public string Message { get; set; } = string.Empty;
 
@@ -23,3 +27,4 @@ namespace SPT.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
+
