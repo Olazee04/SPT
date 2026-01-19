@@ -31,7 +31,8 @@ namespace SPT.Controllers
         // =========================
         public async Task<IActionResult> Dashboard()
         {
-            // 1. Fetch Core Data
+           
+            var mentors = await _userManager.GetUsersInRoleAsync("Mentor");
             var students = await _context.Students
                 .Include(s => s.Track)
                 .Include(s => s.ProgressLogs)
@@ -44,7 +45,9 @@ namespace SPT.Controllers
             var model = new AdminDashboardViewModel
             {
                 PendingLogs = await _context.ProgressLogs.CountAsync(l => !l.IsApproved),
-                OpenTickets = await _context.SupportTickets.CountAsync(t => t.Status == "Open")
+                OpenTickets = await _context.SupportTickets.CountAsync(t => t.Status == "Open"),
+                TotalStudents = students.Count,
+                TotalMentors = mentors.Count
             };
 
             // ----------------------------------------------------
@@ -157,17 +160,21 @@ namespace SPT.Controllers
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
-       public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description, int? mentorRating, int? quizScore, string? action)
+        public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description, int? mentorRating, int? quizScore, string? action)
         {
-            // 1. Fetch Log with Tracking
-            var log = await _context.ProgressLogs.FindAsync(id);
+            // 1. Fetch Log with Student info (Need User details for notification)
+            var log = await _context.ProgressLogs
+                .Include(l => l.Student)
+                .ThenInclude(s => s.User) // ✅ Include User to get the UserId string
+                .FirstOrDefaultAsync(l => l.Id == id);
+
             if (log == null)
             {
                 TempData["Error"] = "Log not found.";
                 return RedirectToAction("ProgressLogs");
             }
 
-            // 🛑 LOGIC 1: REJECTION
+            // 🛑 LOGIC 1: REJECT
             if (action == "Reject")
             {
                 _context.ProgressLogs.Remove(log);
@@ -175,67 +182,68 @@ namespace SPT.Controllers
                 TempData["Error"] = "❌ Log rejected and removed.";
                 return RedirectToAction("ProgressLogs");
             }
-         decimal finalHours = hours ?? log.Hours;
-            if (finalHours > 5)
+
+            // 🛑 LOGIC 2: APPROVE/UPDATE
+
+            // Calculate Daily Total (Sum of ALL logs for this student on this day)
+            var dateToCheck = log.Date.Date;
+            decimal otherLogsTotal = await _context.ProgressLogs
+                .Where(l => l.StudentId == log.StudentId && l.Date.Date == dateToCheck && l.Id != id)
+                .SumAsync(l => l.Hours);
+
+            decimal proposedHours = hours ?? log.Hours;
+
+            // Check if Total exceeds 5
+            if ((otherLogsTotal + proposedHours) > 5)
             {
-                finalHours = 5;
-                TempData["Warning"] = "Hours capped at 5.";
+                TempData["Error"] = $"⚠️ Limit Exceeded! Student has {otherLogsTotal} hrs already. Adding {proposedHours} hrs totals {otherLogsTotal + proposedHours} (Max 5).";
+                return RedirectToAction("ProgressLogs");
             }
 
-            // 🛑 LOGIC 3: UPDATE FIELDS
-            log.Hours = finalHours;
-
-            // Only update description if provided
-            if (!string.IsNullOrEmpty(description))
-                log.ActivityDescription = description;
-
-            // Update Scores
+            // Apply Changes
+            log.Hours = proposedHours;
+            if (!string.IsNullOrEmpty(description)) log.ActivityDescription = description;
             if (mentorRating.HasValue) log.MentorRating = mentorRating;
             if (quizScore.HasValue) log.QuizScore = quizScore;
 
-            // 🛑 LOGIC 4: APPROVE & SAVE
             log.IsApproved = true;
             log.UpdatedAt = DateTime.UtcNow;
             log.VerifiedByUserId = _userManager.GetUserId(User);
 
-            // 💾 FORCE SAVE
             try
             {
-                _context.Entry(log).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                // 👇👇👇 ADD NOTIFICATION LOGIC HERE 👇👇👇
-                if (action == "Approve" || log.IsApproved) // Only notify on approval
+                // ✅ Notification Logic (Fixed)
+                if (log.Student?.User != null)
                 {
                     var notification = new Notification
                     {
-                        UserId = log.StudentId.ToString(), // Ensure StudentId is converted to string if needed
-                        Title = "Log Approved",
+                        UserId = log.Student.User.Id, // ✅ Use the GUID string from User table
+                        Title = "Log Approved",       // ✅ Required Title
                         Message = $"Your log for {log.Date:MMM dd} was approved.",
                         Type = "Success",
                         Url = "/Student/Dashboard",
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false
                     };
                     _context.Notifications.Add(notification);
-                    await _context.SaveChangesAsync(); // Save the notification
                 }
-                // 👆👆👆 END NOTIFICATION LOGIC 👆👆👆
 
+                _context.Entry(log).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
                 TempData["Success"] = "✅ Log verified successfully.";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = "Database Error: " + ex.Message;
             }
-           
 
-            // Return to referring page (Dashboard or List)
+            // Return to referring page
             string referer = Request.Headers["Referer"].ToString();
             if (!string.IsNullOrEmpty(referer) && referer.Contains("Dashboard"))
             {
                 return RedirectToAction("Dashboard");
             }
-            return RedirectToAction("ProgressLogs"); // Fallback to list
+            return RedirectToAction("ProgressLogs");
         }
 
         // =========================
@@ -244,6 +252,8 @@ namespace SPT.Controllers
         [HttpGet]
         public async Task<IActionResult> Students(string searchString, string cohortFilter, string trackFilter)
         {
+            ViewBag.TotalStudents = await _context.Students.CountAsync();
+
             // 1. Start with Query
             var query = _context.Students
                 .Include(s => s.Track)
@@ -570,6 +580,7 @@ namespace SPT.Controllers
                     _context.Notifications.Add(new Notification
                     {
                         UserId = user.Id,
+                        Title = "New Announcement", // 👈 THIS WAS MISSING
                         Message = $"📢 {model.Title}: {model.Message}",
                         Type = "Info",
                         IsRead = false,

@@ -56,13 +56,52 @@
                             <i class="fas fa-cog me-3"></i> Settings
                         </a>
                     }
+                    {
+                    <hr class="sidebar-divider">
 
-                    @if (User.IsInRole("Admin") || User.IsInRole("Mentor"))
-{
-    <div class="sidebar-heading">Management</div>
-    <a asp-controller="Admin" asp-action="Dashboard" class="list-group-item list-group-item-action">
-        <i class="fas fa-th-large me-3"></i> Dashboard
-    </a>
+                    <div class="sidebar-heading">
+                        Administration
+                    </div>
+
+                    <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active" : "")">
+                        <a class="nav-link" asp-controller="Admin" asp-action="Dashboard">
+                            <i class="fas fa-fw fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUsers" aria-expanded="true" aria-controls="collapseUsers">
+                            <i class="fas fa-fw fa-users-cog"></i>
+                            <span>Users & Cohorts</span>
+                        </a>
+                        <div id="collapseUsers" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+                            <div class="bg-white py-2 collapse-inner rounded">
+                                <h6 class="collapse-header">Manage People:</h6>
+                                <a class="collapse-item" asp-controller="Admin" asp-action="Students">Manage Students</a>
+                                <a class="collapse-item" asp-controller="Admin" asp-action="Mentors">Manage Mentors</a>
+                                <div class="collapse-divider"></div>
+                                <h6 class="collapse-header">Structure:</h6>
+                                <a class="collapse-item" asp-controller="Cohort" asp-action="Index">Manage Cohorts</a>
+                            </div>
+                        </div>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAcademic" aria-expanded="true" aria-controls="collapseAcademic">
+                            <i class="fas fa-fw fa-book-reader"></i>
+                            <span>Academic</span>
+                        </a>
+                        <div id="collapseAcademic" class="collapse" aria-labelledby="headingUtilities" data-parent="#accordionSidebar">
+                            <div class="bg-white py-2 collapse-inner rounded">
+                                <h6 class="collapse-header">Daily Operations:</h6>
+                                <a class="collapse-item" asp-controller="Admin" asp-action="ProgressLogs">Review Logs</a>
+                                <a class="collapse-item" asp-controller="Attendance" asp-action="Index">Attendance</a> <h6 class="collapse-header">Content:</h6>
+                                <a class="collapse-item" asp-controller="Quiz" asp-action="Index">Manage Quizzes</a>
+                                <a class="collapse-item" asp-controller="Admin" asp-action="ManageLibrary">Resource Library</a>
+                            </div>
+                        </div>
+                    </li>
     <a asp-controller="Admin" asp-action="Students" class="list-group-item list-group-item-action">
         <i class="fas fa-users me-3"></i> Students
     </a>
@@ -80,6 +119,13 @@
     <a asp-controller="Admin" asp-action="SupportTickets" class="list-group-item list-group-item-action">
         <i class="fas fa-headset me-3"></i> Help Desk
     </a>
+                    <a asp-controller="Quiz" asp-action="Index" class="list-group-item list-group-item-action">
+                        <i class="fas fa-question-circle me-3"></i> Manage Quizzes
+                    </a>
+                    <a asp-controller="Admin" asp-action="CreateAnnouncement" class="list-group-item list-group-item-action">
+                        <i class="fas fa-bullhorn me-3"></i> Announcement
+                    </a>
+
     @if (User.IsInRole("Admin"))
     {
         <div class="sidebar-heading">Admin</div>
@@ -89,12 +135,13 @@
         <a asp-controller="Admin" asp-action="CreateMentor" class="list-group-item list-group-item-action">
             <i class="fas fa-chalkboard-teacher me-3"></i> Add Mentor
         </a>
-        <a asp-controller="Quiz" asp-action="Index" class="list-group-item list-group-item-action">
-            <i class="fas fa-question-circle me-3"></i> Manage Quizzes
-        </a>
-        <a asp-controller="Admin" asp-action="CreateAnnouncement" class="list-group-item list-group-item-action">
-            <i class="fas fa-bullhorn me-3"></i> Announcement
-        </a>
+                        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Certificate" ? "active" : "")">
+                            <a class="nav-link" asp-controller="Certificate" asp-action="Index">
+                                <i class="fas fa-fw fa-certificate"></i>
+                                <span>Certificates</span>
+                            </a>
+                        </li>
+        
     }
 }
 
@@ -182,5 +229,12 @@
         </script>
     }
     @await RenderSectionAsync("Scripts", required: false)
+    <script>
+        // 1. Immediately check local storage on page load
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-mode'); // Or whatever class your CSS uses
+        }
+    </script>
 </body>
 </html>

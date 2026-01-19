@@ -1,0 +1,54 @@
+﻿@{
+    ViewData["Title"] = "Graduation Eligibility";
+}
+
+<div class="container p-4">
+    <h3 class="mb-4 font-weight-bold">🎓 Graduation Eligibility</h3>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Verified Hours</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (dynamic item in ViewBag.EligibleList)
+                    {
+                        <tr>
+                            <td class="font-weight-bold">@item.Student.FullName</td>
+                            <td>@item.TotalHours hrs</td>
+                            <td>
+                                @if (item.IsReady)
+                                {
+                                    <span class="badge badge-success">Ready</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-warning">In Progress</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.IsReady)
+                                {
+                                    <form asp-action="Issue" method="post">
+                                        <input type="hidden" name="studentId" value="@item.Student.Id" />
+                                        <button class="btn btn-sm btn-success">Issue Certificate</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-secondary" disabled>Not Ready</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

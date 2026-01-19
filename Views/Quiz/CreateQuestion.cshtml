@@ -1,38 +1,58 @@
 ﻿@{
     ViewData["Title"] = "Add Question";
+    int moduleId = ViewBag.ModuleId;
 }
 
-<div class="container mt-4">
+<div class="container p-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow">
+            <div class="card shadow border-0">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Add Question</h5>
+                    <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Add New Question</h5>
                 </div>
                 <div class="card-body">
                     <form asp-action="CreateQuestion" method="post">
-                        <input type="hidden" name="moduleId" value="@ViewBag.ModuleId" />
+                        <input type="hidden" name="moduleId" value="@moduleId" />
 
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <label class="form-label fw-bold">Question Text</label>
-                            <textarea name="questionText" class="form-control" rows="2" required placeholder="e.g. What implies inheritance in C#?"></textarea>
+                            <textarea name="questionText" class="form-control" rows="2" required placeholder="e.g., What does MVC stand for?"></textarea>
                         </div>
 
-                        <label class="form-label fw-bold mt-3">Options (Select the correct one)</label>
+                        <label class="form-label fw-bold">Answer Options</label>
+                        <p class="small text-muted">Enter options and select the radio button for the correct answer.</p>
 
-                        @for (int i = 0; i < 4; i++)
-                        {
-                            <div class="input-group mb-2">
-                                <div class="input-group-text">
-                                    <input class="form-check-input mt-0" type="radio" name="correctIndex" value="@i" @(i == 0 ? "checked" : "")>
-                                </div>
-                                <input type="text" name="options" class="form-control" placeholder="Option @(i+1)" required>
+                        <div class="mb-3 input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="correctIndex" value="0" required checked>
                             </div>
-                        }
+                            <input type="text" name="options" class="form-control" placeholder="Option 1" required>
+                        </div>
 
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-success">Save Question</button>
-                            <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+                        <div class="mb-3 input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="correctIndex" value="1" required>
+                            </div>
+                            <input type="text" name="options" class="form-control" placeholder="Option 2" required>
+                        </div>
+
+                        <div class="mb-3 input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="correctIndex" value="2" required>
+                            </div>
+                            <input type="text" name="options" class="form-control" placeholder="Option 3" required>
+                        </div>
+
+                        <div class="mb-3 input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="correctIndex" value="3" required>
+                            </div>
+                            <input type="text" name="options" class="form-control" placeholder="Option 4" required>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Manage" asp-route-moduleId="@moduleId" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success px-4">Save Question</button>
                         </div>
                     </form>
                 </div>

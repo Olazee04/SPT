@@ -1,0 +1,77 @@
+﻿@model IEnumerable<SPT.Models.Attendance>
+@{
+    ViewData["Title"] = "Attendance Records";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="font-weight-bold text-gray-800">Attendance History</h2>
+        <a asp-action="Mark" class="btn btn-primary shadow-sm"><i class="fas fa-edit mr-1"></i> Take Attendance</a>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light">
+            <form method="get" class="form-inline">
+                <label class="mr-2">Date:</label>
+                <input type="date" name="date" class="form-control mr-3" value="@(((DateTime)ViewBag.Date).ToString("yyyy-MM-dd"))" />
+
+                <label class="mr-2">Cohort:</label>
+                <select name="cohortId" class="form-control mr-3" asp-items="ViewBag.Cohorts">
+                    <option value="">All Cohorts</option>
+                </select>
+
+                <button type="submit" class="btn btn-dark">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="pl-4">Student</th>
+                        <th>Cohort</th>
+                        <th class="text-center">Status</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="pl-4 font-weight-bold">@item.Student.FullName</td>
+                                <td><span class="badge badge-light border">@item.Student.Cohort?.Name</span></td>
+                                <td class="text-center">
+                                    @if (item.Status == "Present")
+                                    {
+                                        <span class="badge badge-success px-3">Present</span>
+                                    }
+                                    else if (item.Status == "Absent")
+                                    {
+                                        <span class="badge badge-danger px-3">Absent</span>
+                                    }
+                                    else if (item.Status == "Late")
+                                    {
+                                        <span class="badge badge-warning px-3">Late</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-info px-3">Excused</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">@item.Remarks</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="4" class="text-center py-4 text-muted">No records for this date.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

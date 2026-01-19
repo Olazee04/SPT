@@ -25,5 +25,9 @@ namespace SPT.Models
         public Track? Track { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public int? ModuleId { get; set; }
+        [ForeignKey("ModuleId")]
+        public SyllabusModule Module { get; set; }
     }
 }

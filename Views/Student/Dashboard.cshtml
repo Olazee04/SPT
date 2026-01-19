@@ -1,103 +1,68 @@
 ﻿@model SPT.Models.Student
-@using System.Linq
-
 @{
     ViewData["Title"] = "My Dashboard";
 
-    var logs = Model.ProgressLogs != null
-
-        ? Model.ProgressLogs.ToList()
-
-        : new List<SPT.Models.ProgressLog>();
+    var logs = Model.ProgressLogs?.OrderByDescending(d => d.Date).ToList() ?? new List<SPT.Models.ProgressLog>();
 
     var approvedHours = logs.Where(p => p.IsApproved).Sum(p => p.Hours);
 
     var pendingHours = logs.Where(p => !p.IsApproved).Sum(p => p.Hours);
 
-    var logsCount = logs.Count;
+    var weeklyHours = (decimal)(ViewBag.WeeklyHours ?? 0);
 
+    var consistencyScore = (int)(ViewBag.Consistency ?? 0);
 
+    var streak = (int)(ViewBag.Streak ?? 0);
 
-    var weeklyHours = (decimal)ViewBag.WeeklyHours;
+    var announcement = ViewBag.LatestAnnouncement as SPT.Models.Announcement;
 
-    var consistencyScore = (int)ViewBag.Consistency;
+    var nextModule = ViewBag.NextModule as dynamic; // Using dynamic to avoid null checks on ViewBags
 }
 
-<div class="col-md-3">
-    <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-            <h6 class="text-muted text-uppercase small fw-bold">Verified Hours</h6>
-            <div class="d-flex align-items-center">
-                <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
-                <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
-            </div>
-
-            @if (pendingHours > 0)
-            {
-                <div class="mt-2 badge bg-warning text-dark">
-                    <i class="fas fa-clock"></i> @pendingHours hrs pending
-                </div>
-            }
-            else
-            {
-                <small class="text-muted">All logs verified</small>
-            }
-        </div>
-    </div>
-</div>
-
 <div class="container mt-4">
+
+    @if (announcement != null)
+
+    {
+        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+            <div class="me-3 display-6 text-info"><i class="fas fa-bullhorn"></i></div>
+            <div>
+                <h5 class="alert-heading fw-bold mb-1">@announcement.Title</h5>
+                <p class="mb-0 small">@announcement.Message</p>
+            </div>
+            <small class="ms-auto text-muted">@announcement.CreatedAt.ToString("MMM dd")</small>
+        </div>
+    }
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold">👋 Welcome, @Model.FullName.Split(' ')[0]!</h2>
             <p class="text-muted mb-0">
                 <span class="badge bg-primary">@Model.Track?.Code</span>
-                @Model.Cohort?.Name •
-                <span class="text-success">@Model.EnrollmentStatus</span>
+                @Model.Cohort?.Name
             </p>
         </div>
-
         <button type="button" class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#logWorkModal">
-        <i class="fas fa-plus-circle"></i> Log Daily Progress
-    </button>
-
+            <i class="fas fa-plus-circle"></i> Log Daily Progress
+        </button>
     </div>
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Consistency Score</h6>
+                    <h6 class="text-muted text-uppercase small fw-bold">Verified Hours</h6>
                     <div class="d-flex align-items-center">
-                        <h2 class="mb-0 fw-bold text-primary">@consistencyScore%</h2>
-                        <span class="ms-2 badge bg-light text-dark">Rank: #--</span>
-                    </div>
-                    <small class="text-muted">Target: 80%+</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Hours This Week</h6>
-                    <div class="d-flex align-items-center">
-                        <h2 class="mb-0 fw-bold text-success">@weeklyHours</h2>
+                        <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
                         <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
                     </div>
-
                     @if (pendingHours > 0)
-
                     {
-                        <div class="mt-2 badge bg-warning text-dark">
-                            <i class="fas fa-clock"></i> @pendingHours hrs pending
-                        </div>
+                        <div class="mt-2 badge bg-warning text-dark"><i class="fas fa-clock"></i> @pendingHours hrs pending</div>
                     }
-
                     else
-
                     {
-                        <small class="text-muted d-block mt-1">Total Lifetime: <strong>@approvedHours</strong> hrs</small>
+                        <small class="text-muted">All logs verified</small>
                     }
                 </div>
             </div>
@@ -106,9 +71,27 @@
         <div class="col-md-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Total Check-ins</h6>
-                    <h2 class="mb-0 fw-bold text-info">@logsCount</h2>
-                    <small class="text-muted">Days active</small>
+                    <h6 class="text-muted text-uppercase small fw-bold">Consistency</h6>
+                    <div class="d-flex align-items-center">
+                        <h2 class="mb-0 fw-bold @(consistencyScore >= 80 ? "text-primary" : "text-warning")">@consistencyScore%</h2>
+                    </div>
+                    <div class="progress mt-2" style="height: 5px;">
+                        <div class="progress-bar @(consistencyScore >= 80 ? "bg-primary" : "bg-warning")" style="width: @consistencyScore%"></div>
+                    </div>
+                    <small class="text-muted">Last 28 Days</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Current Streak</h6>
+                    <div class="d-flex align-items-center">
+                        <h2 class="mb-0 fw-bold text-danger"><i class="fas fa-fire"></i> @streak</h2>
+                        <span class="ms-2 small text-muted">days</span>
+                    </div>
+                    <small class="text-muted">Don't break the chain!</small>
                 </div>
             </div>
         </div>
@@ -133,36 +116,56 @@
 
     <div class="row">
         <div class="col-lg-8">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold">📅 Recent Activity</h5>
-                    <a href="#" class="text-decoration-none small">View All</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
                                 <tr>
-                                    <th>Date</th>
+                                    <th class="ps-3">Date</th>
                                     <th>Topic / Module</th>
                                     <th>Hours</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @if (Model.ProgressLogs.Any())
+                                @if (logs.Any())
 
                                 {
 
-                                    foreach (var log in Model.ProgressLogs.OrderByDescending(p => p.Date).Take(5))
+                                    foreach (var log in logs.Take(5))
 
                                     {
                                         <tr>
-                                            <td>@log.Date.ToString("MMM dd")</td>
-                                            <td>@log.ModuleId (Placeholder)</td>
+                                            <td class="ps-3">@log.Date.ToString("MMM dd")</td>
+                                            <td>
+                                                @if (log.Module != null)
+
+                                                {
+                                                    <span class="fw-bold text-dark">@log.Module.ModuleCode</span>
+                                                    <span class="text-muted small d-block">@log.Module.ModuleName</span>
+                                                }
+
+                                                else
+
+                                                {
+                                                    <span class="badge bg-light text-dark border">Self-Study / Other</span>
+                                                }
+                                            </td>
                                             <td>@log.Hours hrs</td>
                                             <td>
-                                                <span class="badge bg-success">Verified</span>
+                                                @if (log.IsApproved)
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success">Verified</span>
+                                                }
+
+                                                else
+                                                {
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning">Pending</span>
+                                                }
                                             </td>
                                         </tr>
                                     }
@@ -173,8 +176,8 @@
 
                                 {
                                     <tr>
-                                        <td colspan="4" class="text-center py-4 text-muted">
-                                            <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                                        <td colspan="4" class="text-center py-5 text-muted">
+                                            <i class="fas fa-clipboard-list fa-2x mb-2 opacity-25"></i>
                                             <p>No activity logged yet. Start today!</p>
                                         </td>
                                     </tr>
@@ -187,224 +190,166 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="card shadow-sm mb-3">
-                <div class="card-body text-center">
-                    <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle mb-3" style="width:100px;height:100px;object-fit:cover;" />
-                    <h5>@Model.FullName</h5>
-                    <p class="text-muted small">@Model.Email</p>
-                    <hr />
-                    <div class="d-grid gap-2">
-                        <a asp-controller="Student" asp-action="Profile" class="btn btn-outline-secondary btn-sm">Edit Profile</a>
+
+            @if (nextModule != null)
+            {
+                <div class="card shadow-sm mb-4 border-0 bg-primary text-white position-relative overflow-hidden">
+                    <div class="card-body position-relative" style="z-index:1;">
+                        <h6 class="text-uppercase small opacity-75 fw-bold mb-2">🚀 Next Milestone</h6>
+                        <h5 class="fw-bold mb-1">@nextModule.ModuleCode</h5>
+                        <p class="mb-3 text-white-50 small">@nextModule.ModuleName</p>
+                        <a asp-action="Curriculum" class="btn btn-light text-primary btn-sm fw-bold w-100">
+                            Start Learning <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                    <i class="fas fa-rocket position-absolute" style="font-size: 5rem; opacity: 0.1; right: -20px; bottom: -20px;"></i>
+                </div>
+            }
+
+            @if (ViewBag.Leaderboard != null)
+            {
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-white fw-bold border-bottom-0 pt-3">
+                        <i class="fas fa-trophy text-warning me-1"></i> Top Students
+                    </div>
+                    <div class="card-body pt-0">
+                        <ul class="list-group list-group-flush">
+                            @foreach (var s in (IEnumerable<dynamic>)ViewBag.Leaderboard)
+
+                            {
+                                <li class="list-group-item px-0 d-flex justify-content-between align-items-center border-0">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(s.ProfilePic ?? "/images/default-avatar.png")" class="rounded-circle me-2 border" style="width:30px;height:30px;object-fit:cover;">
+                                        <span class="small fw-bold">@s.Name</span>
+                                    </div>
+                                    <span class="badge bg-light text-dark border">@s.TotalHours hrs</span>
+                                </li>
+                            }
+                        </ul>
                     </div>
                 </div>
-            </div>
-        </div>
+            }
 
-        <div class="row g-3 mb-4">
-    
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase small fw-bold">Consistency</h6>
-                <div class="d-flex align-items-center">
-                    @{
-                        var score = (int)(ViewBag.Consistency ?? 0);
-                        string colorClass = score >= 80 ? "text-success" : (score >= 50 ? "text-warning" : "text-danger");
-                    }
-                    <h2 class="mb-0 fw-bold @colorClass">@score%</h2>
-                    
-                    <span class="ms-2 badge bg-primary text-white" title="Your Global Rank">
-                        <i class="fas fa-trophy"></i> #@(ViewBag.Rank ?? "-")
-                    </span>
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle mb-3 border p-1" style="width:80px;height:80px;object-fit:cover;" />
+                    <h5 class="fw-bold h6">@Model.FullName</h5>
+                    <a asp-action="Profile" class="btn btn-outline-secondary btn-sm w-100">Edit Profile</a>
                 </div>
-                <div class="progress mt-2" style="height: 5px;">
-                    <div class="progress-bar @(score >= 80 ? "bg-success" : "bg-warning")" role="progressbar" style="width: @score%"></div>
-                </div>
-                <small class="text-muted">Last 28 Days Performance</small>
             </div>
+
         </div>
     </div>
-
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase small fw-bold">Verified Hours</h6>
-                <div class="d-flex align-items-center">
-                    <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
-                    <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
-                </div>
-                @if (pendingHours > 0)
-                {
-                    <div class="mt-2 badge bg-warning text-dark">
-                        <i class="fas fa-clock"></i> @pendingHours hrs pending
-                    </div>
-                }
-                else 
-                {
-                    <small class="text-muted">All logs verified</small>
-                }
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase small fw-bold">Current Streak</h6>
-                <div class="d-flex align-items-center">
-                    <h2 class="mb-0 fw-bold text-danger">
-                        <i class="fas fa-fire"></i> @(ViewBag.Streak ?? 0)
-                    </h2>
-                    <span class="ms-2 small text-muted">days</span>
-                </div>
-                <small class="text-muted">Don't break the chain!</small>
-            </div>
-        </div>
-    </div>
-
 </div>
-    </div>
 
-    <div class="modal fade" id="logWorkModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Log Daily Progress</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+<div class="modal fade" id="logWorkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Log Daily Progress</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
-               
-                        <div class="modal-body">
-                            <form asp-action="LogWork" method="post">
+            <div class="modal-body">
+                <form asp-action="LogWork" method="post">
 
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold small text-uppercase text-muted">Log Date</label>
-                                    <input type="date" name="logDate" class="form-control" required
-                                           value="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
-                                           max="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
-                                           min="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")" />
-                                    <div class="form-text text-muted small">You can only log work for Today or Yesterday.</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold small text-uppercase text-muted">Topic / Module</label>
-                                    <select name="moduleId" id="moduleSelect" class="form-select" required onchange="handleModuleChange(this)">
-                                        ```
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-uppercase text-muted">Topic / Module</label>
-                            <select name="moduleId" id="moduleSelect" class="form-select" required onchange="handleModuleChange(this)">
-                                <option value="" selected disabled>Select what you worked on...</option>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Log Date</label>
+                        <input type="date" name="logDate" class="form-control" required
+                               value="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                               max="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                               min="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")" />
+                        <div class="form-text text-muted small">You can only log work for Today or Yesterday.</div>
+                    </div>
 
-                                @if (ViewBag.CurrentModules != null)
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Topic / Module</label>
+                        <select name="moduleId" id="moduleSelect" class="form-select" required onchange="handleModuleChange(this)">
+                            <option value="" selected disabled>Select what you worked on...</option>
+
+                            @if (ViewBag.CurrentModules != null)
+
+                            {
+
+                                foreach (var m in (IEnumerable<dynamic>)ViewBag.CurrentModules)
 
                                 {
-
-                                    foreach (var m in (IEnumerable<dynamic>)ViewBag.CurrentModules)
-
-                                    {
-                                        <option value="@m.Id" data-is-project="@(m.Name.ToString().Contains("Project") ? "true" : "false")">
-                                            @m.Code - @m.Name
-                                        </option>
-                                    }
-
+                                    <option value="@m.Id">@m.ModuleCode - @m.ModuleName</option>
                                 }
-                                <option value="-1" class="fw-bold text-primary">➕ Other / Self-Study</option>
+
+                            }
+                            <option value="-1" class="fw-bold text-primary">➕ Other / Self-Study</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="customTopicDiv">
+                        <label class="form-label fw-bold small text-primary">Enter Custom Topic</label>
+                        <input type="text" name="customTopic" class="form-control border-primary" placeholder="e.g. C# Delegates (Extra)" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Hours Spent</label>
+                            <input type="number" step="0.5" min="0.5" max="5" name="hours" class="form-control" required placeholder="Max 5.0"
+                                   oninput="if(this.value > 5) this.value = 5;">
+                            <div class="form-text text-danger small">Max: 5.0</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Location</label>
+                            <select name="location" class="form-select">
+                                <option value="Remote">🏠 Remote</option>
+                                <option value="Office">🏢 Office</option>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="mb-3 d-none" id="customTopicDiv">
-                            <label class="form-label fw-bold small text-primary">Enter Custom Topic</label>
-                            <input type="text" name="customTopic" class="form-control border-primary" placeholder="e.g. C# Delegates (Extra)" />
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">What did you learn?</label>
+                        <textarea name="description" class="form-control" rows="2" required placeholder="Briefly describe the lesson..."></textarea>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="practiceDone" value="true" id="practiceCheck">
+                        <label class="form-check-label fw-bold" for="practiceCheck">
+                            ✅ I completed the practical exercises
+                        </label>
+                    </div>
+                    <div class="mb-3">
+    <label class="form-label fw-bold">Blockers / Challenges</label>
+    <textarea name="Blocker" class="form-control" rows="2" placeholder="Did you get stuck on anything?"></textarea>
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-bold">What will you learn tomorrow?</label>
+                        <textarea name="NextGoal" class="form-control" rows="2" placeholder="What is your goal for the next session?"></textarea>
+</div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Proof of Work (Link)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fab fa-github"></i></span>
+                            <input type="url" name="evidenceUrl" class="form-control" placeholder="https://github.com/..." />
                         </div>
+                    </div>
 
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-uppercase text-muted">Hours Spent</label>
-                                <input type="number" step="0.5" min="0.5" max="5" name="hours" class="form-control" required placeholder="Max 5.0"
-                                       oninput="if(this.value > 5) this.value = 5;">
-                                <div class="form-text text-danger small">Daily Max: 5 Hours</div>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-uppercase text-muted">Location</label>
-                                <select name="location" class="form-select">
-                                    <option value="Remote">🏠 Remote</option>
-                                    <option value="Office">🏢 Office</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Submit Log</button>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-uppercase text-muted">What did you learn? (Lesson Covered)</label>
-                            <textarea name="description" class="form-control" rows="2" required placeholder="Briefly describe the lesson..."></textarea>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="form-check mt-2">
-                                    <input class="form-check-input" type="checkbox" name="practiceDone" value="true" id="practiceCheck">
-                                    <label class="form-check-label fw-bold" for="practiceCheck">
-                                        ✅ I completed the practical exercises for this topic
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3 d-none bg-light p-3 rounded border" id="projectProgressDiv">
-                            <label class="form-label fw-bold text-primary">🚀 Mini-Project Progress (%)</label>
-                            <input type="range" name="miniProjectProgress" class="form-range" min="0" max="100" step="10" oninput="document.getElementById('progVal').innerText = this.value + '%'">
-                            <div class="text-end fw-bold text-primary" id="progVal">0%</div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-uppercase text-muted">Any Blockers?</label>
-                                <input type="text" name="blocker" class="form-control" placeholder="Stuck on..." />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-uppercase text-muted">Goal for Tomorrow</label>
-                                <input type="text" name="nextGoal" class="form-control" placeholder="Will finish..." />
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-bold small text-uppercase text-muted">Proof of Work (Link)</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fab fa-github"></i></span>
-                                <input type="url" name="evidenceUrl" class="form-control" placeholder="https://github.com/..." />
-                            </div>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Submit Detailed Log</button>
-                        </div>
-
-                    </form>
-
-                    <script>
-                        function handleModuleChange(select) {
-                            var customDiv = document.getElementById("customTopicDiv");
-                            var projectDiv = document.getElementById("projectProgressDiv");
-                            var selectedOption = select.options[select.selectedIndex];
-
-                            // 1. Handle "Other" Custom Topic
-                            if (select.value === "-1") {
-                                customDiv.classList.remove("d-none");
-                                customDiv.querySelector("input").required = true;
-                            } else {
-                                customDiv.classList.add("d-none");
-                                customDiv.querySelector("input").required = false;
-                            }
-
-                            // 2. Handle Project Progress Bar (Only if module name contains "Project")
-                            var isProject = selectedOption.getAttribute("data-is-project") === "true";
-                            if (isProject) {
-                                projectDiv.classList.remove("d-none");
-                            } else {
-                                projectDiv.classList.add("d-none");
-                            }
-                        }
-                    </script>
-                </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function handleModuleChange(select) {
+        var customDiv = document.getElementById("customTopicDiv");
+        if (select.value === "-1") {
+            customDiv.classList.remove("d-none");
+            customDiv.querySelector("input").required = true;
+        } else {
+            customDiv.classList.add("d-none");
+            customDiv.querySelector("input").required = false;
+        }
+    }
+</script>

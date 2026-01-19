@@ -31,95 +31,89 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // GET: STUDENT DASHBOARD (Merged Stats & Locking)
+        // GET: STUDENT DASHBOARD (Fully Merged)
         // =========================
         public async Task<IActionResult> Dashboard()
         {
+            
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
 
-            // 1. Fetch Student Data & Relations
+            // 1. Fetch Student with ALL necessary data (Merged Includes)
             var student = await _context.Students
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.Mentor)
-                .Include(s => s.ProgressLogs)
                 .Include(s => s.ModuleCompletions)
+                .Include(s => s.ProgressLogs)
+                    .ThenInclude(pl => pl.Module) // 👈 Critical for "Recent Activity" table names
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            if (student == null) return View("ProfilePending");
+            if (student == null) return RedirectToAction("CreateProfile");
 
-            // 2. Filter Verified Logs
-            var logs = student.ProgressLogs.Where(l => l.IsApproved).ToList();
-            var today = DateTime.UtcNow.Date;
+            // 2. Fetch Active Modules for Dropdown
+            var modules = await _context.SyllabusModules
+                .Where(m => m.TrackId == student.TrackId && m.IsActive)
+                .OrderBy(m => m.DisplayOrder)
+                .ToListAsync();
 
-            // ---------------------------------------------------------
-            // 📊 STATS ENGINE
-            // ---------------------------------------------------------
+            ViewBag.CurrentModules = modules;
 
-            // A. Weekly Hours (Reset on Monday)
-            int daysSinceMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-            var thisMonday = today.AddDays(-daysSinceMonday);
+            // 3. Calculate Personal Stats
+            var logs = student.ProgressLogs ?? new List<ProgressLog>();
+            var approvedLogs = logs.Where(l => l.IsApproved).ToList();
 
-            decimal weeklyHours = logs
-                .Where(l => l.Date.Date >= thisMonday)
-                .Sum(l => l.Hours);
+            // --- A. Consistency Score ---
+            var last28Days = Enumerable.Range(0, 28).Select(i => DateTime.UtcNow.Date.AddDays(-i)).ToList();
+            int daysLogged = approvedLogs.Select(l => l.Date.Date).Distinct().Count(d => last28Days.Contains(d));
+            int consistency = (int)((daysLogged / 28.0) * 100);
+            ViewBag.Consistency = consistency;
 
-            // B. Consistency Score
-            int consistencyScore = 0;
-            if (student.TargetHoursPerWeek > 0)
+            // --- B. Streak Calculation ---
+            int streak = 0;
+            var dates = approvedLogs.Select(l => l.Date.Date).Distinct().OrderByDescending(d => d).ToList();
+            var checkDate = DateTime.UtcNow.Date;
+            if (dates.Contains(checkDate) || dates.Contains(checkDate.AddDays(-1)))
             {
-                consistencyScore = (int)((weeklyHours / student.TargetHoursPerWeek) * 100);
-                if (consistencyScore > 100) consistencyScore = 100;
-            }
-
-            // C. Streak Calculation
-            int currentStreak = 0;
-            var logDates = logs.Select(l => l.Date.Date).Distinct().OrderByDescending(d => d).ToList();
-            if (logDates.Any())
-            {
-                var lastLogDate = logDates.First();
-                if (lastLogDate == today || lastLogDate == today.AddDays(-1))
+                foreach (var d in dates)
                 {
-                    currentStreak = 1;
-                    for (int i = 0; i < logDates.Count - 1; i++)
-                    {
-                        if (logDates[i].AddDays(-1) == logDates[i + 1]) currentStreak++;
-                        else break;
-                    }
+                    if (d == checkDate) { streak++; checkDate = checkDate.AddDays(-1); }
+                    else if (d == checkDate.AddDays(-1)) { streak++; checkDate = checkDate.AddDays(-2); }
+                    else break;
                 }
             }
+            ViewBag.Streak = streak;
 
-            // D. Global Rank
-            decimal myTotalHours = logs.Sum(l => l.Hours);
+            // --- C. Weekly Hours ---
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek); // Sunday as start
+            ViewBag.WeeklyHours = approvedLogs.Where(l => l.Date >= startOfWeek).Sum(l => l.Hours);
+
+            // --- D. Global Rank (Restored from your old code) ---
+            decimal myTotalHours = approvedLogs.Sum(l => l.Hours);
             var betterStudentsCount = await _context.Students
                 .Where(s => s.EnrollmentStatus == "Active" && s.Id != student.Id)
-                .Select(s => new {
+                .Select(s => new
+                {
                     Id = s.Id,
                     TotalHours = s.ProgressLogs.Where(p => p.IsApproved).Sum(p => (decimal?)p.Hours) ?? 0
                 })
                 .CountAsync(x => x.TotalHours > myTotalHours);
 
-            int rank = betterStudentsCount + 1;
-
-            // 3. Pass Stats to View
-            ViewBag.WeeklyHours = weeklyHours;
-            ViewBag.Streak = currentStreak;
-            ViewBag.Consistency = consistencyScore;
-            ViewBag.Rank = rank;
+            ViewBag.Rank = betterStudentsCount + 1;
 
             // ---------------------------------------------------------
-            // 🔒 MODULE LOCKING LOGIC (✅ FIXED SECTION)
+            // 🔒 MODULE LOCKING LOGIC (Fixed Property Names)
             // ---------------------------------------------------------
 
-            // We use .Select() here to rename properties so they match what the View expects (@m.Code, @m.Name)
+            // 1. Fetch All Active Modules with Original Names
             var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
                 .Select(m => new {
                     Id = m.Id,
-                    Code = m.ModuleCode,      // ✅ Renamed ModuleCode -> Code
-                    Name = m.ModuleName,      // ✅ Renamed ModuleName -> Name
+                    ModuleCode = m.ModuleCode, // ✅ Keep as ModuleCode
+                    ModuleName = m.ModuleName, // ✅ Keep as ModuleName
                     DisplayOrder = m.DisplayOrder
                 })
                 .ToListAsync();
@@ -129,11 +123,10 @@ namespace SPT.Controllers
                 .Select(c => c.ModuleId)
                 .ToList();
 
-            // Find last completed order
+            // 2. Find last completed order
             int lastCompletedOrder = 0;
             if (completedModuleIds.Any())
             {
-                // We filter in memory here because allModules is already a List<AnonymousType>
                 var lastCompleted = allModules
                     .Where(m => completedModuleIds.Contains(m.Id))
                     .OrderByDescending(m => m.DisplayOrder)
@@ -142,20 +135,55 @@ namespace SPT.Controllers
                 if (lastCompleted != null) lastCompletedOrder = lastCompleted.DisplayOrder;
             }
 
-            // Allow: All Completed + Immediate Next
+            // 3. Filter Unlocked Modules
             var unlockedModules = allModules
                 .Where(m => m.DisplayOrder <= lastCompletedOrder + 1)
                 .ToList();
 
             ViewBag.CurrentModules = unlockedModules;
 
+            // ---------------------------------------------------------
+            // 🚀 NEW FEATURES (Announcement, Next Up, Leaderboard)
+            // ---------------------------------------------------------
+
+            // 1. Announcement
+            try
+            {
+                ViewBag.LatestAnnouncement = await _context.Announcements
+                    .OrderByDescending(a => a.CreatedAt)
+                    .FirstOrDefaultAsync();
+            }
+            catch { ViewBag.LatestAnnouncement = null; }
+
+            // 2. Next Up Module
+            var nextModule = allModules.FirstOrDefault(m => !completedModuleIds.Contains(m.Id));
+            ViewBag.NextModule = nextModule;
+
+            // 3. Mini Leaderboard
+            if (student.CohortId != null)
+            {
+                var topStudents = await _context.Students
+                    .Where(s => s.CohortId == student.CohortId)
+                    .Select(s => new {
+                        Name = s.FullName,
+                        TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => l.Hours),
+                        ProfilePic = s.ProfilePicture
+                    })
+                    .OrderByDescending(x => x.TotalHours)
+                    .Take(3)
+                    .ToListAsync();
+
+                ViewBag.Leaderboard = topStudents;
+            }
+
             return View(student);
         }
+
 
         // =========================
         // POST: LOG WORK (Detailed Version)
         // =========================
-[HttpPost]
+        [HttpPost]
 [ValidateAntiForgeryToken]
 public async Task<IActionResult> LogWork(
     int moduleId,
@@ -341,47 +369,44 @@ public async Task<IActionResult> LogWork(
         public async Task<IActionResult> Curriculum()
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            var student = await _context.Students
+                .Include(s => s.Track) // Ensure Track is loaded
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
+
             if (student == null) return RedirectToAction("Dashboard");
 
             // 1. Get all modules for this track
             var modules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
+                .Include(m => m.Resources) // 👈 Important: Load Resources
                 .OrderBy(m => m.DisplayOrder)
                 .ToListAsync();
 
-            // 2. Get completed modules (Where student passed the quiz)
-            var completions = await _context.ModuleCompletions
+            // 2. Get completed module IDs
+            var completedModuleIds = await _context.ModuleCompletions
                 .Where(mc => mc.StudentId == student.Id && mc.IsCompleted)
+                .Select(mc => mc.ModuleId) // 👈 Just get the IDs for easier checking
                 .ToListAsync();
 
-            // 3. Build the View Model with Locking Logic
-            var model = new List<CurriculumViewModel>();
-            bool previousModuleCompleted = true; // First module is always unlocked
-
-            foreach (var module in modules)
+            // 3. Build the View Model using the new mapping
+            var model = modules.Select(m => new CurriculumViewModel
             {
-                var completion = completions.FirstOrDefault(c => c.ModuleId == module.Id);
-                bool isCompleted = completion != null;
+                Id = m.Id,
+                ModuleCode = m.ModuleCode,
+                ModuleName = m.ModuleName,
+                Title = m.ModuleName,
+                Topics = m.Topics,
+                Description = m.Topics,
+                RequiredHours = m.RequiredHours,
+                Difficulty = m.DifficultyLevel ?? "General",
+                IsCompleted = completedModuleIds.Contains(m.Id),
 
-                var item = new CurriculumViewModel
-                {
-                    ModuleId = module.Id,
-                    ModuleCode = module.ModuleCode,
-                    Title = module.ModuleName,
-                    Description = module.Topics,
-                    RequiredHours = module.RequiredHours,
-                    Difficulty = module.DifficultyLevel,
-                    IsCompleted = isCompleted,
-                    // Logic: Locked if previous wasn't finished AND this one isn't finished
-                    IsLocked = !previousModuleCompleted && !isCompleted
-                };
+                // 🔒 Logic: Locked if it's NOT the 1st one AND the previous one isn't finished
+                IsLocked = m.DisplayOrder > 1 &&
+                           !completedModuleIds.Contains(modules.FirstOrDefault(p => p.DisplayOrder == m.DisplayOrder - 1)?.Id ?? 0),
 
-                model.Add(item);
-
-                // This module determines if the *next* one is unlocked
-                previousModuleCompleted = isCompleted;
-            }
+                Resources = m.Resources.ToList()
+            }).ToList();
 
             return View(model);
         }

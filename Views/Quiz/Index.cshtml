@@ -1,28 +1,88 @@
-﻿@model IEnumerable<SPT.Models.Track>
+﻿@model IEnumerable<SPT.Models.SyllabusModule>
+
 @{
-    ViewData["Title"] = "Select Module for Quiz";
+    ViewData["Title"] = "Quiz Management";
 }
 
-<div class="container mt-4">
-    <h2 class="mb-4">📂 Select a Module to Manage Quiz</h2>
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary"><i class="fas fa-check-double"></i> Quiz Management</h2>
+            <p class="text-muted">Select a module to manage its quiz questions.</p>
+        </div>
+    </div>
 
-    @foreach (var track in Model)
-    {
-        <div class="card mb-3 shadow-sm">
-            <div class="card-header bg-dark text-white">
-                <h5 class="mb-0">@track.Name (@track.Code)</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    @foreach (var module in track.Modules.OrderBy(m => m.DisplayOrder))
-                    {
-                        <a asp-action="Manage" asp-route-moduleId="@module.Id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <span><strong>@module.ModuleCode:</strong> @module.ModuleName</span>
-                            <span class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Manage Quiz</span>
-                        </a>
-                    }
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-light rounded">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <strong>Filter by Track:</strong>
+                </div>
+                <div class="col-auto">
+                    <form method="get">
+                        <select name="trackId" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- All Tracks --</option>
+                            @if (ViewBag.Tracks != null)
+                            {
+                                foreach (var t in ViewBag.Tracks)
+                                {
+                                    <option value="@t.Id">@t.Name</option>
+                                }
+                            }
+                        </select>
+                    </form>
                 </div>
             </div>
         </div>
-    }
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th class="ps-4">Track</th>
+                            <th>Code</th>
+                            <th>Module Name</th>
+                            <th>Questions</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
+                                    <p>No modules found.</p>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-4"><span class="badge bg-secondary">@item.Track?.Code</span></td>
+                                    <td class="fw-bold">@item.ModuleCode</td>
+                                    <td>@item.ModuleName</td>
+                                    <td>
+                                        <span class="badge bg-info text-dark">
+                                            @(item.Questions?.Count ?? 0) Questions
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <a asp-controller="Quiz" asp-action="Manage" asp-route-moduleId="@item.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i> Manage Questions
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>

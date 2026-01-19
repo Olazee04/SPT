@@ -1,18 +1,21 @@
 ﻿@model IEnumerable<SPT.Models.QuizQuestion>
+
 @{
+    ViewData["Title"] = "Manage Questions";
     var module = ViewBag.Module as SPT.Models.SyllabusModule;
-    ViewData["Title"] = "Manage Quiz: " + module.ModuleName;
 }
 
-<div class="container mt-4">
+<div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-0">Manage Quiz: <span class="text-primary">@module.ModuleName</span></h4>
-            <span class="text-muted">Total Questions: @Model.Count()</span>
+            <h2 class="fw-bold text-primary">
+                <i class="fas fa-question-circle"></i> Quiz: @module?.ModuleName
+            </h2>
+            <p class="text-muted">Manage questions for module <strong>@module?.ModuleCode</strong></p>
         </div>
         <div>
-            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
-            <a asp-action="CreateQuestion" asp-route-moduleId="@module.Id" class="btn btn-success">
+            <a asp-controller="Admin" asp-action="ManageQuizzes" class="btn btn-outline-secondary me-2">Back to List</a>
+            <a asp-action="CreateQuestion" asp-route-moduleId="@module?.Id" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Add New Question
             </a>
         </div>
@@ -23,36 +26,52 @@
         <div class="alert alert-success">@TempData["Success"]</div>
     }
 
-    @foreach (var q in Model)
-    {
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <h5 class="card-title">@q.QuestionText</h5>
-                    <form asp-action="DeleteQuestion" method="post">
-                        <input type="hidden" name="id" value="@q.Id" />
-                        <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this question?');">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
+    <div class="card shadow border-0">
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-clipboard-list fa-3x mb-3 opacity-50"></i>
+                    <p>No questions added yet.</p>
                 </div>
-                <ul class="list-group list-group-flush mt-2">
-                    @foreach (var opt in q.Options)
+            }
+            else
+            {
+                <div class="accordion" id="questionsAccordion">
+                    @foreach (var q in Model)
                     {
-                        <li class="list-group-item @(opt.IsCorrect ? "list-group-item-success" : "")">
-                            @if (opt.IsCorrect)
-                            {
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                            }
-                            else
-                            {
-                                <i class="far fa-circle text-muted me-2"></i>
-                            }
-                            @opt.OptionText
-                        </li>
+                        <div class="accordion-item mb-3 border rounded overflow-hidden">
+                            <h2 class="accordion-header" id="heading-@q.Id">
+                                <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@q.Id">
+                                    <strong>@q.QuestionText</strong>
+                                </button>
+                            </h2>
+                            <div id="collapse-@q.Id" class="accordion-collapse collapse" data-bs-parent="#questionsAccordion">
+                                <div class="accordion-body">
+                                    <ul class="list-group mb-3">
+                                        @foreach (var opt in q.Options)
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center @(opt.IsCorrect ? "list-group-item-success" : "")">
+                                                @opt.OptionText
+                                                @if (opt.IsCorrect)
+                                                {
+                                                    <span class="badge bg-success">Correct Answer</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                    <form asp-action="DeleteQuestion" method="post" onsubmit="return confirm('Delete this question?');">
+                                        <input type="hidden" name="id" value="@q.Id" />
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i> Delete Question
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     }
-                </ul>
-            </div>
+                </div>
+            }
         </div>
-    }
+    </div>
 </div>

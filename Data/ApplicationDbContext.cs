@@ -31,7 +31,8 @@ namespace SPT.Data
         public DbSet<ModuleResource> ModuleResources { get; set; }
         public DbSet<SyllabusModule> SyllabusModules { get; set; }
          public DbSet<Resource> Resources { get; set; }
-
+        public DbSet<Certificate> Certificates { get; set; }
+        public DbSet<Attendance> Attendance { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

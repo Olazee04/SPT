@@ -21,23 +21,31 @@ namespace SPT.Controllers
         // 1. SELECT MODULE (Step 1)
         // =========================
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? trackId)
         {
-            // List all modules so Admin can pick one to manage
-            var modules = await _context.SyllabusModules
+            // 1. Get Tracks for Dropdown
+            ViewBag.Tracks = await _context.Tracks.ToListAsync();
+
+            // 2. Start Query for Modules
+            var query = _context.SyllabusModules
                 .Include(m => m.Track)
-                .Include(m => m.Questions)
+                .Include(m => m.Questions) // Include questions so we can count them
+                .AsQueryable();
+
+            // 3. Filter if needed
+            if (trackId.HasValue)
+            {
+                query = query.Where(m => m.TrackId == trackId.Value);
+            }
+
+            // 4. Get List
+            var modules = await query
                 .OrderBy(m => m.Track.Name)
                 .ThenBy(m => m.DisplayOrder)
                 .ToListAsync();
 
+            // 5. Send MODULES to the View
             return View(modules);
-
-            var tracks = await _context.Tracks
-        .Include(t => t.Modules) // Include modules so we can count them
-        .ToListAsync();
-
-            return View(tracks);
         }
 
         // =========================

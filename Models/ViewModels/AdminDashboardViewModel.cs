@@ -7,6 +7,8 @@
         public int PendingLogs { get; set; }
         public int OpenTickets { get; set; }
         public decimal AvgConsistency { get; set; }
+        public int TotalStudents { get; set; } 
+        public int TotalMentors { get; set; }  
 
         // The Big Table Data
         public List<StudentPerformanceDTO> StudentPerformance { get; set; } = new List<StudentPerformanceDTO>();

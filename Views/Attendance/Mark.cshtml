@@ -1,0 +1,98 @@
+﻿@model List<SPT.Models.Student>
+@{
+    ViewData["Title"] = "Mark Attendance";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="font-weight-bold text-gray-800"><i class="fas fa-user-check text-primary mr-2"></i> Mark Attendance</h2>
+
+        <form method="get" class="form-inline">
+            <label class="mr-2 font-weight-bold">Select Cohort:</label>
+            <select name="cohortId" class="form-control mr-2" asp-items="ViewBag.Cohorts" onchange="this.form.submit()">
+                <option value="">-- Choose --</option>
+            </select>
+        </form>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Class List: @ViewBag.CohortName</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="SaveAttendance" method="post">
+                    <input type="hidden" name="cohortId" value="@ViewBag.CohortId" />
+
+                    <div class="form-group row mb-4">
+                        <label class="col-sm-2 col-form-label font-weight-bold">Date:</label>
+                        <div class="col-sm-4">
+                            <input type="date" name="date" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Student</th>
+                                    <th class="text-center">Present</th>
+                                    <th class="text-center">Absent</th>
+                                    <th class="text-center">Late</th>
+                                    <th class="text-center">Excused</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var student in Model)
+                                {
+                                    <tr>
+                                        <td class="font-weight-bold">@student.FullName</td>
+
+                                        <td class="text-center">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="p_@student.Id" name="status[@student.Id]" value="Present" class="custom-control-input" checked>
+                                                <label class="custom-control-label text-success" for="p_@student.Id"><i class="fas fa-check"></i></label>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="a_@student.Id" name="status[@student.Id]" value="Absent" class="custom-control-input">
+                                                <label class="custom-control-label text-danger" for="a_@student.Id"><i class="fas fa-times"></i></label>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="l_@student.Id" name="status[@student.Id]" value="Late" class="custom-control-input">
+                                                <label class="custom-control-label text-warning" for="l_@student.Id"><i class="fas fa-clock"></i></label>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="e_@student.Id" name="status[@student.Id]" value="Excused" class="custom-control-input">
+                                                <label class="custom-control-label text-info" for="e_@student.Id"><i class="fas fa-notes-medical"></i></label>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <input type="text" name="remarks[@student.Id]" class="form-control form-control-sm" placeholder="Optional note..." />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="text-right mt-3">
+                        <button type="submit" class="btn btn-success px-5 font-weight-bold">Save Attendance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+    else if (ViewBag.CohortId != null)
+    {
+        <div class="alert alert-warning text-center">No active students found in this cohort.</div>
+    }
+</div>
