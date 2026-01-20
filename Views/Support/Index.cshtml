@@ -54,6 +54,14 @@
                                         <option>Personal / Other</option>
                                     </select>
                                 </div>
+                                <div class="form-group mb-3">
+                                    <label class="small font-weight-bold">Priority</label>
+                                    <select name="Priority" class="form-control">
+                                        <option value="Low">Low</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="High">High (Blocking Work)</option>
+                                    </select>
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">Message</label>
                                     <textarea name="Message" class="form-control" rows="4" placeholder="Describe your issue..." required></textarea>
@@ -65,36 +73,41 @@
                 </div>
 
                 <div class="col-md-8">
-                    <h5 class="fw-bold mb-3">My Tickets</h5>
-                    @if (tickets == null || !tickets.Any())
-                    {
-                            <div class="alert alert-info">You haven't submitted any support tickets yet.</div>
-                    }
-                    else
-                    {
-                            <div class="list-group">
-                            @foreach (var t in tickets)
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">My Tickets</h6>
+                        </div>
+                        <div class="card-body">
+                            @if (Model.Any())
                             {
-                                string badgeClass = t.Status == "Resolved" ? "bg-success" : (t.Status == "In Progress" ? "bg-warning" : "bg-danger");
-                                        <div class="list-group-item">
-                                            <div class="d-flex w-100 justify-content-between">
-                                                <h6 class="mb-1 fw-bold">@t.Subject</h6>
-                                                <span class="badge @badgeClass">@t.Status</span>
-                                            </div>
-                                            <p class="mb-1 small text-muted">@t.Message</p>
-
-                                    @if (!string.IsNullOrEmpty(t.AdminResponse))
-                                    {
-                                                    <div class="mt-2 p-2 bg-light border-start border-4 border-success rounded">
-                                                        <small class="fw-bold text-success"><i class="fas fa-reply"></i> Mentor Response:</small>
-                                            <p class="mb-0 mt-1 text-dark">@t.AdminResponse</p>
-                                                    </div>
-                                    }
-                                            <small class="text-muted" style="font-size:0.7em;">@t.CreatedAt.ToString("g")</small>
+                                @foreach (var ticket in Model)
+                                {
+                                    <div class="border rounded p-3 mb-3 @(ticket.IsResolved ? "bg-light" : "border-left-warning")">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="font-weight-bold text-dark">@ticket.Subject</h6>
+                                            <span class="badge @(ticket.IsResolved ? "badge-success" : "badge-warning")">
+                                                @(ticket.IsResolved ? "Resolved" : "Open")
+                                            </span>
                                         </div>
+                                        <p class="small text-muted mb-2">@ticket.CreatedAt.ToString("g")</p>
+                                        <p class="mb-2">@ticket.Message</p>
+
+                                        @if (!string.IsNullOrEmpty(ticket.AdminResponse))
+                                        {
+                                            <div class="bg-white border rounded p-3 mt-3">
+                                                <small class="text-primary font-weight-bold"><i class="fas fa-reply"></i> Admin Response:</small>
+                                                <p class="mb-0 mt-1 text-dark">@ticket.AdminResponse</p>
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             }
-                            </div>
-                    }
+                            else
+                            {
+                                <p class="text-center text-muted py-4">No tickets found.</p>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

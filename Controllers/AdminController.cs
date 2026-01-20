@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
 using SPT.Models.ViewModels;
+using SPT.Services;
 
 namespace SPT.Controllers
 {
@@ -16,15 +17,20 @@ namespace SPT.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
-
+        private readonly IEmailService _emailService; 
+        private readonly AuditService _auditService;
         public AdminController(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env)
+              ApplicationDbContext context,
+              UserManager<ApplicationUser> userManager,
+              IWebHostEnvironment env,
+              IEmailService emailService,
+              AuditService auditService)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
+            _emailService = emailService;
+            _auditService = auditService;
         }
         // =========================
         // ADMIN DASHBOARD (MERGED)
@@ -174,18 +180,21 @@ namespace SPT.Controllers
                 return RedirectToAction("ProgressLogs");
             }
 
-            // 🛑 LOGIC 1: REJECT
             if (action == "Reject")
             {
+                if (log.Student?.User != null)
+                {
+                    // Note: You might need to add a "RejectionReason" parameter to your method and modal form!
+                    string reason = "The submission did not meet the requirements.";
+                    string body = $"<p>Your log for {log.Date:d} was rejected.</p><p><strong>Reason:</strong> {reason}</p>";
+                    await _emailService.SendEmailAsync(log.Student.Email, "Log Rejected", body);
+                }
                 _context.ProgressLogs.Remove(log);
                 await _context.SaveChangesAsync();
                 TempData["Error"] = "❌ Log rejected and removed.";
                 return RedirectToAction("ProgressLogs");
             }
 
-            // 🛑 LOGIC 2: APPROVE/UPDATE
-
-            // Calculate Daily Total (Sum of ALL logs for this student on this day)
             var dateToCheck = log.Date.Date;
             decimal otherLogsTotal = await _context.ProgressLogs
                 .Where(l => l.StudentId == log.StudentId && l.Date.Date == dateToCheck && l.Id != id)
@@ -483,6 +492,35 @@ namespace SPT.Controllers
             await _context.SaveChangesAsync();
             TempData["Success"] = "✅ Student updated successfully!";
             return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        // ================
+        // DELETE STUDENT 
+        // ================
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteStudent(int id)
+        {
+            var student = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.Id == id);
+            if (student == null) return NotFound();
+
+            // ✅ THIS IS WHERE YOU ADD THE AUDIT LOG
+            await _auditService.LogAsync("Delete Student", $"Deleted student: {student.FullName} (ID: {id})", User.Identity.Name);
+
+            // Delete User (Cascade deletes student profile)
+            if (student.User != null)
+            {
+                await _userManager.DeleteAsync(student.User);
+            }
+            else
+            {
+                _context.Students.Remove(student);
+                await _context.SaveChangesAsync();
+            }
+
+            TempData["Success"] = "Student deleted successfully.";
+            return RedirectToAction(nameof(Students));
         }
 
         // =========================
@@ -833,5 +871,133 @@ namespace SPT.Controllers
 
             return View(modules); // 👈 We are sending "List<SyllabusModule>"
         }
+
+        // =========================
+        // BULK IMPORT STUDENTS
+        // =========================
+        [HttpGet]
+        public IActionResult ImportStudents()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportStudents(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select a valid CSV file.";
+                return View();
+            }
+
+            if (!file.FileName.EndsWith(".csv"))
+            {
+                TempData["Error"] = "Only .csv files are allowed.";
+                return View();
+            }
+
+            int successCount = 0;
+            int errorCount = 0;
+            var errors = new List<string>();
+
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            {
+                var header = await reader.ReadLineAsync();
+
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var values = line.Split(',');
+
+                    if (values.Length < 3)
+                    {
+                        errorCount++;
+                        continue;
+                    }
+
+                    string fullName = values[0].Trim();
+                    string email = values[1].Trim();
+                    string trackCode = values[2].Trim();
+
+                    if (await _userManager.FindByEmailAsync(email) != null)
+                    {
+                        errors.Add($"{email}: Email already exists.");
+                        errorCount++;
+                        continue;
+                    }
+
+                    var track = await _context.Tracks.FirstOrDefaultAsync(t => t.Code == trackCode);
+                    if (track == null)
+                    {
+                        errors.Add($"{email}: Invalid Track Code '{trackCode}'.");
+                        errorCount++;
+                        continue;
+                    }
+
+                    var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+                    var result = await _userManager.CreateAsync(user, "Student@123");
+
+                    if (result.Succeeded)
+                    {
+                        await _userManager.AddToRoleAsync(user, "Student");
+
+                        var student = new Student
+                        {
+                            UserId = user.Id,
+                            FullName = fullName,
+                            Email = email,
+                            TrackId = track.Id,
+                            DateJoined = DateTime.UtcNow,
+                            TargetHoursPerWeek = 20,
+                            EnrollmentStatus = "Active"
+                        };
+                       
+                        _context.Students.Add(student);
+                        successCount++;
+
+                        try
+                        {
+                            string body = $"<h1>Welcome to RMSys SPT Academy!</h1><p>Your account has been created.</p><p><strong>Email:</strong> {email}</p><p><strong>Password:</strong> Student@123</p><p>Please login and change your password immediately.</p>";
+                            await _emailService.SendEmailAsync(email, "Welcome to SPT", body);
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+                    else
+                    {
+                        errorCount++;
+                        errors.Add($"{email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    }
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            if (errorCount > 0)
+            {
+                TempData["Warning"] = $"Imported {successCount} students. {errorCount} failed. Check details below.";
+                ViewBag.Errors = errors;
+            }
+            else
+            {
+                TempData["Success"] = $"Successfully imported {successCount} students!";
+                return RedirectToAction("Students");
+            }
+
+            return View();
+        }
+
+        // Helper to Download Template
+        public IActionResult DownloadTemplate()
+        {
+            var csv = "FullName,Email,TrackCode\nJohn Doe,john@example.com,FSC\nJane Smith,jane@test.com,API";
+            return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "StudentImportTemplate.csv");
+        }
+
+  
     }
 }

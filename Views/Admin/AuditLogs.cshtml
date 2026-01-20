@@ -1,0 +1,33 @@
+﻿@model IEnumerable<SPT.Models.AuditLog>
+@{
+    ViewData["Title"] = "System Audit Logs";
+}
+
+<div class="container-fluid p-4">
+    <h2 class="mb-4 font-weight-bold text-gray-800">🔒 Security Audit Logs</h2>
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <table class="table table-striped mb-0">
+                <thead class="bg-dark text-white">
+                    <tr>
+                        <th>Time</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                        <th>Performed By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model.OrderByDescending(m => m.Timestamp))
+                    {
+                        <tr>
+                            <td>@log.Timestamp.ToString("g")</td>
+                            <td><span class="badge badge-info">@log.Action</span></td>
+                            <td>@log.Details</td>
+                            <td class="font-weight-bold text-dark">@log.PerformedBy</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

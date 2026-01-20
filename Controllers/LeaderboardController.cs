@@ -1,75 +1,59 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
+using SPT.Models.ViewModels;
 using SPT.Models;
-using SPT.Models.ViewModels; // ✅ FIXED: Added this namespace
 
 namespace SPT.Controllers
 {
-    [Authorize]
+    [Authorize] // Everyone (Students, Mentors, Admins) can see this
     public class LeaderboardController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
 
-        public LeaderboardController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public LeaderboardController(ApplicationDbContext context)
         {
             _context = context;
-            _userManager = userManager;
         }
 
         public async Task<IActionResult> Index()
         {
-            var user = await _userManager.GetUserAsync(User);
-            var currentUserId = user?.Id;
-
-            // 1. Get All Active Students with their Logs
+            // 1. Get all active students
             var students = await _context.Students
-                .Include(s => s.ProgressLogs)
                 .Include(s => s.Track)
+                .Include(s => s.Cohort)
+                .Include(s => s.ProgressLogs)
                 .Where(s => s.EnrollmentStatus == "Active")
                 .ToListAsync();
 
-            // 2. Transform into Leaderboard Data
+            // 2. Calculate Scores in Memory
             var leaderboard = students.Select(s => new LeaderboardViewModel
             {
-                FullName = s.FullName, // ✅ FIXED: Changed StudentName to FullName to match ViewModel
-                TrackCode = s.Track?.Code ?? "N/A",
-                ProfilePicture = s.ProfilePicture,
                 StudentId = s.Id,
+                FullName = s.FullName,
+                ProfilePicture = s.ProfilePicture,
+                Track = s.Track?.Code ?? "N/A",
+                Cohort = s.Cohort?.Name ?? "N/A",
 
-                // Only sum APPROVED logs
+                // Score Logic: Sum of Approved Hours
                 TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => l.Hours),
 
-                // Calculate Consistency
-                ConsistencyScore = CalculateConsistency(s.ProgressLogs.Where(l => l.IsApproved).ToList(), s.TargetHoursPerWeek),
-
-                IsCurrentUser = s.UserId == currentUserId
+                LogCount = s.ProgressLogs.Count(l => l.IsApproved)
             })
-            .OrderByDescending(x => x.TotalHours) // Highest hours first
-            .ThenByDescending(x => x.ConsistencyScore) // Tie-breaker
+            .OrderByDescending(x => x.TotalHours) // Highest score first
             .ToList();
 
-            // 3. Assign Rank Numbers (1, 2, 3...)
-            for (int i = 0; i < leaderboard.Count; i++)
+            // 3. Assign Ranks (Handling ties if needed, but simple index for now)
+            int rank = 1;
+            foreach (var entry in leaderboard)
             {
-                leaderboard[i].Rank = i + 1;
+                entry.Rank = rank++;
             }
 
             return View(leaderboard);
         }
-
-        // Helper to calculate score quickly
-        private int CalculateConsistency(List<ProgressLog> logs, int targetPerWeek)
-        {
-            if (targetPerWeek == 0) return 0;
-            var last28Days = DateTime.UtcNow.Date.AddDays(-28);
-            var recentHours = logs.Where(l => l.Date >= last28Days).Sum(l => l.Hours);
-            var target = targetPerWeek * 4;
-            var score = (int)((recentHours / target) * 100);
-            return score > 100 ? 100 : score;
-        }
     }
+
+    
 }

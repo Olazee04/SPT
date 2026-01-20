@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,7 +34,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Identity/Account/Logout";
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
-
+builder.Services.AddTransient<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<AuditService>();
 var app = builder.Build();
 
 // 5. Middleware Pipeline

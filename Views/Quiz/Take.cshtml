@@ -1,0 +1,41 @@
+﻿@model List<SPT.Models.QuizQuestion>
+@{
+    var module = ViewBag.Module as SPT.Models.SyllabusModule;
+    ViewData["Title"] = "Take Quiz: " + module.ModuleName;
+}
+
+<div class="container p-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <h4 class="font-weight-bold text-primary mb-0">@module.ModuleName Quiz</h4>
+            <p class="text-muted mb-0">Answer all questions to complete this module.</p>
+        </div>
+        <div class="card-body">
+            <form asp-action="Submit" method="post">
+                <input type="hidden" name="moduleId" value="@module.Id" />
+
+                @for (int i = 0; i < Model.Count; i++)
+                {
+                    var q = Model[i];
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">@(i + 1). @q.QuestionText</h6>
+                        <div class="ml-3 mt-2">
+                            @foreach (var opt in q.Options)
+                            {
+                                <div class="custom-control custom-radio mb-2">
+                                    <input type="radio" id="opt_@opt.Id" name="answers[@q.Id]" value="@opt.Id" class="custom-control-input" required>
+                                    <label class="custom-control-label" for="opt_@opt.Id">@opt.OptionText</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <hr class="my-4" />
+                }
+
+                <div class="text-right">
+                    <button type="submit" class="btn btn-success px-5 font-weight-bold">Submit Quiz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

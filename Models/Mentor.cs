@@ -29,7 +29,7 @@ namespace SPT.Models
     // =========================
     // TRACK
     // =========================
-    
+
     public class Track
     {
         [Key]
@@ -93,7 +93,7 @@ namespace SPT.Models
         public ICollection<Student> Students { get; set; } = new List<Student>();
         public ICollection<MentorReview> Reviews { get; set; } = new List<MentorReview>();
     }
- 
+
 
     // =========================
     // MENTOR REVIEW
@@ -174,37 +174,5 @@ namespace SPT.Models
         public string? VerifiedByUserId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    }
-
-    // =========================
-    // AUDIT LOG
-    // =========================
-    public class AuditLog
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required]
-        public string TableName { get; set; } = string.Empty;
-
-        [Required]
-        public int RecordId { get; set; }
-
-        [Required]
-        public string FieldName { get; set; } = string.Empty;
-
-        public string? OldValue { get; set; }
-
-        public string? NewValue { get; set; }
-
-        [Required]
-        public string EditedBy { get; set; } = string.Empty;
-
-        [Required]
-        public string EditedByUserId { get; set; } = string.Empty;
-
-        public DateTime EditedAt { get; set; } = DateTime.UtcNow;
-
-        public string? IPAddress { get; set; }
     }
 }

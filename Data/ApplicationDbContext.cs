@@ -33,6 +33,9 @@ namespace SPT.Data
          public DbSet<Resource> Resources { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
         public DbSet<Attendance> Attendance { get; set; }
+        public DbSet<Capstone> Capstones { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -154,7 +157,7 @@ namespace SPT.Data
                 .HasIndex(p => new { p.StudentId, p.Date });
 
             builder.Entity<AuditLog>()
-                .HasIndex(a => a.EditedAt);
+                .HasIndex(a => a.Timestamp);
 
             builder.Entity<AuditLog>()
                 .HasIndex(a => new { a.TableName, a.RecordId });

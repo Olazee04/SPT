@@ -1,7 +1,9 @@
 :root {
     --primary-color: #4361ee;
+    --sidebar-bg: #212529; /* Dark Sidebar Background */
     --sidebar-width: 260px;
     --body-bg: #f4f6f9;
+    --text-light: #ecf0f1;
 }
 
 html, body {
@@ -26,11 +28,17 @@ html, body {
 #sidebar-wrapper {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
-    background-color: #212529; /* Dark Sidebar */
+    background-color: var(--sidebar-bg);
     color: #fff;
+    border-right: 1px solid rgba(255,255,255,0.1);
     display: flex;
     flex-direction: column;
     transition: all 0.3s;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto; /* Scrollable sidebar if menu is long */
+    z-index: 1000;
 }
 
 #page-content-wrapper {
@@ -38,48 +46,71 @@ html, body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    min-width: 0; /* Critical for Flexbox */
+    min-width: 0;
 }
 
 /* ===========================
    2. SIDEBAR STYLING
    =========================== */
-.sidebar-logo {
-    padding: 20px;
-    font-size: 1.25rem;
-    font-weight: bold;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+.sidebar-heading {
+    padding: 1.5rem;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+    background-color: rgba(0,0,0,0.2);
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-header-label {
+    color: #adb5bd;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 1.5rem 1rem 0.5rem 1.5rem;
 }
 
 .list-group-item {
-    background-color: transparent;
-    color: rgba(255, 255, 255, 0.7);
-    border: none;
+    background-color: transparent !important;
+    color: rgba(255,255,255,0.8) !important;
+    border: none !important;
+    font-size: 1rem;
     padding: 12px 25px;
-    transition: all 0.2s;
-    font-size: 0.95rem;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
 }
 
-    .list-group-item:hover, .list-group-item-action:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        color: #fff;
-        text-decoration: none;
-        border-left: 4px solid var(--primary-color);
+    .list-group-item:hover {
+        background-color: rgba(255,255,255,0.1) !important;
+        color: #fff !important;
+        padding-left: 30px; /* Slide effect */
+        border-left: 4px solid var(--primary-color) !important;
     }
 
-.sidebar-heading {
-    padding: 15px 25px 5px 25px;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.4);
-    font-weight: bold;
-}
+    /* Active State */
+    .list-group-item.active-link {
+        background-color: var(--primary-color) !important;
+        color: #fff !important;
+        font-weight: 600;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        border-radius: 0 25px 25px 0; /* Modern curved tab look */
+        margin-right: 10px;
+    }
 
-.logout-btn {
+    .list-group-item i {
+        width: 25px;
+        text-align: center;
+        margin-right: 10px;
+    }
+
+/* Sidebar Footer */
+.sidebar-footer {
     margin-top: auto;
     padding: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.2);
 }
 
 /* ===========================
@@ -89,6 +120,7 @@ html, body {
     background: #fff;
     padding: 15px 30px;
     border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -98,6 +130,11 @@ html, body {
     padding: 30px;
     flex-grow: 1;
     overflow-y: auto;
+}
+
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
 /* Custom Cards */

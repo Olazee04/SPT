@@ -593,10 +593,10 @@ public async Task<IActionResult> LogWork(
                 {
                     StudentId = s.Id,
                     FullName = s.FullName,
-                    TrackCode = s.Track.Code,
-                    CohortName = s.Cohort.Name,
+                    TrackCode = s.Track != null ? s.Track.Code : "N/A",
+                    CohortName = s.Cohort != null ? s.Cohort.Name : "N/A",
                     ProfilePicture = s.ProfilePicture,
-                    // Only sum APPROVED hours
+                  
                     TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => (decimal?)l.Hours) ?? 0
                 })
                 .OrderByDescending(x => x.TotalHours)

@@ -33,6 +33,9 @@
             <input type="text" name="searchString" class="form-control me-2" placeholder="Search students..." style="width: 250px;">
             <button type="submit" class="btn btn-primary">Search</button>
         </form>
+        <a asp-action="ImportStudents" class="btn btn-success btn-sm mr-1">
+            <i class="fas fa-file-csv fa-sm"></i> Bulk Import
+        </a>
         <a asp-action="CreateStudent" class="btn btn-success"><i class="fas fa-plus"></i> New Student</a>
     </div>
 </div>

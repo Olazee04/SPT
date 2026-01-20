@@ -1,11 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
-using SPT.Models;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SPT.Controllers
 {
@@ -13,57 +9,66 @@ namespace SPT.Controllers
     public class NotificationController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly Microsoft.AspNetCore.Identity.UserManager<SPT.Models.ApplicationUser> _userManager;
 
-        public NotificationController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public NotificationController(ApplicationDbContext context, Microsoft.AspNetCore.Identity.UserManager<SPT.Models.ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
         }
 
-        // GET: /Notification/Index
-        public async Task<IActionResult> Index()
+        [HttpGet]
+        public async Task<IActionResult> GetNotifications()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return RedirectToAction("Login", "Account");
-
+            var userId = _userManager.GetUserId(User);
             var notifications = await _context.Notifications
-                .Where(n => n.UserId == user.Id)
+                .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
+                .Take(10) // Last 10
+                .Select(n => new {
+                    n.Id,
+                    n.Title,
+                    n.Message,
+                    n.IsRead,
+                    n.Url,
+                    TimeAgo = TimeAgo(n.CreatedAt) // Helper method logic below
+                })
                 .ToListAsync();
 
-            return View(notifications);
+            var unreadCount = await _context.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
+
+            return Json(new { count = unreadCount, notifications = notifications });
         }
 
-        // POST: Mark as Read (AJAX)
         [HttpPost]
         public async Task<IActionResult> MarkAsRead(int id)
         {
-            var user = await _userManager.GetUserAsync(User);
-            var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.Id == id && n.UserId == user.Id);
-
-            if (notification != null)
+            var notif = await _context.Notifications.FindAsync(id);
+            if (notif != null && notif.UserId == _userManager.GetUserId(User))
             {
-                notification.IsRead = true;
+                notif.IsRead = true;
                 await _context.SaveChangesAsync();
             }
-
             return Ok();
         }
 
-        // POST: Mark All as Read
         [HttpPost]
-        public async Task<IActionResult> MarkAllAsRead()
+        public async Task<IActionResult> MarkAllRead()
         {
-            var user = await _userManager.GetUserAsync(User);
-            var unread = await _context.Notifications.Where(n => n.UserId == user.Id && !n.IsRead).ToListAsync();
-
-            foreach (var n in unread)
-            {
-                n.IsRead = true;
-            }
+            var userId = _userManager.GetUserId(User);
+            var unread = await _context.Notifications.Where(n => n.UserId == userId && !n.IsRead).ToListAsync();
+            foreach (var n in unread) n.IsRead = true;
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return Ok();
+        }
+
+        // Simple Helper for "2 mins ago"
+        private static string TimeAgo(DateTime date)
+        {
+            var span = DateTime.UtcNow - date;
+            if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+            if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+            return $"{(int)span.TotalDays}d ago";
         }
     }
 }

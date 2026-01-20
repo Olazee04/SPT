@@ -65,6 +65,7 @@ namespace SPT.Controllers
 
                 model.StudentId = student.Id;
                 model.Status = "Open";
+               
                 model.CreatedAt = DateTime.UtcNow;
 
                 _context.SupportTickets.Add(model);
