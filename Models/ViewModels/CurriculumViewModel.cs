@@ -12,9 +12,10 @@
         public int RequiredHours { get; set; }
         public string Difficulty { get; set; } = "Beginner";
 
-        public bool IsCompleted { get; set; } // Passed the Quiz?
-        public bool IsLocked { get; set; }    // Is previous module done?
-        public int? QuizScore { get; set; }   // If they took it
+        public bool IsCompleted { get; set; } 
+        public bool IsLocked { get; set; }    
+        public int? QuizScore { get; set; }   
+        public bool IsMiniProject { get; set; }
 
         public List<ModuleResource> Resources { get; set; } = new List<ModuleResource>();
     }

@@ -2,237 +2,278 @@
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 public static class SeedData
 {
     public static async Task InitializeAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();
+
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
+        // =====================================================
+        // DATABASE (SAFE FOR IDENTITY)
+        // =====================================================
+        await context.Database.MigrateAsync();
 
-        context.Database.EnsureCreated();
-
-        // 1. SEED ROLES
+        // =====================================================
+        // 1. ROLES
+        // =====================================================
         string[] roles = { "Admin", "Student", "Mentor" };
         foreach (var role in roles)
-            if (!await roleManager.RoleExistsAsync(role)) await roleManager.CreateAsync(new IdentityRole(role));
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
+        }
 
-        // 2. SEED ADMIN
+        // =====================================================
+        // 2. ADMIN USER
+        // =====================================================
         if (await userManager.FindByEmailAsync("admin@spt.com") == null)
         {
-            var admin = new ApplicationUser { UserName = "admin", Email = "admin@spt.com", EmailConfirmed = true };
+            var admin = new ApplicationUser
+            {
+                UserName = "admin",
+                Email = "admin@spt.com",
+                EmailConfirmed = true
+            };
+
             await userManager.CreateAsync(admin, "Admin@123");
             await userManager.AddToRoleAsync(admin, "Admin");
         }
 
-        // 3. SEED TRACKS
-        var tracks = new List<Track>
+        // =====================================================
+        // 3. TRACKS
+        // =====================================================
+        if (!await context.Tracks.AnyAsync())
         {
-            new Track { Name = "Fullstack C#", Code = "FSC", Description = "Complete C# & React Path", IsActive = true },
-            new Track { Name = "Frontend JavaScript", Code = "FEJ", Description = "Master React & UI", IsActive = true },
-            new Track { Name = "Backend Web API", Code = "API", Description = "Master .NET APIs", IsActive = true },
-            new Track { Name = "Mobile Game Dev", Code = "MGD", Description = "Unity & C#", IsActive = true }
-        };
+            context.Tracks.AddRange(
+                new Track { Name = "Frontend JavaScript", Code = "FEJ", IsActive = true },
+                new Track { Name = "Backend C#", Code = "BEC", IsActive = true },
+                new Track { Name = "Fullstack", Code = "FSC", IsActive = true },
+                new Track { Name = "Backend Web API Development", Code = "API", IsActive = true },
+                new Track { Name = "Mobile Game Development", Code = "MGD", IsActive = true },
+                new Track { Name = "Web 3", Code = "WB3", IsActive = true }
+            );
 
-        foreach (var t in tracks)
-        {
-            if (!context.Tracks.Any(dbT => dbT.Code == t.Code)) context.Tracks.Add(t);
-        }
-        await context.SaveChangesAsync();
-
-        // Get Track IDs
-        var fsTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "FSC");
-        var feTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "FEJ");
-        var apiTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "API");
-        var mgdTrack = await context.Tracks.FirstOrDefaultAsync(t => t.Code == "MGD");
-
-        // ==========================================
-        // 4. SEED MODULES (19 PER COHORT)
-        // ==========================================
-
-        // --- A. FULLSTACK (FSC) ---
-        if (fsTrack != null && !context.SyllabusModules.Any(m => m.TrackId == fsTrack.Id))
-        {
-            var modules = new List<SyllabusModule>
-            {
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "C#-01", ModuleName = "C# Syntax & Basics", DisplayOrder = 1, IsActive = true, RequiredHours = 10 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "C#-02", ModuleName = "OOP Fundamentals", DisplayOrder = 2, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "C#-03", ModuleName = "Advanced OOP", DisplayOrder = 3, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "C#-04", ModuleName = "LINQ & Async", DisplayOrder = 4, IsActive = true, RequiredHours = 10 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "C#-05", ModuleName = "Debugging Techniques", DisplayOrder = 5, IsActive = true, RequiredHours = 10 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "DB-01", ModuleName = "SQL Database Design", DisplayOrder = 6, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "DB-02", ModuleName = "Advanced SQL", DisplayOrder = 7, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "NET-01", ModuleName = "EF Core Basics", DisplayOrder = 8, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "NET-02", ModuleName = "EF Core Migrations", DisplayOrder = 9, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "WEB-01", ModuleName = "ASP.NET MVC Basics", DisplayOrder = 10, IsActive = true, RequiredHours = 20 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "API-01", ModuleName = "Building REST APIs", DisplayOrder = 11, IsActive = true, RequiredHours = 20 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "API-02", ModuleName = "Authentication (JWT)", DisplayOrder = 12, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "API-03", ModuleName = "Dependency Injection", DisplayOrder = 13, IsActive = true, RequiredHours = 10 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "API-04", ModuleName = "Middleware", DisplayOrder = 14, IsActive = true, RequiredHours = 10 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "TST-01", ModuleName = "Unit Testing (xUnit)", DisplayOrder = 15, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "FE-INT", ModuleName = "Connecting React", DisplayOrder = 16, IsActive = true, RequiredHours = 20 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "OPS-01", ModuleName = "Git Version Control", DisplayOrder = 17, IsActive = true, RequiredHours = 10 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "OPS-02", ModuleName = "Docker Basics", DisplayOrder = 18, IsActive = true, RequiredHours = 15 },
-                new SyllabusModule { TrackId = fsTrack.Id, ModuleCode = "CAP-FS", ModuleName = "Fullstack Capstone", DisplayOrder = 19, IsActive = true, RequiredHours = 40, HasProject = true }
-            };
-            context.SyllabusModules.AddRange(modules);
+            await context.SaveChangesAsync();
         }
 
+        // =====================================================
+        // 4. ENSURE ALL STUDENTS HAVE TRACK
+        // =====================================================
+        var defaultTrack = await context.Tracks
+            .AsNoTracking()
+            .FirstAsync(t => t.Code == "FSC");
 
-        // --- B. FRONTEND (FEJ) ---
-        if (fsTrack != null && !context.SyllabusModules.Any(m => m.TrackId == fsTrack.Id))
+        var studentsWithoutTrack = await context.Students
+            .Where(s => s.TrackId == null)
+            .ToListAsync();
+
+        if (studentsWithoutTrack.Any())
         {
-            if (feTrack != null)
+            foreach (var s in studentsWithoutTrack)
             {
-                var modules = new List<SyllabusModule>();
-                // Generate 18 Modules
-                for (int i = 1; i <= 18; i++)
-                {
-                    modules.Add(new SyllabusModule
-                    {
-                        TrackId = feTrack.Id,
-                        ModuleCode = $"FE-{i:00}",
-                        ModuleName = $"Frontend Level {i}",
-                        DisplayOrder = i,
-                        IsActive = true,
-                        RequiredHours = 15
-                    });
-                }
-                // Name the important ones
-                modules[0].ModuleName = "HTML5 Semantics"; modules[1].ModuleName = "CSS3 Flexbox/Grid";
-                modules[2].ModuleName = "JavaScript Basics"; modules[3].ModuleName = "DOM Manipulation";
-                modules[4].ModuleName = "React Fundamentals"; modules[5].ModuleName = "React Hooks";
-
-                // Capstone
-                modules.Add(new SyllabusModule { TrackId = feTrack.Id, ModuleCode = "CAP-FE", ModuleName = "Frontend Capstone", DisplayOrder = 19, IsActive = true, RequiredHours = 40, HasProject = true });
-                context.SyllabusModules.AddRange(modules);
-            }
-
-            // --- C. BACKEND API (API) ---
-            if (apiTrack != null && !context.SyllabusModules.Any(m => m.TrackId == apiTrack.Id))
-            {
-                if (apiTrack != null)
-                {
-                    var modules = new List<SyllabusModule>();
-                    for (int i = 1; i <= 18; i++)
-                    {
-                        modules.Add(new SyllabusModule
-                        {
-                            TrackId = apiTrack.Id,
-                            ModuleCode = $"API-{i:00}",
-                            ModuleName = $"Backend Level {i}",
-                            DisplayOrder = i,
-                            IsActive = true,
-                            RequiredHours = 15
-                        });
-                    }
-                    modules[0].ModuleName = "C# Advanced"; modules[1].ModuleName = "SQL Optimization";
-                    modules[2].ModuleName = "REST Principles"; modules[3].ModuleName = "Microservices Intro";
-
-                    modules.Add(new SyllabusModule { TrackId = apiTrack.Id, ModuleCode = "CAP-API", ModuleName = "Backend Capstone", DisplayOrder = 19, IsActive = true, RequiredHours = 40, HasProject = true });
-                    context.SyllabusModules.AddRange(modules);
-                }
-            }
-
-            // --- D. GAME DEV (MGD) ---
-            if (mgdTrack != null && !context.SyllabusModules.Any(m => m.TrackId == mgdTrack.Id))
-            {
-                var modules = new List<SyllabusModule>();
-                for (int i = 1; i <= 18; i++)
-                {
-                    modules.Add(new SyllabusModule
-                    {
-                        TrackId = mgdTrack.Id,
-                        ModuleCode = $"MGD-{i:00}",
-                        ModuleName = $"Unity Level {i}",
-                        DisplayOrder = i,
-                        IsActive = true,
-                        RequiredHours = 15
-                    });
-                }
-                modules[0].ModuleName = "Unity Interface"; modules[1].ModuleName = "C# for Games";
-                modules[2].ModuleName = "Physics System"; modules[3].ModuleName = "2D Animation";
-
-                modules.Add(new SyllabusModule { TrackId = mgdTrack.Id, ModuleCode = "CAP-MGD", ModuleName = "Game Capstone", DisplayOrder = 19, IsActive = true, RequiredHours = 40, HasProject = true });
-                context.SyllabusModules.AddRange(modules);
+                s.TrackId = defaultTrack.Id;
             }
 
             await context.SaveChangesAsync();
+        }
 
-            // ==========================================
-            // 5. SEED RESOURCES (MATERIALS FOR ALL)
-            // ==========================================
+        // =====================================================
+        // 5. MODULES — 19 PER TRACK
+        // =====================================================
+        var tracks = await context.Tracks
+            .AsNoTracking()
+            .ToListAsync();
 
-            if (!context.Resources.Any())
+        foreach (var track in tracks)
+        {
+            bool hasModules = await context.SyllabusModules
+                .AsNoTracking()
+                .AnyAsync(m => m.TrackId == track.Id);
+
+            if (hasModules)
+                continue;
+
+            var modules = new List<SyllabusModule>();
+
+            // MODULES 1–18 (LEARNING)
+            for (int i = 1; i <= 18; i++)
             {
-                int GetModId(string code) => context.SyllabusModules.FirstOrDefault(m => m.ModuleCode == code)?.Id ?? 0;
-                var res = new List<Resource>();
-
-
-                // A. FULLSTACK RESOURCES
-                if (fsTrack != null)
+                modules.Add(new SyllabusModule
                 {
-                    void AddFS(string code, string title, string url)
-                    {
-                        int mid = GetModId(code); if (mid > 0) res.Add(new Resource { ModuleId = mid, TrackId = fsTrack.Id, Title = title, Url = url, Type = "Video" });
-                    }
-                    AddFS("C#-01", "C# Syntax & Basics", "https://www.youtube.com/playlist?list=PL82C6-O4XrHfoN_Y4MwGvJz5BntiL0z0D");
-                    AddFS("C#-02", "OOP Fundamentals", "https://www.youtube.com/watch?v=gfkTfcpWqAY");
-                    AddFS("DB-01", "SQL Crash Course", "https://www.youtube.com/watch?v=7S_tz1z_5bA");
-                    AddFS("NET-01", "EF Core Basics", "https://www.youtube.com/watch?v=dCgYmdk3KjM");
-                    AddFS("API-01", "Building REST APIs", "https://www.youtube.com/watch?v=pKd0Rpw7O48");
-                    AddFS("CAP-FS", "Capstone Guide", "https://www.youtube.com/watch?v=BfEjDD8mJV2");
-                }
-
-                // B. FRONTEND RESOURCES
-                if (feTrack != null)
-                {
-                    for (int i = 1; i <= 18; i++)
-                    {
-                        int mid = GetModId($"FE-{i:00}");
-                        if (mid > 0) res.Add(new Resource { ModuleId = mid, TrackId = feTrack.Id, Title = $"Frontend Video {i}", Url = "https://www.youtube.com/watch?v=G3e-cpL7ofc", Type = "Video" });
-                    }
-                    int cap = GetModId("CAP-FE");
-                    if (cap > 0) res.Add(new Resource { ModuleId = cap, TrackId = feTrack.Id, Title = "Frontend Capstone Ideas", Url = "https://www.youtube.com/watch?v=CgkZ7MvWUAA", Type = "Video" });
-                }
-
-                // C. API RESOURCES
-                if (apiTrack != null)
-                {
-                    for (int i = 1; i <= 18; i++)
-                    {
-                        int mid = GetModId($"API-{i:00}");
-                        if (mid > 0) res.Add(new Resource { ModuleId = mid, TrackId = apiTrack.Id, Title = $"Backend Video {i}", Url = "https://www.youtube.com/watch?v=pKd0Rpw7O48", Type = "Video" });
-                    }
-                    int cap = GetModId("CAP-API");
-                    if (cap > 0) res.Add(new Resource { ModuleId = cap, TrackId = apiTrack.Id, Title = "Full API Build", Url = "https://www.youtube.com/watch?v=4N4p16dgoXw", Type = "Video" });
-                }
-
-                // D. GAME DEV RESOURCES
-                if (mgdTrack != null)
-                {
-                    for (int i = 1; i <= 18; i++)
-                    {
-                        int mid = GetModId($"MGD-{i:00}");
-                        if (mid > 0) res.Add(new Resource { ModuleId = mid, TrackId = mgdTrack.Id, Title = $"Unity Tutorial {i}", Url = "https://www.youtube.com/watch?v=nPW6tKeapsM", Type = "Video" });
-                    }
-                    int cap = GetModId("CAP-MGD");
-                    if (cap > 0) res.Add(new Resource { ModuleId = cap, TrackId = mgdTrack.Id, Title = "Game Dev Capstone", Url = "https://www.youtube.com/watch?v=j48LtUkZRjU", Type = "Video" });
-                }
-
-                if (res.Any())
-                {
-                    context.Resources.AddRange(res);
-                    await context.SaveChangesAsync();
-                }
+                    TrackId = track.Id,
+                    DisplayOrder = i,
+                    ModuleCode = $"{track.Code}-{i:00}",
+                    ModuleName = $"{track.Name} – Module {i}",
+                    RequiredHours = 8,
+                    DifficultyLevel = i <= 5 ? "Beginner" : i <= 12 ? "Intermediate" : "Advanced",
+                    Topics = $"Core learning content for {track.Name} (Part {i})",
+                    HasQuiz = i % 3 == 0,
+                    IsActive = true
+                });
             }
+
+            // MODULE 19 (MINI PROJECT)
+            modules.Add(new SyllabusModule
+            {
+                TrackId = track.Id,
+                DisplayOrder = 19,
+                ModuleCode = $"CAP-{track.Code}",
+                ModuleName = "Mini Project",
+                RequiredHours = 40,
+                DifficultyLevel = "Expert",
+                Topics = $"Build a real-world {track.Name} project",
+                HasProject = true,
+                IsMiniProject = true,
+                IsActive = true
+            });
+
+            context.SyllabusModules.AddRange(modules);
+            await context.SaveChangesAsync();
+        }
+        // =====================================================
+        // 6. MODULE RESOURCES – NORMALIZE TO 2 PER MODULE
+        // =====================================================
+        var learningModules = await context.SyllabusModules
+            .Where(m => m.DisplayOrder <= 18)
+            .Include(m => m.Resources)
+             .Include(m => m.Track)
+            .ToListAsync();
+
+        foreach (var module in learningModules)
+        {
+            var resources = await context.ModuleResources
+                .Where(r => r.ModuleId == module.Id)
+                .OrderBy(r => r.Id)
+                .ToListAsync();
+
+            // Ensure Documentation resource
+            var doc = resources.FirstOrDefault(r => r.Type == "Article");
+            if (doc == null)
+            {
+                context.ModuleResources.Add(new ModuleResource
+                {
+                    ModuleId = module.Id,
+                    Title = $"{module.ModuleName} – Official Documentation",
+                    Url = GetDocumentationUrl(module),
+                    Type = "Article",
+                    IsActive = true
+                });
+            }
+            else
+            {
+                doc.Title = $"{module.ModuleName} – Official Documentation";
+                doc.Url = GetDocumentationUrl(module);
+            }
+
+            // Ensure Video resource
+            var video = resources.FirstOrDefault(r => r.Type == "Video");
+            if (video == null)
+            {
+                context.ModuleResources.Add(new ModuleResource
+                {
+                    ModuleId = module.Id,
+                    Title = $"{module.ModuleName} – Video Tutorial",
+                    Url = GetVideoUrl(module),
+                    Type = "Video",
+                    IsActive = true
+                });
+            }
+            else
+            {
+                video.Title = $"{module.ModuleName} – Video Tutorial";
+                video.Url = GetVideoUrl(module);
+            }
+
+           
+            foreach (var extra in resources.Skip(2))
+                context.ModuleResources.Remove(extra);
+        }
+
+        await context.SaveChangesAsync();
+
+
+
+        // =====================================================
+        // 7. TRACK-LEVEL RESOURCES (LIBRARY)
+        // =====================================================
+        if (!await context.Resources.AnyAsync())
+        {
+            var allTracks = await context.Tracks
+                .AsNoTracking()
+                .ToListAsync();
+
+            foreach (var track in allTracks)
+            {
+                context.Resources.Add(new Resource
+                {
+                    TrackId = track.Id,
+                    Title = $"{track.Name} – Official Resources",
+                    Description = "Curated documentation and tutorials",
+                    Url = "https://learn.microsoft.com/",
+                    Type = "Link",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            await context.SaveChangesAsync();
         }
     }
+
+    // =====================================================
+    // DEFAULT RESOURCE URLS (SAFE & REAL)
+    // =====================================================
+    private static string GetDefaultResourceUrl(SyllabusModule module)
+    {
+        return module.Track.Code switch
+        {
+            "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
+            "API" => "https://learn.microsoft.com/en-us/aspnet/core/web-api/",
+            "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+            "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
+            "MGD" => "https://learn.unity.com/",
+            "WB3" => "https://docs.soliditylang.org/",
+            _ => "https://learn.microsoft.com/"
+        };
+    }
+
+    private static string GetDocumentationUrl(SyllabusModule module)
+    {
+        if (module == null || module.Track == null)
+        {
+            return "#";
+        }
+        return module.Track.Code switch
+        {
+            "API" => "https://learn.microsoft.com/en-us/aspnet/core/web-api/",
+            "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
+            "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+            "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
+            "MGD" => "https://learn.unity.com/",
+            "WB3" => "https://docs.soliditylang.org/",
+            _ => "https://learn.microsoft.com/"
+        };
+    }
+
+    private static string GetVideoUrl(SyllabusModule module)
+    {
+        return module.Track.Code switch
+        {
+            "API" => "https://www.youtube.com/watch?v=pKd0Rpw7O48",
+            "FSC" => "https://www.youtube.com/watch?v=gfkTfcpWqAY",
+            "FEJ" => "https://www.youtube.com/watch?v=PkZNo7MFNFg",
+            "BEC" => "https://www.youtube.com/watch?v=GhQdlIFylQ8",
+            "MGD" => "https://www.youtube.com/watch?v=gB1F9G0JXOo",
+            "WB3" => "https://www.youtube.com/watch?v=gyMwXuJrbJQ",
+            _ => "https://www.youtube.com/"
+        };
+    }
+
+
 }

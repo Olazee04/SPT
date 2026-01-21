@@ -64,8 +64,7 @@ app.MapRazorPages(); // 🔴 REQUIRED: This makes the Login/Logout pages work!
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // Ensure database is created (optional safety check)
-    // await context.Database.MigrateAsync(); 
+    await context.Database.MigrateAsync(); 
     await SeedData.InitializeAsync(scope.ServiceProvider);
 }
 

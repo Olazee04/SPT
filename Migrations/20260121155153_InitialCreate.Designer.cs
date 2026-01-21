@@ -12,8 +12,8 @@ using SPT.Data;
 namespace SPT.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260116174927_AddMentorRating")]
-    partial class AddMentorRating
+    [Migration("20260121155153_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -265,6 +265,35 @@ namespace SPT.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("SPT.Models.Attendance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("Attendance");
+                });
+
             modelBuilder.Entity("SPT.Models.AuditLog", b =>
                 {
                     b.Property<int>("Id")
@@ -273,8 +302,13 @@ namespace SPT.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("EditedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EditedBy")
                         .IsRequired()
@@ -288,13 +322,18 @@ namespace SPT.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("IPAddress")
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NewValue")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RecordId")
@@ -304,13 +343,97 @@ namespace SPT.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("EditedAt");
+                    b.HasIndex("Timestamp");
 
                     b.HasIndex("TableName", "RecordId");
 
                     b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("SPT.Models.Capstone", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApprovalCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GitHubUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LiveUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MentorFeedback")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("Capstones");
+                });
+
+            modelBuilder.Entity("SPT.Models.Certificate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CertificateId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DateIssued")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IssuedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrackName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("Certificates");
                 });
 
             modelBuilder.Entity("SPT.Models.Cohort", b =>
@@ -533,6 +656,10 @@ namespace SPT.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -542,9 +669,11 @@ namespace SPT.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Notifications");
                 });
@@ -696,6 +825,9 @@ namespace SPT.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ModuleId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -712,6 +844,8 @@ namespace SPT.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ModuleId");
 
                     b.HasIndex("TrackId");
 
@@ -1053,6 +1187,39 @@ namespace SPT.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("SPT.Models.Attendance", b =>
+                {
+                    b.HasOne("SPT.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("SPT.Models.Capstone", b =>
+                {
+                    b.HasOne("SPT.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("SPT.Models.Certificate", b =>
+                {
+                    b.HasOne("SPT.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("SPT.Models.Mentor", b =>
                 {
                     b.HasOne("SPT.Models.Track", "Track")
@@ -1119,6 +1286,17 @@ namespace SPT.Migrations
                     b.Navigation("Module");
                 });
 
+            modelBuilder.Entity("SPT.Models.Notification", b =>
+                {
+                    b.HasOne("SPT.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SPT.Models.ProgressLog", b =>
                 {
                     b.HasOne("SPT.Models.SyllabusModule", "Module")
@@ -1162,11 +1340,17 @@ namespace SPT.Migrations
 
             modelBuilder.Entity("SPT.Models.Resource", b =>
                 {
+                    b.HasOne("SPT.Models.SyllabusModule", "Module")
+                        .WithMany()
+                        .HasForeignKey("ModuleId");
+
                     b.HasOne("SPT.Models.Track", "Track")
                         .WithMany()
                         .HasForeignKey("TrackId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Module");
 
                     b.Navigation("Track");
                 });

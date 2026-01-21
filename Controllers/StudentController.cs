@@ -369,47 +369,62 @@ public async Task<IActionResult> LogWork(
         public async Task<IActionResult> Curriculum()
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
+
             var student = await _context.Students
-                .Include(s => s.Track) // Ensure Track is loaded
+                .Include(s => s.Track)
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            if (student == null) return RedirectToAction("Dashboard");
+            if (student == null)
+                return RedirectToAction(nameof(Dashboard));
 
-            // 1. Get all modules for this track
+            int trackId = student.TrackId;
+
+            // 1. Load ALL modules for this track
             var modules = await _context.SyllabusModules
-                .Where(m => m.TrackId == student.TrackId && m.IsActive)
-                .Include(m => m.Resources) // 👈 Important: Load Resources
+                .Where(m => m.TrackId == trackId && m.IsActive)
+                .Include(m => m.Resources) // ModuleResources
                 .OrderBy(m => m.DisplayOrder)
                 .ToListAsync();
 
-            // 2. Get completed module IDs
-            var completedModuleIds = await _context.ModuleCompletions
+            // 2. Load completed modules
+            var completedIds = await _context.ModuleCompletions
                 .Where(mc => mc.StudentId == student.Id && mc.IsCompleted)
-                .Select(mc => mc.ModuleId) // 👈 Just get the IDs for easier checking
+                .Select(mc => mc.ModuleId)
                 .ToListAsync();
 
-            // 3. Build the View Model using the new mapping
-            var model = modules.Select(m => new CurriculumViewModel
+            // 3. Build ViewModel (NO NULL RISK)
+            var model = modules.Select((m, index) =>
             {
-                Id = m.Id,
-                ModuleCode = m.ModuleCode,
-                ModuleName = m.ModuleName,
-                Title = m.ModuleName,
-                Topics = m.Topics,
-                Description = m.Topics,
-                RequiredHours = m.RequiredHours,
-                Difficulty = m.DifficultyLevel ?? "General",
-                IsCompleted = completedModuleIds.Contains(m.Id),
+                bool isLocked = m.DisplayOrder > 1 &&
+                    !completedIds.Contains(
+                        modules.First(x => x.DisplayOrder == m.DisplayOrder - 1).Id
+                    );
 
-                // 🔒 Logic: Locked if it's NOT the 1st one AND the previous one isn't finished
-                IsLocked = m.DisplayOrder > 1 &&
-                           !completedModuleIds.Contains(modules.FirstOrDefault(p => p.DisplayOrder == m.DisplayOrder - 1)?.Id ?? 0),
+                return new CurriculumViewModel
+                {
+                    Id = m.Id,
+                    ModuleCode = m.ModuleCode,
+                    ModuleName = m.ModuleName,
+                    Title = m.ModuleName,
+                    Topics = m.Topics,
+                    Description = m.Topics,
+                    RequiredHours = m.RequiredHours,
+                    Difficulty = m.DifficultyLevel,
+                    IsCompleted = completedIds.Contains(m.Id),
+                    IsLocked = isLocked,
+                    IsMiniProject = m.IsMiniProject,
 
-                Resources = m.Resources.ToList()
+
+                    Resources = m.Resources
+                        .Where(r => r.IsActive)
+                        .ToList()
+                };
             }).ToList();
 
             return View(model);
         }
+
 
         // =========================
         // GET: Attendance Page
