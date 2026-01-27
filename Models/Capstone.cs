@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SPT.Models
@@ -9,21 +8,34 @@ namespace SPT.Models
         [Key]
         public int Id { get; set; }
 
+        [Required]
         public int StudentId { get; set; }
-        [ForeignKey("StudentId")]
-        public Student Student { get; set; }
 
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string GitHubUrl { get; set; }
-        public string LiveUrl { get; set; }
+        [ForeignKey(nameof(StudentId))]
+        public Student Student { get; set; } = null!;
 
-        public string Status { get; set; } = "Submitted"; // Submitted, Under Review, Changes Requested, Approved
+        [Required]
+        public string Title { get; set; } = string.Empty;
 
-        // Approvals (Simulating 2 approvals required)
-        public int ApprovalCount { get; set; } = 0;
-        public string MentorFeedback { get; set; }
+        [Required]
+        public string Description { get; set; } = string.Empty;
+
+        public string? RepositoryUrl { get; set; }
+        public string? LiveDemoUrl { get; set; }
+
+        // Mentor side
+        public string? MentorFeedback { get; set; }
+
+        public CapstoneStatus Status { get; set; } = CapstoneStatus.Pending;
 
         public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ReviewedAt { get; set; }
+    }
+
+    public enum CapstoneStatus
+    {
+        Pending,
+        Approved,
+        Rejected
     }
 }

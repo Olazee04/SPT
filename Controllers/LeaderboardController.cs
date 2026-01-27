@@ -3,11 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models.ViewModels;
-using SPT.Models;
 
 namespace SPT.Controllers
 {
-    [Authorize] // Everyone (Students, Mentors, Admins) can see this
+    [Authorize]
     public class LeaderboardController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -19,41 +18,120 @@ namespace SPT.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // 1. Get all active students
-            var students = await _context.Students
-                .Include(s => s.Track)
-                .Include(s => s.Cohort)
-                .Include(s => s.ProgressLogs)
-                .Where(s => s.EnrollmentStatus == "Active")
+            var model = new LeaderboardDashboardViewModel
+            {
+                CompletedModules = await CompletedModules(),
+                ActiveThisWeek = await ActiveThisWeek(),
+                ActiveToday = await ActiveToday(),
+                ActiveThisMonth = await ActiveThisMonth(),
+                Consistency = await Consistency(),
+                TopPerCohort = await TopPerCohort()
+            };
+
+            return View(model);
+        }
+
+        // ---------- PRIVATE METHODS (NOT CONTROLLERS) ----------
+
+        private async Task<List<LeaderboardRow>> CompletedModules()
+        {
+            return await _context.Students
+                .Select(s => new LeaderboardRow
+                {
+                    FullName = s.FullName,
+                    Cohort = s.Cohort!.Name,
+                    Score = s.ModuleCompletions.Count(mc => mc.IsCompleted)
+                })
+                .OrderByDescending(x => x.Score)
+                .Take(5)
                 .ToListAsync();
+        }
 
-            // 2. Calculate Scores in Memory
-            var leaderboard = students.Select(s => new LeaderboardViewModel
-            {
-                StudentId = s.Id,
-                FullName = s.FullName,
-                ProfilePicture = s.ProfilePicture,
-                Track = s.Track?.Code ?? "N/A",
-                Cohort = s.Cohort?.Name ?? "N/A",
+        private async Task<List<LeaderboardRow>> ActiveThisWeek()
+        {
+            var start = DateTime.UtcNow.Date.AddDays(-7);
 
-                // Score Logic: Sum of Approved Hours
-                TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => l.Hours),
+            return await _context.ProgressLogs
+                .Where(l => l.Date >= start)
+                .GroupBy(l => l.Student)
+                .Select(g => new LeaderboardRow
+                {
+                    FullName = g.Key.FullName,
+                    Cohort = g.Key.Cohort!.Name,
+                    Score = g.Count()
+                })
+                .OrderByDescending(x => x.Score)
+                .Take(5)
+                .ToListAsync();
+        }
 
-                LogCount = s.ProgressLogs.Count(l => l.IsApproved)
-            })
-            .OrderByDescending(x => x.TotalHours) // Highest score first
-            .ToList();
+        private async Task<List<LeaderboardRow>> ActiveToday()
+        {
+            var today = DateTime.UtcNow.Date;
 
-            // 3. Assign Ranks (Handling ties if needed, but simple index for now)
-            int rank = 1;
-            foreach (var entry in leaderboard)
-            {
-                entry.Rank = rank++;
-            }
+            return await _context.ProgressLogs
+                .Where(l => l.Date.Date == today)
+                .GroupBy(l => l.Student)
+                .Select(g => new LeaderboardRow
+                {
+                    FullName = g.Key.FullName,
+                    Cohort = g.Key.Cohort!.Name,
+                    Score = g.Count()
+                })
+                .OrderByDescending(x => x.Score)
+                .Take(5)
+                .ToListAsync();
+        }
 
-            return View(leaderboard);
+        private async Task<List<LeaderboardRow>> ActiveThisMonth()
+        {
+            var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+            return await _context.ProgressLogs
+                .Where(l => l.Date >= start)
+                .GroupBy(l => l.Student)
+                .Select(g => new LeaderboardRow
+                {
+                    FullName = g.Key.FullName,
+                    Cohort = g.Key.Cohort!.Name,
+                    Score = g.Count()
+                })
+                .OrderByDescending(x => x.Score)
+                .Take(5)
+                .ToListAsync();
+        }
+
+        private async Task<List<LeaderboardRow>> Consistency()
+        {
+            return await _context.Students
+                .Select(s => new LeaderboardRow
+                {
+                    FullName = s.FullName,
+                    Cohort = s.Cohort!.Name,
+                    Score = s.ProgressLogs
+                        .Select(l => l.Date.Date)
+                        .Distinct()
+                        .Count()
+                })
+                .OrderByDescending(x => x.Score)
+                .Take(5)
+                .ToListAsync();
+        }
+
+        private async Task<List<LeaderboardRow>> TopPerCohort()
+        {
+            return await _context.Students
+                .GroupBy(s => s.Cohort!.Name)
+                .Select(g => g
+                    .OrderByDescending(s => s.ProgressLogs.Count)
+                    .Select(s => new LeaderboardRow
+                    {
+                        FullName = s.FullName,
+                        Cohort = g.Key,
+                        Score = s.ProgressLogs.Count
+                    })
+                    .First())
+                .ToListAsync();
         }
     }
-
-    
 }

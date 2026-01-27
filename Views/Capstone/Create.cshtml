@@ -1,0 +1,85 @@
+﻿@model SPT.Models.Capstone
+
+@{
+    ViewData["Title"] = "Submit Capstone Project";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-rocket me-2"></i>
+                        Capstone Project Submission
+                    </h4>
+                </div>
+
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Congratulations 🎉</strong><br />
+                        You have unlocked the <b>Project Module (Module 19)</b>.
+                        Please submit your final capstone project below.
+                    </div>
+
+                    <form asp-action="Submit" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <!-- TITLE -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Project Title</label>
+                            <input asp-for="Title"
+                                   class="form-control"
+                                   placeholder="e.g. Student Management System" />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Project Description</label>
+                            <textarea asp-for="Description"
+                                      class="form-control"
+                                      rows="5"
+                                      placeholder="Describe what your project does, the problem it solves, and the technologies used."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <!-- GITHUB -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">GitHub Repository (optional)</label>
+                            <input asp-for="RepositoryUrl"
+                                   class="form-control"
+                                   placeholder="https://github.com/username/project" />
+                        </div>
+
+                        <!-- LIVE DEMO -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Live Demo URL (optional)</label>
+                            <input asp-for="LiveDemoUrl"
+                                   class="form-control"
+                                   placeholder="https://yourproject.com" />
+                        </div>
+
+                        <!-- ACTIONS -->
+                        <div class="d-flex justify-content-end mt-4">
+                            <a asp-action="Index" class="btn btn-outline-secondary me-2">
+                                Cancel
+                            </a>
+
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Submit Capstone
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

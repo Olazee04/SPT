@@ -13,14 +13,14 @@ public static class SeedData
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // =====================================================
+        // =============================
         // DATABASE (SAFE FOR IDENTITY)
-        // =====================================================
+        // =============================
         await context.Database.MigrateAsync();
 
-        // =====================================================
+        // ==========
         // 1. ROLES
-        // =====================================================
+        // ==========
         string[] roles = { "Admin", "Student", "Mentor" };
         foreach (var role in roles)
         {
@@ -30,9 +30,9 @@ public static class SeedData
             }
         }
 
-        // =====================================================
+        // ==============
         // 2. ADMIN USER
-        // =====================================================
+        // ==============
         if (await userManager.FindByEmailAsync("admin@spt.com") == null)
         {
             var admin = new ApplicationUser
@@ -46,9 +46,9 @@ public static class SeedData
             await userManager.AddToRoleAsync(admin, "Admin");
         }
 
-        // =====================================================
+        // ============
         // 3. TRACKS
-        // =====================================================
+        // ============
         if (!await context.Tracks.AnyAsync())
         {
             context.Tracks.AddRange(
@@ -63,9 +63,9 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // =====================================================
+        // ===================================
         // 4. ENSURE ALL STUDENTS HAVE TRACK
-        // =====================================================
+        // ===================================
         var defaultTrack = await context.Tracks
             .AsNoTracking()
             .FirstAsync(t => t.Code == "FSC");
@@ -84,9 +84,9 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // =====================================================
+        // ==========================
         // 5. MODULES — 19 PER TRACK
-        // =====================================================
+        // ==========================
         var tracks = await context.Tracks
             .AsNoTracking()
             .ToListAsync();
@@ -200,9 +200,9 @@ public static class SeedData
 
 
 
-        // =====================================================
+        // ===================================
         // 7. TRACK-LEVEL RESOURCES (LIBRARY)
-        // =====================================================
+        // ====================================
         if (!await context.Resources.AnyAsync())
         {
             var allTracks = await context.Tracks
@@ -226,9 +226,9 @@ public static class SeedData
         }
     }
 
-    // =====================================================
+    // ===================================
     // DEFAULT RESOURCE URLS (SAFE & REAL)
-    // =====================================================
+    // ====================================
     private static string GetDefaultResourceUrl(SyllabusModule module)
     {
         return module.Track.Code switch

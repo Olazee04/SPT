@@ -19,32 +19,33 @@ namespace SPT.Controllers
             _userManager = userManager;
         }
 
-        // =========================
-        // 1. INDEX (Dashboard for Support & Reflection)
-        // =========================
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
-            if (student == null) return RedirectToAction("Dashboard", "Student");
+            if (user == null)
+                return RedirectToAction("Index", "Home");
 
-            // Fetch Tickets (Convert ID to string if needed by your model)
-            var tickets = await _context.SupportTickets
-                .Where(t => t.StudentId == student.Id)
-                .OrderByDescending(t => t.CreatedAt)
-                .ToListAsync();
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            // Fetch Reflections
-            var recentReflections = await _context.StudentReflections
-                .Where(r => r.StudentId == student.Id)
-                .OrderByDescending(r => r.Date)
-                .Take(5)
-                .ToListAsync();
+            if (student == null)
+                return RedirectToAction("Dashboard", "Student");
 
-            ViewBag.Tickets = tickets;
-            ViewBag.Reflections = recentReflections;
+            var model = new SupportDashboardViewModel
+            {
+                Tickets = await _context.SupportTickets
+                    .Where(t => t.StudentId == student.Id)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToListAsync(),
 
-            return View();
+                Reflections = await _context.StudentReflections
+                    .Where(r => r.StudentId == student.Id)
+                    .OrderByDescending(r => r.Date)
+                    .Take(5)
+                    .ToListAsync()
+            };
+
+            return View(model);
         }
 
         // =========================

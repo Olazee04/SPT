@@ -102,6 +102,17 @@ namespace SPT.Controllers
 
             ViewBag.Rank = betterStudentsCount + 1;
 
+            
+            var weeklyAttendance = await _context.ProgressLogs
+                .Where(l => l.StudentId == student.Id &&
+                            l.Date >= DateTime.UtcNow.AddDays(-6))
+                .Select(l => l.Date.Date)
+                .Distinct()
+                .CountAsync();
+
+            ViewBag.WeeklyAttendance = weeklyAttendance;
+
+
             // ---------------------------------------------------------
             // 🔒 MODULE LOCKING LOGIC (Fixed Property Names)
             // ---------------------------------------------------------
@@ -141,6 +152,11 @@ namespace SPT.Controllers
                 .ToList();
 
             ViewBag.CurrentModules = unlockedModules;
+
+            bool capstoneUnlocked = student.ModuleCompletions
+    .Any(mc => mc.ModuleId == 19 && mc.IsCompleted);
+
+            ViewBag.CapstoneUnlocked = capstoneUnlocked;
 
             // ---------------------------------------------------------
             // 🚀 NEW FEATURES (Announcement, Next Up, Leaderboard)
@@ -587,43 +603,7 @@ public async Task<IActionResult> LogWork(
 
             return RedirectToAction("Curriculum");
         }
-        // =========================
-        // GET: Leaderboard (Hall of Fame)
-        // =========================
-        [HttpGet]
-        public async Task<IActionResult> Leaderboard()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
-            if (student == null) return RedirectToAction("Dashboard");
-
-            // 1. Get Top 20 Students (Active only)
-            // Ordered by: Total Verified Hours (Desc), then Name (Asc)
-            var leaderboard = await _context.Students
-                .Include(s => s.Track)
-                .Include(s => s.Cohort)
-                .Include(s => s.ProgressLogs) // Need logs to sum hours
-                .Where(s => s.EnrollmentStatus == "Active")
-                .Select(s => new LeaderboardViewModel
-                {
-                    StudentId = s.Id,
-                    FullName = s.FullName,
-                    TrackCode = s.Track != null ? s.Track.Code : "N/A",
-                    CohortName = s.Cohort != null ? s.Cohort.Name : "N/A",
-                    ProfilePicture = s.ProfilePicture,
-                  
-                    TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => (decimal?)l.Hours) ?? 0
-                })
-                .OrderByDescending(x => x.TotalHours)
-                .Take(20)
-                .ToListAsync();
-
-            // 2. Find My Rank
-            // We scan the list to see if "I" am inside the top 20
-            ViewBag.MyStudentId = student.Id;
-
-            return View(leaderboard);
-        }
+      
 
         
         // =========================

@@ -168,10 +168,9 @@ namespace SPT.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description, int? mentorRating, int? quizScore, string? action)
         {
-            // 1. Fetch Log with Student info (Need User details for notification)
             var log = await _context.ProgressLogs
                 .Include(l => l.Student)
-                .ThenInclude(s => s.User) // ✅ Include User to get the UserId string
+                .ThenInclude(s => s.User) 
                 .FirstOrDefaultAsync(l => l.Id == id);
 
             if (log == null)
@@ -184,7 +183,6 @@ namespace SPT.Controllers
             {
                 if (log.Student?.User != null)
                 {
-                    // Note: You might need to add a "RejectionReason" parameter to your method and modal form!
                     string reason = "The submission did not meet the requirements.";
                     string body = $"<p>Your log for {log.Date:d} was rejected.</p><p><strong>Reason:</strong> {reason}</p>";
                     await _emailService.SendEmailAsync(log.Student.Email, "Log Rejected", body);
@@ -202,14 +200,12 @@ namespace SPT.Controllers
 
             decimal proposedHours = hours ?? log.Hours;
 
-            // Check if Total exceeds 5
             if ((otherLogsTotal + proposedHours) > 5)
             {
                 TempData["Error"] = $"⚠️ Limit Exceeded! Student has {otherLogsTotal} hrs already. Adding {proposedHours} hrs totals {otherLogsTotal + proposedHours} (Max 5).";
                 return RedirectToAction("ProgressLogs");
             }
 
-            // Apply Changes
             log.Hours = proposedHours;
             if (!string.IsNullOrEmpty(description)) log.ActivityDescription = description;
             if (mentorRating.HasValue) log.MentorRating = mentorRating;
@@ -221,13 +217,12 @@ namespace SPT.Controllers
 
             try
             {
-                // ✅ Notification Logic (Fixed)
                 if (log.Student?.User != null)
                 {
                     var notification = new Notification
                     {
-                        UserId = log.Student.User.Id, // ✅ Use the GUID string from User table
-                        Title = "Log Approved",       // ✅ Required Title
+                        UserId = log.Student.User.Id, 
+                        Title = "Log Approved",       
                         Message = $"Your log for {log.Date:MMM dd} was approved.",
                         Type = "Success",
                         Url = "/Student/Dashboard",
@@ -245,8 +240,7 @@ namespace SPT.Controllers
             {
                 TempData["Error"] = "Database Error: " + ex.Message;
             }
-
-            // Return to referring page
+    
             string referer = Request.Headers["Referer"].ToString();
             if (!string.IsNullOrEmpty(referer) && referer.Contains("Dashboard"))
             {
@@ -262,9 +256,8 @@ namespace SPT.Controllers
         public async Task<IActionResult> Students(string searchString, string cohortFilter, string trackFilter)
         {
             ViewBag.TotalStudents = await _context.Students.CountAsync();
-
-            // 1. Start with Query
-            var query = _context.Students
+    
+                var query = _context.Students
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.Mentor)
@@ -782,6 +775,7 @@ namespace SPT.Controllers
                 var notification = new Notification
                 {
                     UserId = ticket.Student.UserId,
+                    Title = "Support Ticket Update",
                     Message = $"💬 Admin responded to your ticket: '{ticket.Subject}'",
                     Type = "Info",
                     IsRead = false,

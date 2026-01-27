@@ -1,190 +1,276 @@
-﻿@{
+﻿@model SPT.Models.SupportDashboardViewModel
+
+@{
     ViewData["Title"] = "Support & Reflections";
-    var tickets = ViewBag.Tickets as List<SPT.Models.SupportTicket>;
-    var reflections = ViewBag.Reflections as List<SPT.Models.StudentReflection>;
 }
 
 <div class="container mt-4">
+
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-headset text-primary"></i> Support & Reflections</h2>
+        <h2>
+            <i class="fas fa-headset text-primary"></i>
+            Support & Reflections
+        </h2>
     </div>
 
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success">@TempData["Success"]</div>
+            <div class="alert alert-success">@TempData["Success"]</div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger">@TempData["Error"]</div>
+            <div class="alert alert-danger">@TempData["Error"]</div>
     }
 
-    <ul class="nav nav-tabs mb-4" id="supportTabs" role="tablist">
+    <!-- TABS -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item">
-            <button class="nav-link active fw-bold" id="help-tab" data-bs-toggle="tab" data-bs-target="#help" type="button">
+            <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#help">
                 <i class="fas fa-ticket-alt"></i> Help Desk
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold" id="journal-tab" data-bs-toggle="tab" data-bs-target="#journal" type="button">
+            <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#journal">
                 <i class="fas fa-book-open"></i> Daily Reflection
             </button>
         </li>
     </ul>
 
-    <div class="tab-content" id="myTabContent">
+    <div class="tab-content">
 
-        <div class="tab-pane fade show active" id="help" role="tabpanel">
+        <!-- ================= HELP DESK ================= -->
+        <div class="tab-pane fade show active" id="help">
             <div class="row">
+
+                <!-- CREATE TICKET -->
                 <div class="col-md-4">
                     <div class="card shadow-sm border-0 bg-light">
                         <div class="card-body">
                             <h5 class="fw-bold mb-3">Submit a Request</h5>
+
                             <form asp-action="CreateTicket" method="post">
+
                                 <div class="mb-3">
                                     <label class="form-label">Subject</label>
-                                    <input name="Subject" class="form-control" placeholder="Brief issue title" required />
+                                    <input name="Subject" class="form-control" required />
                                 </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">Category</label>
                                     <select name="Category" class="form-select">
                                         <option>Technical Issue</option>
                                         <option>Course Content Help</option>
                                         <option>Mentorship Request</option>
-                                        <option value="Profile Update">👤 Profile Update Request</option>
+                                        <option>Profile Update</option>
                                         <option>Personal / Other</option>
                                     </select>
                                 </div>
-                                <div class="form-group mb-3">
-                                    <label class="small font-weight-bold">Priority</label>
-                                    <select name="Priority" class="form-control">
-                                        <option value="Low">Low</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="High">High (Blocking Work)</option>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Priority</label>
+                                    <select name="Priority" class="form-select">
+                                        <option>Low</option>
+                                        <option selected>Medium</option>
+                                        <option>High</option>
                                     </select>
                                 </div>
+
                                 <div class="mb-3">
                                     <label class="form-label">Message</label>
-                                    <textarea name="Message" class="form-control" rows="4" placeholder="Describe your issue..." required></textarea>
+                                    <textarea name="Message" class="form-control" rows="4" required></textarea>
                                 </div>
-                       <button type="submit" class="btn btn-primary w-100">Submit Ticket</button>
+
+                                <button type="submit" class="btn btn-primary w-100">
+                                    Submit Ticket
+                                </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
+                <!-- MY TICKETS -->
                 <div class="col-md-8">
                     <div class="card shadow">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">My Tickets</h6>
+                        <div class="card-header">
+                            <h6 class="fw-bold text-primary mb-0">My Tickets</h6>
                         </div>
+
                         <div class="card-body">
-                            @if (Model.Any())
+
+                            @if (Model.Tickets.Any())
                             {
-                                @foreach (var ticket in Model)
+                                foreach (var ticket in Model.Tickets)
                                 {
-                                    <div class="border rounded p-3 mb-3 @(ticket.IsResolved ? "bg-light" : "border-left-warning")">
-                                        <div class="d-flex justify-content-between">
-                                            <h6 class="font-weight-bold text-dark">@ticket.Subject</h6>
-                                            <span class="badge @(ticket.IsResolved ? "badge-success" : "badge-warning")">
+                                            <div class="border rounded p-3 mb-3 @(ticket.IsResolved ? "bg-light" : "")">
+
+                                                <div class="d-flex justify-content-between">
+                                                    <h6 class="fw-bold">@ticket.Subject</h6>
+                                                    <span class="badge @(ticket.IsResolved ? "bg-success" : "bg-warning")">
                                                 @(ticket.IsResolved ? "Resolved" : "Open")
-                                            </span>
-                                        </div>
-                                        <p class="small text-muted mb-2">@ticket.CreatedAt.ToString("g")</p>
-                                        <p class="mb-2">@ticket.Message</p>
+                                                    </span>
+                                                </div>
+
+                                                <p class="small text-muted">
+                                            @ticket.CreatedAt.ToString("g")
+                                                </p>
+
+                                                <p>@ticket.Message</p>
 
                                         @if (!string.IsNullOrEmpty(ticket.AdminResponse))
                                         {
-                                            <div class="bg-white border rounded p-3 mt-3">
-                                                <small class="text-primary font-weight-bold"><i class="fas fa-reply"></i> Admin Response:</small>
-                                                <p class="mb-0 mt-1 text-dark">@ticket.AdminResponse</p>
-                                            </div>
+                                                        <div class="bg-white border rounded p-3 mt-3">
+                                                            <small class="fw-bold text-primary">
+                                                                <i class="fas fa-reply"></i> Admin Response
+                                                            </small>
+                                                            <p class="mb-0 mt-1">@ticket.AdminResponse</p>
+                                                        </div>
                                         }
-                                    </div>
+                                            </div>
                                 }
                             }
                             else
                             {
-                                <p class="text-center text-muted py-4">No tickets found.</p>
+                                    <p class="text-center text-muted py-4">
+                                        No tickets submitted yet.
+                                    </p>
                             }
+
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="journal" role="tabpanel">
+        <!-- ================= JOURNAL ================= -->
+        <div class="tab-pane fade" id="journal">
             <div class="row">
+
+                <!-- CREATE REFLECTION -->
                 <div class="col-md-4">
-                    <div class="card shadow-sm border-success h-100">
+                    <div class="card shadow-sm border-success">
                         <div class="card-header bg-success text-white">
-                            <h5 class="mb-0 card-title"><i class="fas fa-pen-fancy"></i> Daily Check-in</h5>
+                            <h5 class="mb-0">
+                                <i class="fas fa-pen-fancy"></i> Daily Check-in
+                            </h5>
                         </div>
+
                         <div class="card-body">
                             <form asp-action="CreateReflection" method="post">
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">How are you feeling?</label>
-                                    <div class="btn-group w-100" role="group">
-                                        <input type="radio" class="btn-check" name="Mood" id="mood1" value="🤩" autocomplete="off">
-                                        <label class="btn btn-outline-success" for="mood1">🤩</label>
+    <label class="fw-bold mb-2 d-block">Mood</label>
 
-                                        <input type="radio" class="btn-check" name="Mood" id="mood2" value="🙂" autocomplete="off" checked>
-                                        <label class="btn btn-outline-primary" for="mood2">🙂</label>
+    <div class="btn-group w-100" role="group">
 
-                                        <input type="radio" class="btn-check" name="Mood" id="mood3" value="😐" autocomplete="off">
-                                        <label class="btn btn-outline-secondary" for="mood3">😐</label>
+        <input type="radio"
+               class="btn-check"
+               name="Mood"
+               id="mood-happy"
+               value="🙂"
+               checked />
 
-                                        <input type="radio" class="btn-check" name="Mood" id="mood4" value="😫" autocomplete="off">
-                                        <label class="btn btn-outline-warning" for="mood4">😫</label>
-                                    </div>
-                                </div>
+        <label class="btn btn-outline-primary" for="mood-happy">
+            🙂 Happy
+        </label>
+
+        <input type="radio"
+               class="btn-check"
+               name="Mood"
+               id="mood-excited"
+               value="🤩" />
+
+        <label class="btn btn-outline-success" for="mood-excited">
+            🤩 Excited
+        </label>
+
+        <input type="radio"
+               class="btn-check"
+               name="Mood"
+               id="mood-neutral"
+               value="😐" />
+
+        <label class="btn btn-outline-secondary" for="mood-neutral">
+            😐 Neutral
+        </label>
+
+        <input type="radio"
+               class="btn-check"
+               name="Mood"
+               id="mood-stressed"
+               value="😫" />
+
+        <label class="btn btn-outline-warning" for="mood-stressed">
+            😫 Stressed
+        </label>
+
+    </div>
+</div>
+
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">What did you learn?</label>
+                                    <label class="fw-bold">What did you learn?</label>
                                     <textarea name="WhatILearned" class="form-control" rows="2" required></textarea>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Any Struggles?</label>
+                                    <label class="fw-bold">Any struggles?</label>
                                     <textarea name="Struggles" class="form-control" rows="2"></textarea>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Goal for Tomorrow</label>
+                                    <label class="fw-bold">Goal for tomorrow</label>
                                     <input name="GoalTomorrow" class="form-control" />
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Understanding (1-5)</label>
-                                    <input type="range" name="UnderstandingRating" class="form-range" min="1" max="5" id="rangeRating" oninput="document.getElementById('ratingVal').innerText = this.value">
-                                    <div class="text-center fw-bold text-primary" id="ratingVal">3</div>
+                                    <label class="fw-bold">Understanding (1–5)</label>
+                                    <input type="range" name="UnderstandingRating" min="1" max="5" class="form-range">
                                 </div>
 
-                                <button type="submit" class="btn btn-success w-100">Save Journal</button>
+                                <button type="submit" class="btn btn-success w-100">
+                                    Save Journal
+                                </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
+                <!-- RECENT REFLECTIONS -->
                 <div class="col-md-8">
                     <h5 class="fw-bold mb-3">Recent Journals</h5>
+
                     <div class="row">
-                        @foreach (var r in reflections)
+                        @foreach (var r in Model.Reflections)
                         {
                                 <div class="col-md-6 mb-3">
                                     <div class="card shadow-sm h-100">
                                         <div class="card-body">
+
                                             <div class="d-flex justify-content-between">
                                                 <span class="fs-4">@r.Mood</span>
-                                                <small class="text-muted">@r.Date.ToString("MMM dd")</small>
+                                                <small class="text-muted">
+                                                @r.Date.ToString("MMM dd")
+                                                </small>
                                             </div>
-                                            <hr class="my-2" />
-                                            <p class="card-text mb-1"><strong>Learned:</strong> @r.WhatILearned</p>
+
+                                            <hr />
+
+                                            <p>
+                                                <strong>Learned:</strong>
+                                            @r.WhatILearned
+                                            </p>
+
                                         @if (!string.IsNullOrEmpty(r.Struggles))
                                         {
-                                                    <p class="card-text mb-1 text-danger small"><strong>Struggle:</strong> @r.Struggles</p>
+                                                    <p class="text-danger small">
+                                                        <strong>Struggle:</strong>
+                                                @r.Struggles
+                                                    </p>
                                         }
-                                            <div class="mt-2 text-end">
-                                                <span class="badge bg-light text-dark border">Rating: @r.UnderstandingRating/5</span>
+
+                                            <div class="text-end">
+                                                <span class="badge bg-light text-dark border">
+                                                    Rating: @r.UnderstandingRating / 5
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -192,7 +278,9 @@
                         }
                     </div>
                 </div>
+
             </div>
         </div>
+
     </div>
 </div>

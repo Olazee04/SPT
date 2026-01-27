@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Models.ViewModels;
 
 namespace SPT.Controllers
 {
@@ -20,88 +21,68 @@ namespace SPT.Controllers
         // =========================
         // 1. DASHBOARD / HISTORY
         // =========================
-        public async Task<IActionResult> Index(DateTime? date, int? cohortId)
+        public async Task<IActionResult>
+    Index(
+    DateTime? startDate,
+    DateTime? endDate,
+    int? cohortId)
         {
-            var today = date ?? DateTime.UtcNow.Date;
+            DateTime from = startDate ?? DateTime.UtcNow.Date.AddDays(-6); // last 7 days
+            DateTime to = endDate ?? DateTime.UtcNow.Date;
 
-            var query = _context.Attendance
-                .Include(a => a.Student)
-                .ThenInclude(s => s.Cohort)
-                .Where(a => a.Date == today)
-                .AsQueryable();
+            var logsQuery = _context.ProgressLogs
+            .Include(l => l.Student)
+            .ThenInclude(s => s.Cohort)
+            .Where(l => l.Date >= from && l.Date <= to);
 
             if (cohortId.HasValue)
             {
-                query = query.Where(a => a.Student.CohortId == cohortId);
+                logsQuery = logsQuery.Where(l => l.Student.CohortId == cohortId);
             }
 
-            var records = await query.ToListAsync();
+            var logs = await logsQuery.ToListAsync();
 
-            ViewBag.Date = today;
+            // Group by Student
+            var grouped = logs
+            .GroupBy(l => l.Student)
+            .Select(g => new AttendanceSummaryViewModel
+            {
+                StudentId = g.Key.Id,
+                StudentName = g.Key.FullName,
+                CohortName = g.Key.Cohort?.Name ?? "N/A",
+
+                PresentDays = g.Select(x => x.Date.Date).Distinct().Count(),
+                OfficeDays = g.Where(x => x.Location == "Office")
+            .Select(x => x.Date.Date)
+            .Distinct()
+            .Count(),
+                RemoteDays = g.Where(x => x.Location == "Remote")
+            .Select(x => x.Date.Date)
+            .Distinct()
+            .Count(),
+                TotalLogs = g.Count()
+            })
+            .ToList();
+
+            // Calculate absences (simple version: weekdays only)
+            int totalDays = Enumerable
+            .Range(0, (to - from).Days + 1)
+            .Select(d => from.AddDays(d))
+            .Count(d => d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday);
+
+            foreach (var item in grouped)
+            {
+                item.AbsentDays = Math.Max(0, totalDays - item.PresentDays);
+            }
+
+            ViewBag.SelectedCohort = cohortId;
             ViewBag.Cohorts = new SelectList(await _context.Cohorts.ToListAsync(), "Id", "Name");
+            ViewBag.From = from;
+            ViewBag.To = to;
 
-            return View(records);
+            return View(grouped);
         }
 
-        // =========================
-        // 2. MARK ATTENDANCE (GET)
-        // =========================
-        [HttpGet]
-        public async Task<IActionResult> Mark(int? cohortId)
-        {
-            // If no cohort selected, show empty selection page
-            if (!cohortId.HasValue)
-            {
-                ViewBag.Cohorts = new SelectList(await _context.Cohorts.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
-                return View(new List<Student>());
-            }
 
-            // Get all active students in this cohort
-            var students = await _context.Students
-                .Where(s => s.CohortId == cohortId && s.EnrollmentStatus == "Active")
-                .OrderBy(s => s.FullName)
-                .ToListAsync();
-
-            ViewBag.CohortId = cohortId;
-            ViewBag.CohortName = (await _context.Cohorts.FindAsync(cohortId))?.Name;
-            ViewBag.Cohorts = new SelectList(await _context.Cohorts.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
-
-            return View(students);
-        }
-
-        // =========================
-        // 3. SAVE ATTENDANCE (POST)
-        // =========================
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveAttendance(int cohortId, DateTime date, Dictionary<int, string> status, Dictionary<int, string> remarks)
-        {
-            // 1. Remove existing records for this cohort on this date (to prevent duplicates/allow updates)
-            var existing = await _context.Attendance
-                .Include(a => a.Student)
-                .Where(a => a.Date == date && a.Student.CohortId == cohortId)
-                .ToListAsync();
-
-            _context.Attendance.RemoveRange(existing);
-
-            // 2. Add new records
-            var newRecords = new List<Attendance>();
-            foreach (var studentId in status.Keys)
-            {
-                newRecords.Add(new Attendance
-                {
-                    StudentId = studentId,
-                    Date = date,
-                    Status = status[studentId], // Present, Absent, etc.
-                    Remarks = remarks.ContainsKey(studentId) ? remarks[studentId] : null
-                });
-            }
-
-            _context.Attendance.AddRange(newRecords);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = $"Attendance marked for {newRecords.Count} students.";
-            return RedirectToAction("Index", new { date = date, cohortId = cohortId });
-        }
     }
 }

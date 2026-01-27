@@ -23,67 +23,81 @@ namespace SPT.Controllers
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            if (user == null) return RedirectToAction("Login", "Account");
 
-            // Allow mentors to see list, students to see their own
-            if (User.IsInRole("Mentor") || User.IsInRole("Admin"))
-            {
-                var all = await _context.Capstones.Include(c => c.Student).ToListAsync();
-                return View("MentorIndex", all);
-            }
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            var myProject = await _context.Capstones.FirstOrDefaultAsync(c => c.StudentId == student.Id);
+            if (student == null)
+                return RedirectToAction("Dashboard", "Student");
+
+            var myProject = await _context.Capstones
+                .FirstOrDefaultAsync(c => c.StudentId == student.Id);
+
+ 
             return View(myProject);
         }
 
         [HttpPost]
         [Authorize(Roles = "Student")]
+        [HttpPost]
         public async Task<IActionResult> Submit(Capstone model)
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            var student = await _context.Students.FirstAsync(s => s.UserId == user.Id);
 
-            model.StudentId = student.Id;
-            model.Status = "Submitted";
-            model.SubmittedAt = DateTime.UtcNow;
+            var existing = await _context.Capstones
+                .FirstOrDefaultAsync(c => c.StudentId == student.Id);
 
-            _context.Capstones.Add(model);
+            if (existing != null)
+            {
+                // RESUBMISSION
+                existing.Title = model.Title;
+                existing.Description = model.Description;
+                existing.RepositoryUrl = model.RepositoryUrl;
+                existing.LiveDemoUrl = model.LiveDemoUrl;
+                existing.Status = CapstoneStatus.Pending;
+                existing.MentorFeedback = null;
+                existing.SubmittedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                model.StudentId = student.Id;
+                model.Status = CapstoneStatus.Pending;
+                _context.Capstones.Add(model);
+            }
+
             await _context.SaveChangesAsync();
-            return RedirectToAction("Index");
+            TempData["Success"] = "Capstone submitted successfully!";
+            return RedirectToAction(nameof(Index));
         }
 
-        // MENTOR: Review Action
-        [HttpPost]
-        [Authorize(Roles = "Mentor,Admin")]
-        public async Task<IActionResult> Review(int id, string action, string feedback)
+        [Authorize(Roles = "Student")]
+        [HttpGet]
+        public async Task<IActionResult> Create()
         {
-            var project = await _context.Capstones.FindAsync(id);
-            if (project == null) return NotFound();
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
 
-            if (action == "Approve")
-            {
-                project.ApprovalCount++;
-                project.MentorFeedback = feedback;
+            var student = await _context.Students
+                .Include(s => s.ModuleCompletions)
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-                // Logic: Needs 2 approvals? Or just 1 for now?
-                if (project.ApprovalCount >= 1)
-                {
-                    project.Status = "Approved";
-                }
-                else
-                {
-                    project.Status = "1/2 Approvals";
-                }
-            }
-            else if (action == "RequestChanges")
-            {
-                project.Status = "Changes Requested";
-                project.MentorFeedback = feedback;
-                project.ApprovalCount = 0; // Reset
-            }
+            if (student == null)
+                return RedirectToAction("Dashboard", "Student");
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction("Index");
+            // 🔒 Gate by module 19 (Project Module)
+            bool projectUnlocked = student.ModuleCompletions
+                .Any(mc => mc.ModuleId == 19 && mc.IsCompleted);
+
+            if (!projectUnlocked)
+                return RedirectToAction("Locked");
+
+            return View();
         }
+
     }
+
+
+
 }

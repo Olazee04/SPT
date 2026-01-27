@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SPT.Models;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -20,5 +21,10 @@ namespace SPT.Models
         public DateTime DateIssued { get; set; } = DateTime.UtcNow;
 
         public string IssuedBy { get; set; } = "Admin";
+
+        public string CertificateCode { get; set; } = string.Empty;
+        public DateTime IssuedAt { get; set; }
     }
 }
+
+    

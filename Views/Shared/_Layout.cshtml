@@ -48,21 +48,29 @@
                         <a asp-controller="Student" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                             <i class="fas fa-home"></i> Dashboard
                         </a>
-                        <a asp-controller="Student" asp-action="Curriculum" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Curriculum" ? "active-link" : "")">
-                            <i class="fas fa-book-open"></i> Curriculum
+                        <a asp-controller="Student"
+                           asp-action="Curriculum"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Curriculum" ? "active-link" : "")">
+                            <i class="fas fa-pen"></i> Curriculum
                         </a>
+
                         <a asp-controller="Quiz" asp-action="Take" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Quiz" ? "active-link" : "")">
                             <i class="fas fa-pen"></i> Quizzes
                         </a>
-                        <a asp-controller="Student" asp-action="Leaderboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Leaderboard" ? "active-link" : "")">
+                        <a asp-controller="Leaderboard" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
                             <i class="fas fa-trophy"></i> Leaderboard
                         </a>
                         <a asp-controller="Library" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Library" ? "active-link" : "")">
                             <i class="fas fa-folder-open"></i> Resources
                         </a>
-                        <a asp-controller="Capstone" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Capstone" ? "active-link" : "")">
-                            <i class="fas fa-rocket"></i> Capstone
-                        </a>
+
+                @if (User.IsInRole("Student") && (ViewBag.CapstoneUnlocked ?? false))
+{
+    <a asp-controller="Capstone" asp-action="Index" class="list-group-item">
+        <i class="fas fa-rocket"></i> Capstone
+    </a>
+}
 
                         <div class="sidebar-header-label">Account</div>
                         <a asp-controller="Student" asp-action="Settings" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active-link" : "")">
@@ -107,10 +115,11 @@
                         <a asp-controller="Attendance" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Attendance" ? "active-link" : "")">
                             <i class="fas fa-calendar-check"></i> Attendance
                         </a>
-                        <a asp-controller="Capstone" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Capstone" ? "active-link" : "")">
-                            <i class="fas fa-project-diagram"></i> Capstones
+                        <a asp-controller="MentorCapstone" asp-action="Index" class="list-group-item">
+                            <i class="fas fa-project-diagram"></i> Capstone Reviews
                         </a>
-                        <a asp-controller="Student" asp-action="Leaderboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Leaderboard" ? "active-link" : "")">
+                        <a asp-controller="Leaderboard" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
                             <i class="fas fa-trophy"></i> Leaderboard
                         </a>
                         <a asp-controller="Admin" asp-action="ManageLibrary" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ManageLibrary" ? "active-link" : "")">

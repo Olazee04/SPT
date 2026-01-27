@@ -14,7 +14,9 @@ namespace SPT.Models
 
         public ApplicationUser User { get; set; }
 
-        public string Title { get; set; }
+        [Required]
+        public string Title { get; set; } = "Notification";
+
         [Required]
         public string Message { get; set; } = string.Empty;
 
