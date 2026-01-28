@@ -581,7 +581,7 @@ namespace SPT.Controllers
         // ANNOUNCEMENTS
         // =========================
         [HttpGet]
-        [Authorize(Roles = "Admin")] // Usually only admins broadcast, but change to "Admin,Mentor" if needed
+        [Authorize(Roles = "Admin, Mentor")] // Usually only admins broadcast, but change to "Admin,Mentor" if needed
         public IActionResult CreateAnnouncement()
         {
             return View();
@@ -589,7 +589,7 @@ namespace SPT.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin, Mentor")]
         public async Task<IActionResult> CreateAnnouncement(Announcement model)
         {
             if (ModelState.IsValid)
@@ -992,6 +992,21 @@ namespace SPT.Controllers
             return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "StudentImportTemplate.csv");
         }
 
-  
+
+        // =========================
+        // SYSTEM AUDIT LOGS
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AuditLogs()
+        {
+            var logs = await _context.AuditLogs
+                .OrderByDescending(a => a.Timestamp)
+                .ToListAsync();
+
+            return View(logs);
+        }
+
+
     }
 }

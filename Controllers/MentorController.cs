@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
 using SPT.Models.ViewModels;
+using SPT.Services;
 
 namespace SPT.Controllers
 {
@@ -14,15 +15,17 @@ namespace SPT.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
+        private readonly AuditService _auditService;
 
         public MentorController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env, AuditService auditService)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
+            _auditService = auditService;
         }
 
         // =========================

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
 using SPT.Models.ViewModels;
+using SPT.Services;
 using System;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -19,15 +20,17 @@ namespace SPT.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
+        private readonly AuditService _auditService;
 
         public StudentController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env, AuditService auditService)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
+            _auditService = auditService;
         }
 
         // =========================
@@ -39,6 +42,14 @@ namespace SPT.Controllers
 
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
+
+            var alerts = await _context.Notifications
+    .Where(n => n.UserId == user.Id && !n.IsRead)
+    .OrderByDescending(n => n.CreatedAt)
+    .Take(3)
+    .ToListAsync();
+
+            ViewBag.DashboardAlerts = alerts;
 
             // 1. Fetch Student with ALL necessary data (Merged Includes)
             var student = await _context.Students
@@ -158,6 +169,7 @@ namespace SPT.Controllers
 
             ViewBag.CapstoneUnlocked = capstoneUnlocked;
 
+            
             // ---------------------------------------------------------
             // 🚀 NEW FEATURES (Announcement, Next Up, Leaderboard)
             // ---------------------------------------------------------
@@ -254,8 +266,28 @@ public async Task<IActionResult> LogWork(
                     ? $"🚫 Daily limit exceeded. You have already logged {existingHours} hours for {logDate:MMM dd}. You can only add {remaining} more."
                     : $"🚫 Daily limit reached. You cannot log any more hours for {logDate:MMM dd}.";
 
-                TempData["Error"] = msg;
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = student.UserId,
+                    Title = "Daily Limit Exceeded",
+                    Message = msg,
+                    Type = "Error",
+                    Url = "/Student/Dashboard",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                });
+
+                await _context.SaveChangesAsync();
+                await _auditService.LogAsync(
+    "LOG WORK",
+    $"Student logged {hours} hours for {logDate:MMM dd}",
+    student.FullName,
+    HttpContext.Connection.RemoteIpAddress?.ToString()
+);
+
+
                 return RedirectToAction(nameof(Dashboard));
+
             }
 
             // ==================================================
@@ -305,8 +337,21 @@ public async Task<IActionResult> LogWork(
             _context.ProgressLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            TempData["Success"] = $"✅ Log submitted for {logDate:MMM dd}!";
+            _context.Notifications.Add(new Notification
+            {
+                UserId = student.UserId,
+                Title = "Log Submitted",
+                Message = $"✅ Log submitted for {logDate:MMM dd}!",
+                Type = "Success",
+                Url = "/Student/Dashboard",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            });
+
+            await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Dashboard));
+
         }
 
         // =========================
@@ -592,6 +637,12 @@ public async Task<IActionResult> LogWork(
                     };
                     _context.ModuleCompletions.Add(completion);
                     await _context.SaveChangesAsync();
+                    await _auditService.LogAsync(
+    passed ? "QUIZ PASSED" : "QUIZ FAILED",
+    $"ModuleId: {moduleId}, Score: {percentage}%",
+    student.FullName,
+    HttpContext.Connection.RemoteIpAddress?.ToString()
+);
                 }
 
                 TempData["Success"] = $"🎉 Passed! You scored {percentage}%. The next module is unlocked.";
@@ -684,9 +735,27 @@ public async Task<IActionResult> LogWork(
 
             _context.SupportTickets.Add(ticket);
             await _context.SaveChangesAsync();
+            await _auditService.LogAsync(
+                "SUPPORT TICKET",
+                "Student requested account deletion",
+                student.FullName,
+                HttpContext.Connection.RemoteIpAddress?.ToString()
+            );
 
             TempData["Success"] = "Deletion request sent to Admin. You will be contacted shortly.";
             return RedirectToAction(nameof(Profile));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MarkNotificationRead(int id)
+        {
+            var notification = await _context.Notifications.FindAsync(id);
+            if (notification != null)
+            {
+                notification.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
+            return Redirect(Request.Headers["Referer"].ToString());
         }
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Services;
 
 namespace SPT.Controllers
 {
@@ -10,10 +11,12 @@ namespace SPT.Controllers
     public class CertificateController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly AuditService _auditService;
 
-        public CertificateController(ApplicationDbContext context)
+        public CertificateController(ApplicationDbContext context, AuditService auditService )
         {
-            _context = context;
+            _context = context;            _auditService = auditService;
+
         }
 
         // =========================

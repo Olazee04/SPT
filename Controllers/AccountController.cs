@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SPT.Models;
+using SPT.Services;
 
 namespace SPT.Controllers
 {
@@ -10,15 +11,16 @@ namespace SPT.Controllers
     _signInManager;
         private readonly UserManager<ApplicationUser>
             _userManager;
-
+        private readonly AuditService _auditService;
         public AccountController(
         SignInManager<ApplicationUser>
             signInManager,
             UserManager<ApplicationUser>
-                userManager)
+                userManager, AuditService auditService)
         {
             _signInManager = signInManager;
             _userManager = userManager;
+            _auditService = auditService;
         }
 
         // =========================

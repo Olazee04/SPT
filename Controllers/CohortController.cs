@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Services;
+using System.Reflection;
 
 namespace SPT.Controllers
 {
@@ -10,10 +12,12 @@ namespace SPT.Controllers
     public class CohortController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly AuditService _auditService;
 
-        public CohortController(ApplicationDbContext context)
+        public CohortController(ApplicationDbContext context, AuditService auditService)
         {
             _context = context;
+            _auditService = auditService;
         }
 
         // =========================
@@ -55,6 +59,12 @@ namespace SPT.Controllers
 
                 _context.Cohorts.Add(model);
                 await _context.SaveChangesAsync();
+                await _auditService.LogAsync(
+                "CREATE NEW COHORT",
+     "Created New Cohort",
+    User.Identity!.Name!,
+    HttpContext.Connection.RemoteIpAddress?.ToString()
+);
                 TempData["Success"] = "Cohort created successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -90,6 +100,13 @@ namespace SPT.Controllers
                 {
                     _context.Update(model);
                     await _context.SaveChangesAsync();
+                    await _auditService.LogAsync(
+               "EDIT  COHORT",
+    "Editted Cohort",
+   User.Identity!.Name!,
+   HttpContext.Connection.RemoteIpAddress?.ToString()
+);
+
                     TempData["Success"] = "Cohort updated successfully!";
                 }
                 catch (DbUpdateConcurrencyException)
@@ -124,6 +141,13 @@ namespace SPT.Controllers
                 {
                     _context.Cohorts.Remove(cohort);
                     await _context.SaveChangesAsync();
+                    await _auditService.LogAsync(
+               "DELETE COHORT",
+    "Deleted a Cohort",
+   User.Identity!.Name!,
+   HttpContext.Connection.RemoteIpAddress?.ToString()
+);
+
                     TempData["Success"] = "Cohort deleted.";
                 }
             }

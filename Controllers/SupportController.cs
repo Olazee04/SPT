@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Services;
 
 namespace SPT.Controllers
 {
@@ -12,11 +13,14 @@ namespace SPT.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AuditService _auditService;
 
-        public SupportController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public SupportController(ApplicationDbContext context, AuditService auditService,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
+            _auditService = auditService;
         }
 
         public async Task<IActionResult> Index()

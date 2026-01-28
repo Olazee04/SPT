@@ -13,6 +13,8 @@ namespace SPT.Models
         [Required]
         public string Message { get; set; } = string.Empty;
 
+        public bool IsRead { get; set; }
+        public string TargetPage { get; set; } // Dashboard, Curriculum, Support
         public string Audience { get; set; } = "All"; // "All", "Students", "Mentors"
 
         public string PostedBy { get; set; } = string.Empty; // Admin Name

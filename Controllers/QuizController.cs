@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Services;
+using System.Reflection;
 
 namespace SPT.Controllers
 {
@@ -13,11 +15,14 @@ namespace SPT.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AuditService _auditService;
 
-        public QuizController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public QuizController(ApplicationDbContext context, AuditService auditService,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
+            _auditService = auditService;
         }
 
         // =========================
@@ -79,6 +84,7 @@ namespace SPT.Controllers
         public IActionResult CreateQuestion(int moduleId)
         {
             ViewBag.ModuleId = moduleId;
+
             return View();
         }
 
@@ -103,6 +109,12 @@ namespace SPT.Controllers
             };
             _context.QuizQuestions.Add(question);
             await _context.SaveChangesAsync(); // Save to get ID
+            await _auditService.LogAsync(
+    "CREATE QUIZ QUESTION",
+    $"Question added to ModuleId {moduleId}",
+    User.Identity!.Name!,
+    HttpContext.Connection.RemoteIpAddress?.ToString()
+);
 
             // Save Options
             for (int i = 0; i < options.Count; i++)
@@ -135,6 +147,12 @@ namespace SPT.Controllers
                 int modId = q.ModuleId;
                 _context.QuizQuestions.Remove(q);
                 await _context.SaveChangesAsync();
+                await _auditService.LogAsync(
+                "DELETE QUIZ QUESTION",
+    $"Question Deleted From ModuleId",
+    User.Identity!.Name!,
+    HttpContext.Connection.RemoteIpAddress?.ToString()
+);
                 return RedirectToAction(nameof(Manage), new { moduleId = modId });
             }
             return RedirectToAction(nameof(Index));

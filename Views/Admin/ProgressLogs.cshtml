@@ -60,7 +60,7 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0 leaderboard-card">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light text-muted small text-uppercase">
@@ -88,7 +88,7 @@
                                         </div>
                                         <div>
                                             <span class="d-block font-weight-bold text-dark small">@log.Student?.FullName</span>
-                                            <span class="badge badge-light border text-muted" style="font-size:0.65rem;">@log.Student?.Track?.Code</span>
+                                            <span class="badge badge-light border text-muted leaderboard-card" style="font-size:0.65rem;">@log.Student?.Track?.Code</span>
                                         </div>
                                     </div>
                                 </td>
@@ -122,7 +122,7 @@
                                     }
                                 </td>
 
-                                        <td class="text-center">
+                                <td class="text-center leaderboard-card">
                                     @if (log.IsApproved)
                                     {
                     <span class="badge rounded-pill bg-success px-3 py-2">
@@ -148,26 +148,27 @@
 
                             <div class="modal fade" id="logModal_@log.Id" tabindex="-1" role="dialog" aria-hidden="true">
                                 <div class="modal-dialog modal-dialog-centered" role="document">
-                                    <div class="modal-content border-0 shadow-lg">
+                                    <div class="modal-content border-0 leaderboard-card shadow-lg">
                                         <div class="modal-header bg-primary text-white">
                                             <h5 class="modal-title font-weight-bold">Review Log</h5>
                                             <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                                                 <span aria-hidden="true">&times;</span>
                                             </button>
                                         </div>
-                                        <div class="modal-body p-4">
+                                        <div class="modal-body p-4 leaderboard-card">
                                             <div class="d-flex align-items-center mb-3 p-3 bg-light rounded border">
                                                 <div>
                                                     <h6 class="mb-0 font-weight-bold text-gray-800">@log.Student?.FullName</h6>
                                                     <small class="text-muted">@log.Date.ToString("D")</small>
                                                 </div>
+
                                                 <div class="ml-auto text-right">
                                                     <h4 class="font-weight-bold text-primary mb-0">@log.Hours</h4>
                                                     <small class="text-muted">Hours</small>
                                                 </div>
                                             </div>
 
-                                            <div class="mb-3">
+                                            <div class="mb-3 leaderboard-card">
                                                 <label class="small text-muted font-weight-bold text-uppercase">Description</label>
                                                 <p class="p-3 border rounded bg-white small mb-0">
                                                     @(string.IsNullOrEmpty(log.ActivityDescription) ? "No description." : log.ActivityDescription)

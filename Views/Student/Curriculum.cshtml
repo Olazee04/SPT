@@ -1,4 +1,10 @@
 ﻿@model List<SPT.Models.CurriculumViewModel>
+@if (TempData["QuizError"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["QuizError"]
+    </div>
+}
 @{
     ViewData["Title"] = "My Learning Roadmap";
 }
@@ -86,13 +92,26 @@
                             <h5 class="modal-title fw-bold">📚 Study Materials: @module.ModuleName</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body">
-                            @if (module.Resources != null && module.Resources.Any())
+                       
+                            <div class="modal-body">
+
+                                @* ✅ MINI PROJECT HANDLING *@
+                            @if (module.IsMiniProject)
+                            {
+                                <div class="alert alert-info small text-center">
+                                    📌 <strong>This is a Mini Project</strong><br />
+                                    Complete all previous modules and submit your project for mentor review.
+                                </div>
+                            }
+                            else
                             {
                                 <div class="list-group list-group-flush">
                                     @foreach (var res in module.Resources)
                                     {
-                                        <a href="@res.Url" target="_blank" class="list-group-item list-group-item-action d-flex align-items-center p-3 my-1 border rounded shadow-sm">
+                                        <a href="@res.Url"
+                                           target="_blank"
+                                           class="list-group-item list-group-item-action d-flex align-items-center p-3 my-1 border rounded shadow-sm">
+
                                             <div class="me-3">
                                                 @if (res.Type == "Video" || res.Url.Contains("youtube"))
                                                 {
@@ -107,70 +126,25 @@
                                                     <i class="fas fa-link fa-2x text-primary"></i>
                                                 }
                                             </div>
+
                                             <div>
                                                 <h6 class="mb-0 fw-bold text-dark">@res.Title</h6>
-                                                <small class="text-muted text-decoration-underline">Click to open resource</small>
+                                                <small class="text-muted">Click to open resource</small>
                                             </div>
-                                            <i class="fas fa-external-link-alt ms-auto text-muted opacity-50"></i>
+
+                                            <i class="fas fa-external-link-alt ms-auto text-muted"></i>
                                         </a>
                                     }
                                 </div>
                             }
-                            <div class="modal-body">
 
-                                @* ✅ MINI PROJECT HANDLING *@
-                                @if (module.IsMiniProject)
-                                {
-                                    <div class="alert alert-info small text-center">
-                                        📌 <strong>This is a Mini Project</strong><br />
-                                        Complete all previous modules and submit your project for mentor review.<br />
-                                        <span class="text-muted">Passing this module makes you eligible for certification.</span>
-                                    </div>
-                                }
-                                else
-                                {
-                                    @* ✅ LEARNING MODULES (1–18) *@
-                                    <div class="list-group list-group-flush">
-                                        @foreach (var res in module.Resources)
-                                        {
-                                            <a href="@res.Url"
-                                               target="_blank"
-                                               class="list-group-item list-group-item-action d-flex align-items-center p-3 my-1 border rounded shadow-sm">
-
-                                                <div class="me-3">
-                                                    @if (res.Type == "Video" || res.Url.Contains("youtube"))
-                                                    {
-                                                        <i class="fab fa-youtube fa-2x text-danger"></i>
-                                                    }
-                                                    else if (res.Type == "PDF")
-                                                    {
-                                                        <i class="fas fa-file-pdf fa-2x text-danger"></i>
-                                                    }
-                                                    else
-                                                    {
-                                                        <i class="fas fa-link fa-2x text-primary"></i>
-                                                    }
-                                                </div>
-
-                                                <div>
-                                                    <h6 class="mb-0 fw-bold text-dark">@res.Title</h6>
-                                                    <small class="text-muted text-decoration-underline">
-                                                        Click to open resource
-                                                    </small>
-                                                </div>
-
-                                                <i class="fas fa-external-link-alt ms-auto text-muted opacity-50"></i>
-                                            </a>
-                                        }
-                                    </div>
-                                }
 
                             </div>
 
                         </div>
                     </div>
                 </div>
-            </div>
+            
         }
     
     </div>

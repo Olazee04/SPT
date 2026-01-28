@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
+using SPT.Services;
 
 namespace SPT.Controllers
 {
@@ -13,11 +14,14 @@ namespace SPT.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AuditService _auditService;
 
-        public ProgressLogController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public ProgressLogController(ApplicationDbContext context, AuditService auditService,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _userManager = userManager;
+            _auditService = auditService;
         }
 
         // =========================

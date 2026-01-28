@@ -6,6 +6,27 @@
     --text-light: #ecf0f1;
 }
 
+    /* ===========================
+   THEME-AWARE VARIABLES
+   =========================== */
+
+    /* Light Mode */
+    :root[data-bs-theme="light"] {
+        --card-bg-dark: #1f2328;
+        --card-text-light: #ffffff;
+        --card-muted-text: #ced4da;
+        --badge-bg: #0d6efd;
+    }
+
+    /* Dark Mode */
+    :root[data-bs-theme="dark"] {
+        --card-bg-dark: #1c1f23;
+        --card-text-light: #f8f9fa;
+        --card-muted-text: #adb5bd;
+        --badge-bg: #4dabf7;
+    }
+
+
 html, body {
     height: 100%;
     margin: 0;
@@ -240,3 +261,31 @@ html, body {
         background: #f0f0f0;
         color: #000;
     }
+
+/* ===========================
+   LEADERBOARD CARDS
+   =========================== */
+
+.leaderboard-card {
+    background-color: var(--card-bg-dark);
+    color: var(--card-text-light);
+}
+
+    .leaderboard-card .list-group-item {
+        background-color: transparent !important;
+        color: var(--card-text-light) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        font-weight: 600;
+    }
+
+    .leaderboard-card small,
+    .leaderboard-card .text-muted {
+        color: var(--card-muted-text) !important;
+    }
+
+    .leaderboard-card .badge {
+        background-color: var(--badge-bg) !important;
+        color: #fff !important;
+        font-weight: 700;
+    }
+

@@ -48,14 +48,12 @@
                         <a asp-controller="Student" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                             <i class="fas fa-home"></i> Dashboard
                         </a>
+                        
+
                         <a asp-controller="Student"
                            asp-action="Curriculum"
                            class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Curriculum" ? "active-link" : "")">
-                            <i class="fas fa-pen"></i> Curriculum
-                        </a>
-
-                        <a asp-controller="Quiz" asp-action="Take" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Quiz" ? "active-link" : "")">
-                            <i class="fas fa-pen"></i> Quizzes
+                            <i class="fas fa-book"></i> Curriculum
                         </a>
                         <a asp-controller="Leaderboard" asp-action="Index"
                            class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
@@ -71,6 +69,26 @@
         <i class="fas fa-rocket"></i> Capstone
     </a>
 }
+                        @if (ViewBag.CanViewCertificate == true)
+
+                        {
+                            <a asp-controller="Student"
+                               asp-action="Certificate"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Certificate" ? "active-link" : "")">
+                                <i class="fas fa-certificate text-warning"></i> Certificate
+                            </a>
+                        }
+
+                        else
+
+                        {
+                            <a href="javascript:void(0)"
+                               class="list-group-item disabled text-muted"
+                               title="Complete all required modules to unlock certificate">
+                                <i class="fas fa-lock"></i> Certificate (Locked)
+                            </a>
+                        }
+
 
                         <div class="sidebar-header-label">Account</div>
                         <a asp-controller="Student" asp-action="Settings" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active-link" : "")">
@@ -104,9 +122,11 @@
                         @if (User.IsInRole("Mentor"))
 
                         {
-                            <a asp-controller="Mentor" asp-action="MyStudents" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "MyStudents" ? "active-link" : "")">
-                                <i class="fas fa-users"></i> My Mentees
-                            </a>
+                           <a asp-controller="Mentor"
+   asp-action="Students"
+   class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
+    <i class="fas fa-users"></i> My Mentees
+</a>
                         }
 
                         <a asp-controller="Admin" asp-action="ProgressLogs" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" ? "active-link" : "")">
@@ -149,9 +169,6 @@
                             <a asp-controller="Cohort" asp-action="Index" class="list-group-item ps-5 small text-white-50"><i class="fas fa-angle-right me-2"></i> Cohorts</a>
                         </div>
 
-                        <a asp-controller="Admin" asp-action="SupportTickets" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "SupportTickets" ? "active-link" : "")">
-                            <i class="fas fa-life-ring"></i> Help Desk
-                        </a>
                         <a asp-controller="Certificate" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Certificate" ? "active-link" : "")">
                             <i class="fas fa-certificate"></i> Issue Certificates
                         </a>
@@ -302,3 +319,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

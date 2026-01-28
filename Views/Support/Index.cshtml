@@ -1,5 +1,10 @@
 ﻿@model SPT.Models.SupportDashboardViewModel
-
+@if (TempData["SupportSuccess"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SupportSuccess"]
+    </div>
+}
 @{
     ViewData["Title"] = "Support & Reflections";
 }
@@ -13,14 +18,7 @@
         </h2>
     </div>
 
-    @if (TempData["Success"] != null)
-    {
-            <div class="alert alert-success">@TempData["Success"]</div>
-    }
-    @if (TempData["Error"] != null)
-    {
-            <div class="alert alert-danger">@TempData["Error"]</div>
-    }
+   
 
     <!-- TABS -->
     <ul class="nav nav-tabs mb-4" role="tablist">
