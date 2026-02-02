@@ -1,79 +1,83 @@
+/* ===========================
+   ROOT VARIABLES
+   =========================== */
 :root {
     --primary-color: #4361ee;
-    --sidebar-bg: #212529; /* Dark Sidebar Background */
+    --sidebar-bg: #212529;
     --sidebar-width: 260px;
-    --body-bg: #f4f6f9;
-    --text-light: #ecf0f1;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --card-bg: #ffffff;
+    --border-color: #e5e7eb;
 }
 
-    /* ===========================
+/* DARK MODE */
+[data-bs-theme="dark"] {
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --bg-primary: #0f172a;
+    --bg-secondary: #111827;
+    --card-bg: #1f2933;
+    --border-color: #374151;
+}
+
+/* ===========================
    THEME-AWARE VARIABLES
    =========================== */
 
-    /* Light Mode */
-    :root[data-bs-theme="light"] {
-        --card-bg-dark: #1f2328;
-        --card-text-light: #ffffff;
-        --card-muted-text: #ced4da;
-        --badge-bg: #0d6efd;
-    }
+/* LIGHT MODE (FIXED TYPO) */
+:root[data-bs-theme="light"] {
+    --card-bg-dark: #1f2328;
+    --card-text-light: #ffffff;
+    --card-muted-text: #ced4da;
+    --badge-bg: #0d6efd;
+}
 
-    /* Dark Mode */
-    :root[data-bs-theme="dark"] {
-        --card-bg-dark: #1c1f23;
-        --card-text-light: #f8f9fa;
-        --card-muted-text: #adb5bd;
-        --badge-bg: #4dabf7;
-    }
-
+/* DARK MODE */
+:root[data-bs-theme="dark"] {
+    --card-bg-dark: #1c1f23;
+    --card-text-light: #f8f9fa;
+    --card-muted-text: #adb5bd;
+    --badge-bg: #4dabf7;
+}
 
 html, body {
     height: 100%;
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--body-bg);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     overflow-x: hidden;
 }
 
 /* ===========================
-   1. LAYOUT WRAPPER
+   LAYOUT
    =========================== */
+
 #wrapper {
     display: flex;
     width: 100%;
     min-height: 100vh;
-    align-items: stretch;
 }
 
 #sidebar-wrapper {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
-    color: #fff;
+    color: var(--text-primary);
     border-right: 1px solid rgba(255,255,255,0.1);
     display: flex;
     flex-direction: column;
-    transition: all 0.3s;
     position: sticky;
     top: 0;
     height: 100vh;
-    overflow-y: auto; /* Scrollable sidebar if menu is long */
-    z-index: 1000;
+    overflow-y: auto;
 }
 
-#page-content-wrapper {
-    width: 100%;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-/* ===========================
-   2. SIDEBAR STYLING
-   =========================== */
-.sidebar-heading {
+2. SIDEBAR STYLING =========================== */ .sidebar-heading {
     padding: 1.5rem;
     font-size: 1.3rem;
     font-weight: 800;
@@ -109,8 +113,8 @@ html, body {
         padding-left: 30px; /* Slide effect */
         border-left: 4px solid var(--primary-color) !important;
     }
-
     /* Active State */
+
     .list-group-item.active-link {
         background-color: var(--primary-color) !important;
         color: #fff !important;
@@ -125,8 +129,8 @@ html, body {
         text-align: center;
         margin-right: 10px;
     }
-
 /* Sidebar Footer */
+
 .sidebar-footer {
     margin-top: auto;
     padding: 20px;
@@ -135,46 +139,30 @@ html, body {
 }
 
 /* ===========================
-   3. COMPONENT STYLES (Cards, Profile, Buttons)
+   TOP NAVBAR
    =========================== */
+
 .top-navbar {
-    background: #fff;
-    padding: 15px 30px;
-    border-bottom: 1px solid #e0e0e0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
 }
 
-.container-fluid {
-    padding: 30px;
-    flex-grow: 1;
-    overflow-y: auto;
-}
+/* ===========================
+   CARDS
+   =========================== */
 
-.dropdown-menu {
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-/* Custom Cards */
 .custom-card {
-    background: #fff;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
     border-radius: 15px;
-    border: none;
     box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-    padding: 25px;
-    height: 100%;
 }
 
 .card-title-custom {
     font-weight: 700;
-    margin-bottom: 20px;
-    font-size: 1.1rem;
-    color: #000;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 10px;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
 }
 
 /* Profile Image Area */

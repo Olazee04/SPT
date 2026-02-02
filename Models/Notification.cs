@@ -25,6 +25,7 @@ namespace SPT.Models
         public bool IsRead { get; set; } = false;
 
         public string Type { get; set; } = "Info"; // Info, Alert, Success
+        public string TargetPage { get; set; } // Dashboard, Curriculum, Support
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

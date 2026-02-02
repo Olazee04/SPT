@@ -226,6 +226,7 @@ namespace SPT.Controllers
                         Message = $"Your log for {log.Date:MMM dd} was approved.",
                         Type = "Success",
                         Url = "/Student/Dashboard",
+                        TargetPage = "SomePage",
                         CreatedAt = DateTime.UtcNow,
                         IsRead = false
                     };
@@ -615,7 +616,14 @@ namespace SPT.Controllers
                         Message = $"📢 {model.Title}: {model.Message}",
                         Type = "Info",
                         IsRead = false,
-                        Url = "/Notification/Index",
+                        TargetPage = "SomePage",
+                        Url = model.TargetPage switch
+                        {
+                            "Dashboard" => "/Student/Dashboard",
+                            "Curriculum" => "/Student/Curriculum",
+                            "Support" => "/Support/Index",
+                            _ => "/Student/Dashboard"
+                        },
                         CreatedAt = DateTime.UtcNow
                     });
                 }
@@ -779,6 +787,7 @@ namespace SPT.Controllers
                     Message = $"💬 Admin responded to your ticket: '{ticket.Subject}'",
                     Type = "Info",
                     IsRead = false,
+                    TargetPage = "SomePage",
                     Url = "/Support/Index",
                     CreatedAt = DateTime.UtcNow
                 };

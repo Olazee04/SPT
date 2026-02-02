@@ -169,19 +169,19 @@ namespace SPT.Controllers
 
             ViewBag.CapstoneUnlocked = capstoneUnlocked;
 
-            
+
             // ---------------------------------------------------------
             // 🚀 NEW FEATURES (Announcement, Next Up, Leaderboard)
             // ---------------------------------------------------------
 
             // 1. Announcement
-            try
-            {
-                ViewBag.LatestAnnouncement = await _context.Announcements
-                    .OrderByDescending(a => a.CreatedAt)
-                    .FirstOrDefaultAsync();
-            }
-            catch { ViewBag.LatestAnnouncement = null; }
+            ViewBag.LatestAnnouncement = await _context.Announcements
+    .Where(a =>
+        a.TargetPage == "Dashboard" &&
+        (a.Audience == "All" || a.Audience == "Students")
+    )
+    .OrderByDescending(a => a.CreatedAt)
+    .FirstOrDefaultAsync();
 
             // 2. Next Up Module
             var nextModule = allModules.FirstOrDefault(m => !completedModuleIds.Contains(m.Id));
@@ -241,7 +241,6 @@ public async Task<IActionResult> LogWork(
             var today = DateTime.UtcNow.Date;
             var yesterday = today.AddDays(-1);
 
-            // Normalize input date to remove time part
             logDate = logDate.Date;
 
             if (logDate < yesterday || logDate > today)
@@ -253,12 +252,11 @@ public async Task<IActionResult> LogWork(
             // ==================================================
             // 🛡️ RULE 2: TOTAL DAILY LIMIT (Max 5 Hours)
             // ==================================================
-            // 1. Calculate hours already logged for this specific date
-            decimal existingHours = student.ProgressLogs
+              decimal existingHours = student.ProgressLogs
                 .Where(l => l.Date.Date == logDate)
                 .Sum(l => l.Hours);
 
-            // 2. Check if new total exceeds limit
+           
             if (existingHours + hours > 5)
             {
                 decimal remaining = 5 - existingHours;
@@ -273,6 +271,7 @@ public async Task<IActionResult> LogWork(
                     Message = msg,
                     Type = "Error",
                     Url = "/Student/Dashboard",
+                    TargetPage = "SomePage",
                     CreatedAt = DateTime.UtcNow,
                     IsRead = false
                 });
@@ -345,6 +344,7 @@ public async Task<IActionResult> LogWork(
                 Type = "Success",
                 Url = "/Student/Dashboard",
                 CreatedAt = DateTime.UtcNow,
+                TargetPage = "SomePage",
                 IsRead = false
             });
 
@@ -484,6 +484,13 @@ public async Task<IActionResult> LogWork(
             }).ToList();
 
             return View(model);
+            ViewBag.LatestAnnouncement = await _context.Announcements
+    .Where(a =>
+        a.TargetPage == "Curriculum" &&
+        (a.Audience == "All" || a.Audience == "Students")
+    )
+    .OrderByDescending(a => a.CreatedAt)
+    .FirstOrDefaultAsync();
         }
 
 
@@ -735,6 +742,13 @@ public async Task<IActionResult> LogWork(
 
             _context.SupportTickets.Add(ticket);
             await _context.SaveChangesAsync();
+            ViewBag.LatestAnnouncement = await _context.Announcements
+    .Where(a =>
+        a.TargetPage == "Support" &&
+        (a.Audience == "All" || a.Audience == "Students")
+    )
+    .OrderByDescending(a => a.CreatedAt)
+    .FirstOrDefaultAsync();
             await _auditService.LogAsync(
                 "SUPPORT TICKET",
                 "Student requested account deletion",
