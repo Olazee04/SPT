@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SPT.Data.ApplicationDbContext Db
+
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -109,6 +114,10 @@
                             <a asp-controller="Admin" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                                 <i class="fas fa-tachometer-alt"></i> Master Dashboard
                             </a>
+
+                            <a asp-controller="Admin" asp-action="ProgressLogs" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" ? "active-link" : "")">
+                                <i class="fas fa-clipboard-check"></i> Review Logs
+                            </a>
                         }
 
                         else
@@ -123,15 +132,24 @@
 
                         {
                            <a asp-controller="Mentor"
-   asp-action="Students"
-   class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
-    <i class="fas fa-users"></i> My Mentees
-</a>
-                        }
+                                asp-action="Students"
+                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
+                                <i class="fas fa-users"></i> My Mentees
+                            </a>
 
-                        <a asp-controller="Admin" asp-action="ProgressLogs" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" ? "active-link" : "")">
-                            <i class="fas fa-clipboard-check"></i> Review Logs
-                        </a>
+                            <a asp-controller="Mentor"
+                                                            asp-action="Messages"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active-link" : "")">
+                                <i class="fas fa-comment-dots"></i> Message A Student
+                            </a>
+
+                            <a asp-controller="Mentor"
+                               asp-action="Profile"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active-link" : "")">
+                                <i class="fas fa-user-cog"></i> My Profile
+                            </a>
+                        }
+                      
                         <a asp-controller="Attendance" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Attendance" ? "active-link" : "")">
                             <i class="fas fa-calendar-check"></i> Attendance
                         </a>
@@ -198,50 +216,83 @@
 
             <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
                 <div class="d-flex w-100 justify-content-between align-items-center">
+
                     <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
 
                     <div class="d-flex align-items-center">
+
                         @if (User.Identity.IsAuthenticated)
 
                         {
-                            <button class="btn btn-light rounded-circle me-3" id="theme-toggle" title="Toggle Mode">
+
+                            var currentUser = await UserManager.GetUserAsync(User);
+
+                            string avatarUrl = null;
+
+
+
+                            if (currentUser != null)
+
+                            {
+
+                                var mentor = Db.Mentors.FirstOrDefault(m => m.UserId == currentUser.Id);
+
+                                var student = Db.Students.FirstOrDefault(s => s.UserId == currentUser.Id);
+
+                                avatarUrl = mentor?.ProfilePicture ?? student?.ProfilePicture;
+
+                            }
+
+                            <button class="btn btn-light rounded-circle me-3" id="theme-toggle">
                                 <i class="fas fa-moon"></i>
                             </button>
 
                             <div class="dropdown me-4">
-                                <a class="nav-link position-relative" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
                                     <i class="fas fa-bell fa-lg text-secondary"></i>
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notif-count" style="display:none; font-size: 0.6rem;">0</span>
+                                    <span id="notif-count"
+                                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                          style="display:none;font-size:.6rem;">0</span>
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-end shadow border-0 animated--grow-in p-0" aria-labelledby="alertsDropdown" style="width: 320px;">
-                                    <div class="bg-primary text-white p-2 text-center small fw-bold rounded-top">NOTIFICATIONS</div>
-                                    <div id="notif-list" style="max-height: 300px; overflow-y: auto;">
-                                        <div class="text-center py-4 small text-muted">Loading...</div>
-                                    </div>
-                                    <div class="p-2 border-top text-center bg-light rounded-bottom">
-                                        <a class="small text-decoration-none fw-bold" href="#" onclick="markAllRead()">Mark All as Read</a>
+
+                                <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="width:320px;">
+                                    <div class="bg-primary text-white p-2 text-center small fw-bold">NOTIFICATIONS</div>
+                                    <div id="notif-list" style="max-height:300px;overflow-y:auto;"></div>
+                                    <div class="p-2 border-top text-center bg-light">
+                                        <a class="small fw-bold text-decoration-none" href="#" onclick="markAllRead()">Mark All as Read</a>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="d-flex align-items-center border-start ps-3">
+
                                 <div class="text-end me-3 d-none d-lg-block">
-                                    <div class="small fw-bold text-dark">@User.Identity.Name</div>
-                                    <div class="badge bg-secondary text-white" style="font-size: 0.65rem;">
+                                    <div class="small fw-bold">@User.Identity.Name</div>
+                                    <div class="badge bg-secondary">
                                         @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value
                                     </div>
                                 </div>
-                                <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:40px; height:40px;">
-                                    @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
-                                </div>
+
+                                @if (!string.IsNullOrEmpty(avatarUrl))
+
+                                {
+                                    <img src="@avatarUrl"
+                                         class="rounded-circle shadow-sm"
+                                         style="width:40px;height:40px;object-fit:cover;" />
+                                }
+
+                                else
+
+                                {
+                                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold"
+                                         style="width:40px;height:40px;">
+                                        @(User.Identity.Name.Substring(0, 1).ToUpper())
+                                    </div>
+                                }
+
                             </div>
                         }
 
-                        else
-
-                        {
-                            <a class="btn btn-primary btn-sm px-4" asp-area="Identity" asp-page="/Account/Login">Login</a>
-                        }
                     </div>
                 </div>
             </nav>
@@ -249,9 +300,9 @@
             <div class="container-fluid p-4">
                 @RenderBody()
             </div>
+
         </div>
 
-    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>

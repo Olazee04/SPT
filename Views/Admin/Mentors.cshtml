@@ -17,13 +17,33 @@
     {
         <div class="col-md-4">
             <div class="custom-card h-100 text-center position-relative">
-                <div class="avatar-circle bg-dark text-white mx-auto mb-3 d-flex align-items-center justify-content-center fw-bold"
-                     style="width:80px; height:80px; font-size: 2rem;">
-                    @mentor.FullName.Substring(0, 1)
-                </div>
+                @if (!string.IsNullOrEmpty(mentor.ProfilePicture))
+                {
+                    <img src="@mentor.ProfilePicture"
+                         class="rounded-circle mx-auto mb-3 border"
+                         style="width:80px;height:80px;object-fit:cover;" />
+                }
+                else
+                {
+                    <div class="avatar-circle bg-dark text-white mx-auto mb-3 d-flex align-items-center justify-content-center fw-bold"
+                         style="width:80px;height:80px;font-size:2rem;">
+                        @mentor.FullName.Substring(0, 1)
+                    </div>
+                }
+
 
                 <h5 class="fw-bold mb-1">@mentor.FullName</h5>
-                <p class="text-muted small mb-2">@mentor.Specialization</p>
+                <div class="badge bg-info">@mentor.Specialization</div>
+                @if (mentor.Track != null)
+                {
+                    <div class="badge bg-info">@mentor.Track.Name</div>
+                }
+                else
+                {
+                    <div class="badge bg-secondary">General</div>
+                }
+
+
                 <span class="badge bg-light text-dark border mb-3">@mentor.User?.Email</span>
 
                 <hr />
@@ -31,13 +51,36 @@
                 <div class="d-flex justify-content-around text-start">
                     <div>
                         <small class="text-muted d-block uppercase" style="font-size:0.7rem;">STUDENTS</small>
-                        <span class="fw-bold h5">@mentor.Students.Count</span>
+                        <span class="fw-bold h5">
+                            @(mentor.TrackId == null
+                                ? ViewBag.TotalStudents
+                               : mentor.Students.Count)
+                        </span>
                     </div>
                     <div>
                         <small class="text-muted d-block uppercase" style="font-size:0.7rem;">STATUS</small>
                         <span class="badge bg-success">Active</span>
                     </div>
+                    <a asp-action="EditMentor" asp-route-id="@mentor.Id"
+                       class="btn btn-sm btn-outline-primary w-50 mb-2">
+                        Edit Profile
+                    </a>
+
                 </div>
+                <form asp-action="DeleteMentor" method="post" class="mt-2">
+                    <input type="hidden" name="id" value="@mentor.Id" />
+                    <button class="btn btn-sm btn-outline-danger w-100"
+                            onclick="return confirm('Delete this mentor?')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+                <form asp-action="ResetUserPassword" method="post" class="mt-2">
+                    <input type="hidden" name="userId" value="@mentor.UserId" />
+                    <button class="btn btn-sm btn-outline-warning w-100">
+                        <i class="fas fa-key"></i> Reset Password
+                    </button>
+                </form>
+
             </div>
         </div>
     }

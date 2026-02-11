@@ -3,16 +3,39 @@
     ViewData["Title"] = "My Students";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold"><i class="fas fa-chalkboard-teacher me-2"></i> My Assigned Students</h4>
+
+<div class="row mb-4 g-3">
+
+    <div class="col-md-4">
+        <div class="custom-card text-center p-4">
+            <h6 class="text-muted text-uppercase small">My Students</h6>
+            <h2 class="fw-bold">@ViewBag.MyStudentsCount</h2>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="custom-card text-center p-4">
+            <h6 class="text-muted text-uppercase small">Pending Logs</h6>
+            <h2 class="fw-bold text-warning">@ViewBag.PendingLogs</h2>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="custom-card text-center p-4">
+            <h6 class="text-muted text-uppercase small">Avg Consistency</h6>
+            <h2 class="fw-bold text-success">@ViewBag.AvgConsistency%</h2>
+        </div>
+    </div>
+
 </div>
+
 
 <div class="custom-card p-0 overflow-hidden">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="bg-light text-muted small text-uppercase">
                 <tr>
-                    <th class="ps-4">Student Name</th>
+                    <th class="ps-4">Student</th>
                     <th>Cohort</th>
                     <th>Track</th>
                     <th class="text-center">Hrs (7d)</th>
@@ -22,35 +45,52 @@
                 </tr>
             </thead>
             <tbody>
+
                 @foreach (var s in Model)
                 {
                     <tr>
                         <td class="ps-4">
                             <div class="d-flex align-items-center">
-                                <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle me-3 border" style="width:35px;height:35px;object-fit:cover;">
+                                <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")"
+                                     class="rounded-circle me-3 border"
+                                     style="width:38px;height:38px;object-fit:cover;">
+
                                 <div>
-                                    <span class="d-block fw-bold">@s.FullName</span>
+                                    <span class="fw-bold d-block">@s.FullName</span>
                                     <small class="text-muted">@s.Email</small>
                                 </div>
                             </div>
                         </td>
+
                         <td>@s.CohortName</td>
-                        <td><span class="badge bg-light text-dark border">@s.TrackCode</span></td>
+
+                        <td>
+                            <span class="badge bg-light border text-dark">
+                                @s.TrackCode
+                            </span>
+                        </td>
 
                         <td class="text-center">
                             <strong>@s.HoursLast7Days</strong>
-                            <div class="small text-muted">@s.CheckInsLast7Days check-ins</div>
+                            <div class="small text-muted">
+                                @s.CheckInsLast7Days check-ins
+                            </div>
                         </td>
 
-                        <td style="width: 150px;">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>@s.CompletedModules / @s.TotalModules</span>
-                            </div>
+                        <td style="width:160px;">
                             @{
-                                double modProgress = s.TotalModules == 0 ? 0 : ((double)s.CompletedModules / s.TotalModules) * 100;
+                                double modProgress =
+                                s.TotalModules == 0 ? 0 :
+                                ((double)s.CompletedModules / s.TotalModules) * 100;
                             }
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: @modProgress%"></div>
+
+                            <div class="small mb-1">
+                                @s.CompletedModules / @s.TotalModules
+                            </div>
+
+                            <div class="progress" style="height:6px;">
+                                <div class="progress-bar bg-primary"
+                                     style="width:@modProgress%"></div>
                             </div>
                         </td>
 
@@ -69,19 +109,80 @@
                             }
                         </td>
 
-                        <td style="width: 120px;">
+                        <td style="width:130px;">
+                            @{
+                                string barColor =
+                                s.ConsistencyScore >= 75 ? "bg-success" :
+                                s.ConsistencyScore >= 40 ? "bg-warning" :
+                                "bg-danger";
+                            }
+
                             <div class="d-flex align-items-center">
-                                <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                                    @{
-                                        string barColor = s.ConsistencyScore >= 75 ? "bg-primary" : (s.ConsistencyScore >= 40 ? "bg-warning" : "bg-danger");
-                                    }
-                                    <div class="progress-bar @barColor" role="progressbar" style="width: @s.ConsistencyScore%"></div>
+                                <div class="progress flex-grow-1 me-2" style="height:6px;">
+                                    <div class="progress-bar @barColor"
+                                         style="width:@s.ConsistencyScore%"></div>
                                 </div>
-                                <small class="fw-bold">@s.ConsistencyScore%</small>
+                                <small class="fw-bold">
+                                    @s.ConsistencyScore%
+                                </small>
                             </div>
                         </td>
                     </tr>
                 }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<div class="custom-card mt-4">
+    <h5 class="card-title-custom mb-3">
+        📝 Logs Needing Review
+    </h5>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="bg-light small text-uppercase">
+                <tr>
+                    <th>Student</th>
+                    <th>Module</th>
+                    <th>Date</th>
+                    <th>Hours</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @if (ViewBag.PendingLogsList != null && ViewBag.PendingLogsList.Count > 0)
+                {
+                    foreach (var log in ViewBag.PendingLogsList)
+                    {
+                        <tr>
+                            <td>@log.Student.FullName</td>
+                            <td>@log.Module.ModuleCode</td>
+                            <td>@log.Date.ToShortDateString()</td>
+                            <td>@log.Hours</td>
+                            <td>
+                                <form asp-action="ApproveLog" method="post">
+                                    <input type="hidden" name="id" value="@log.Id" />
+                                    <button class="btn btn-success btn-sm">
+                                        Approve
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            No logs needing review
+                        </td>
+                    </tr>
+                }
+
             </tbody>
         </table>
     </div>

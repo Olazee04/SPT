@@ -75,6 +75,8 @@ namespace SPT.Models
         public string? NextOfKin { get; set; }
 
         public string? NextOfKinPhone { get; set; }
+        public string? NextOfKinAddress { get; set; }
+
 
         [Required]
 

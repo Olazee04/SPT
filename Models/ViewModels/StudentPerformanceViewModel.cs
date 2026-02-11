@@ -4,13 +4,15 @@ namespace SPT.Models.ViewModels
 {
     public class StudentPerformanceViewModel
     {
+        public string UserId { get; set; } = "";
+
         public int StudentId { get; set; }
-        public string FullName { get; set; }
-        public string Email { get; set; }
-        public string ProfilePicture { get; set; }
-        public string CohortName { get; set; }
-        public string TrackCode { get; set; }
-        public string MentorName { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? ProfilePicture { get; set; }
+        public string? CohortName { get; set; }
+        public string? TrackCode { get; set; }
+        public string? MentorName { get; set; }
 
         // 📊 Stats for the Table
         public int TargetHoursPerWeek { get; set; }
@@ -19,6 +21,6 @@ namespace SPT.Models.ViewModels
         public int CompletedModules { get; set; }
         public int TotalModules { get; set; }
         public int ConsistencyScore { get; set; }
-        public string Status { get; set; } // Active, At Risk, Inactive
+        public string? Status { get; set; } // Active, At Risk, Inactive
     }
 }

@@ -42,6 +42,9 @@ namespace SPT.Models
 
         [Range(1, 5)]
         public int? MentorRating { get; set; } // 1-5 Star Rating
+        public string? MentorResponse { get; set; }
+        public bool IsRejected { get; set; } = false;
+        public string? RejectionReason { get; set; }
 
         public string LoggedBy { get; set; } = string.Empty;
         public string LoggedByUserId { get; set; } = string.Empty;

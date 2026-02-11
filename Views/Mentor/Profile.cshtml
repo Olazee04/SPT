@@ -3,65 +3,90 @@
     ViewData["Title"] = "My Profile";
 }
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary">
-                    <h4 class="mb-0"><i class="fas fa-user-cog"></i> My Profile Settings</h4>
-                </div>
-                <div class="card-body">
-                    @if (TempData["Success"] != null)
-                    {
-                        <div class="alert alert-success">@TempData["Success"]</div>
-                    }
-                    @if (TempData["Error"] != null)
-                    {
-                        <div class="alert alert-danger">@TempData["Error"]</div>
-                    }
+<div class="row g-4">
 
-                    <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data">
-                        <h5 class="text-muted border-bottom pb-2">Personal Details (Read Only)</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name</label>
-                                <input value="@Model.FullName" class="form-control bg-light" readonly />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input value="@Model.User?.Email" class="form-control bg-light" readonly />
-                            </div>
-                        </div>
+    <div class="col-lg-4">
 
-                        <h5 class="text-muted border-bottom pb-2 mt-4">Update Picture</h5>
-                        <div class="row mb-3 align-items-center">
-                            <div class="col-auto">
-                                <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;" />
-                            </div>
-                            <div class="col">
-                                <input type="file" name="profilePicture" class="form-control" accept="image/*" />
-                            </div>
-                        </div>
+        <div class="custom-card text-center">
 
-                        <h5 class="text-muted border-bottom pb-2 mt-4">Change Password</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Current Password</label>
-                                <input type="password" name="currentPassword" class="form-control" placeholder="Required to change password" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">New Password</label>
-                                <input type="password" name="newPassword" class="form-control" placeholder="Enter new password" />
-                            </div>
-                        </div>
+            <h5 class="card-title-custom">Profile Picture</h5>
 
-                        <div class="text-end">
-                            <a asp-action="Dashboard" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <img src="@(Model.ProfilePicture ?? "/images/default-avatar.png")"
+                 class="rounded-circle mb-3"
+                 style="width:140px;height:140px;object-fit:cover;" />
+
+            <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data">
+                <label class="btn btn-primary w-100">
+                    Change Photo
+                    <input type="file" name="profilePicture" hidden onchange="this.form.submit()" />
+                </label>
+            </form>
+
         </div>
+
+        <div class="custom-card mt-3">
+            <h5 class="card-title-custom">🔐 Change Password</h5>
+
+            <form asp-action="UpdateProfile" method="post">
+                <input type="password" name="currentPassword" class="form-control mb-2" placeholder="Current Password" />
+                <input type="password" name="newPassword" class="form-control mb-2" placeholder="New Password" />
+                <button class="btn btn-primary w-100">Update Password</button>
+            </form>
+
+        </div>
+
     </div>
+
+    <div class="col-lg-8">
+
+        <div class="custom-card">
+
+            <h5 class="card-title-custom">Mentor Information</h5>
+
+            <div class="form-row-custom">
+                <span class="form-label-custom">Full Name: </span>
+                <span class="form-value-custom">@Model.FullName</span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Email: </span>
+                <span>@Model.User?.Email</span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Specialization: </span>
+                <span class="badge bg-info">
+                    @(Model.Track?.Name ?? Model.Specialization ?? "General")
+                </span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Phone: </span>
+                <span>@Model.Phone</span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Address: </span>
+                <span>@Model.Address</span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Next of Kin: </span>
+                <span>@Model.NextOfKin</span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Next of Kin Phone: </span>
+                <span>@Model.NextOfKinPhone</span>
+            </div>
+
+            <div class="form-row-custom">
+                <span>Next of Kin Address: </span>
+                <span>@Model.NextOfKinAddress</span>
+            </div>
+
+        </div>
+
+    </div>
+
 </div>

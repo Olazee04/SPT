@@ -27,6 +27,105 @@ namespace SPT.Controllers
             _env = env;
             _auditService = auditService;
         }
+        // =========================
+        // MENTOR DASHBOARD (ADMIN VIEW — FILTERED)
+        // =========================
+        public async Task<IActionResult> Dashboard()
+        {
+            var mentor = await GetCurrentMentorAsync();
+            if (mentor == null) return View("Error");
+
+            IQueryable<Student> studentQuery;
+
+            if (mentor.Specialization == "General")
+                studentQuery = _context.Students;
+            else
+                studentQuery = _context.Students.Where(s => s.MentorId == mentor.Id);
+
+            var students = await studentQuery
+                .Include(s => s.Track)
+                .Include(s => s.ProgressLogs)
+                .Include(s => s.ModuleCompletions)
+                .ToListAsync();
+
+            var modules = await _context.SyllabusModules.ToListAsync();
+
+            var model = new AdminDashboardViewModel();
+
+            model.TotalStudents = students.Count;
+            model.TotalMentors = 1;
+
+            var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6);
+
+            model.PendingLogs = await _context.ProgressLogs
+                .Where(l => !l.IsApproved &&
+                            studentQuery.Select(s => s.Id).Contains(l.StudentId))
+                .CountAsync();
+
+            model.OpenTickets = await _context.SupportTickets
+                .Where(t => !t.IsResolved &&
+                            studentQuery.Select(s => s.Id).Contains(t.StudentId))
+                .CountAsync();
+
+            var performance = new List<StudentPerformanceDTO>();
+
+            foreach (var s in students)
+            {
+                var recent = s.ProgressLogs
+                    .Where(l => l.IsApproved && l.Date >= sevenDaysAgo)
+                    .ToList();
+
+                var hours = recent.Sum(l => l.Hours);
+                var checkins = recent.Select(l => l.Date.Date).Distinct().Count();
+
+                var totalMods = modules.Count(m => m.TrackId == s.TrackId);
+                var completed = s.ModuleCompletions.Count(mc => mc.IsCompleted);
+
+                performance.Add(new StudentPerformanceDTO
+                {
+                    StudentId = s.Id,
+                    FullName = s.FullName,
+                    Track = s.Track?.Code ?? "N/A",
+                    ProfilePicture = s.ProfilePicture,
+                    WeeklyHours = hours,
+                    WeeklyCheckIns = checkins,
+                    CompletedModules = completed,
+                    TotalModules = totalMods
+                });
+            }
+
+            model.StudentPerformance = performance;
+            model.ActiveStudents = performance.Count(p => p.Status == "Active");
+            model.AvgConsistency = performance.Any()
+                ? (decimal)performance.Average(p => p.ConsistencyScore)
+                : 0;
+
+            // charts
+            model.TrackLabels = performance.GroupBy(p => p.Track)
+                .Select(g => g.Key)
+                .ToArray();
+
+            model.TrackCounts = performance.GroupBy(p => p.Track)
+                .Select(g => g.Count())
+                .ToArray();
+
+            model.ActivityDates = new string[7];
+            model.ActivityCounts = new int[7];
+
+            for (int i = 0; i < 7; i++)
+            {
+                var d = sevenDaysAgo.AddDays(i);
+
+                model.ActivityDates[i] = d.ToString("MMM dd");
+
+                model.ActivityCounts[i] = await _context.ProgressLogs
+                    .Where(l => l.Date.Date == d &&
+                                studentQuery.Select(s => s.Id).Contains(l.StudentId))
+                    .CountAsync();
+            }
+
+            return View("~/Views/Admin/Dashboard.cshtml", model);
+        }
 
         // =========================
         // HELPER: GET CURRENT MENTOR
@@ -34,74 +133,65 @@ namespace SPT.Controllers
         private async Task<Mentor?> GetCurrentMentorAsync()
         {
             var userId = _userManager.GetUserId(User);
-            return await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == userId);
+            return await _context.Mentors
+     .Include(m => m.User)
+     .FirstOrDefaultAsync(m => m.UserId == userId);
+
         }
 
-        // =========================
-        // MENTOR DASHBOARD
-        // =========================
-        public async Task<IActionResult> Dashboard()
-        {
-            var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return View("Error"); // Handle missing profile gracefully
 
-            // 1. Scoped Stats (Only MY students)
-            var myStudentsQuery = _context.Students.Where(s => s.MentorId == mentor.Id && s.EnrollmentStatus == "Active");
-
-            ViewBag.MyStudentsCount = await myStudentsQuery.CountAsync();
-
-            ViewBag.PendingLogs = await _context.ProgressLogs
-                .Where(l => l.Student.MentorId == mentor.Id && !l.IsApproved)
-                .CountAsync();
-
-            ViewBag.AvgConsistency = 85; // Placeholder or calculate properly if needed
-
-            // 2. Fetch Recent Logs for "Inbox"
-            var recentLogs = await _context.ProgressLogs
-                .Include(l => l.Student)
-                .Include(l => l.Module)
-                .Where(l => l.Student.MentorId == mentor.Id && !l.IsApproved)
-                .OrderByDescending(l => l.Date)
-                .Take(5)
-                .ToListAsync();
-
-            return View(recentLogs);
-        }
 
         // =========================
         // MY STUDENTS LIST
         // =========================
+       
         [HttpGet]
         public async Task<IActionResult> Students()
         {
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return RedirectToAction(nameof(Dashboard));
+            if (mentor == null) return RedirectToAction(nameof(Students));
 
-            // 1. Fetch Data
-            var students = await _context.Students
+            IQueryable<Student> studentQuery;
+
+            if (mentor.Specialization == "General")
+                studentQuery = _context.Students;
+            else
+                studentQuery = _context.Students.Where(s => s.MentorId == mentor.Id);
+
+            var students = await studentQuery
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.ProgressLogs)
                 .Include(s => s.ModuleCompletions)
-                .Where(s => s.MentorId == mentor.Id) // 🔒 Filter by Mentor
                 .ToListAsync();
 
-            // 2. Transform for ViewModel
-            var modelList = new List<StudentPerformanceViewModel>();
-            var today = DateTime.UtcNow.Date;
-            var last7Days = today.AddDays(-7);
+         
 
             var trackModuleCounts = await _context.SyllabusModules
                 .Where(m => m.IsActive)
                 .GroupBy(m => m.TrackId)
                 .ToDictionaryAsync(g => g.Key, g => g.Count());
 
+   
+
+            var modelList = new List<StudentPerformanceViewModel>();
+
+            var today = DateTime.UtcNow.Date;
+            var last7Days = today.AddDays(-7);
+
             foreach (var s in students)
             {
-                var recentLogs = s.ProgressLogs.Where(l => l.Date >= last7Days && l.IsApproved).ToList();
+                var recentLogs = s.ProgressLogs
+                    .Where(l => l.Date >= last7Days && l.IsApproved)
+                    .ToList();
+
                 decimal hours7Days = recentLogs.Sum(l => l.Hours);
                 int checkIns7Days = recentLogs.Select(l => l.Date.Date).Distinct().Count();
-                int totalMods = trackModuleCounts.ContainsKey(s.TrackId) ? trackModuleCounts[s.TrackId] : 1;
+
+                int totalMods = trackModuleCounts.ContainsKey(s.TrackId)
+                    ? trackModuleCounts[s.TrackId]
+                    : 1;
+
                 int completedMods = s.ModuleCompletions.Count(mc => mc.IsCompleted);
 
                 int consistency = 0;
@@ -119,7 +209,7 @@ namespace SPT.Controllers
                     ProfilePicture = s.ProfilePicture,
                     CohortName = s.Cohort?.Name ?? "N/A",
                     TrackCode = s.Track?.Code ?? "N/A",
-                    MentorName = "Me",
+                    MentorName = mentor.FullName,
                     TargetHoursPerWeek = s.TargetHoursPerWeek,
                     HoursLast7Days = hours7Days,
                     CheckInsLast7Days = checkIns7Days,
@@ -130,8 +220,37 @@ namespace SPT.Controllers
                 });
             }
 
+            // =========================
+            // DASHBOARD METRICS
+            // =========================
+
+            var pendingLogs = await _context.ProgressLogs
+                .Include(l => l.Student)
+                .Include(l => l.Module)
+                .Where(l => !l.IsApproved &&
+                            studentQuery.Select(s => s.Id).Contains(l.StudentId))
+                .OrderByDescending(l => l.Date)
+                .Take(10)
+                .ToListAsync();
+
+            int pendingCount = pendingLogs.Count;
+
+            int avgConsistency = modelList.Count == 0
+                ? 0
+                : (int)modelList.Average(x => x.ConsistencyScore);
+
+            // =========================
+            // VIEWBAGS
+            // =========================
+
+            ViewBag.MyStudentsCount = students.Count;
+            ViewBag.PendingLogs = pendingCount;
+            ViewBag.AvgConsistency = avgConsistency;
+            ViewBag.PendingLogsList = pendingLogs;
+
             return View(modelList);
         }
+
 
         // =========================
         // APPROVE LOG (Scoped)
@@ -177,6 +296,18 @@ namespace SPT.Controllers
             return View(mentor);
         }
 
+
+        public async Task<IActionResult> Messages()
+        {
+            var mentor = await GetCurrentMentorAsync();
+
+            var students = mentor.Specialization == "General"
+                ? await _context.Students.ToListAsync()
+                : await _context.Students.Where(s => s.MentorId == mentor.Id).ToListAsync();
+
+            return View(students);
+        }
+
         // =========================
         // POST: UPDATE PROFILE & PASSWORD
         // =========================
@@ -185,7 +316,10 @@ namespace SPT.Controllers
         public async Task<IActionResult> UpdateProfile(IFormFile? profilePicture, string? currentPassword, string? newPassword)
         {
             var user = await _userManager.GetUserAsync(User);
-            var mentor = await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == user.Id);
+            var mentor = await _context.Mentors
+    .Include(m => m.User)
+    .Include(m => m.Track)
+    .FirstOrDefaultAsync(m => m.UserId == user.Id);
 
             if (mentor == null) return NotFound();
 

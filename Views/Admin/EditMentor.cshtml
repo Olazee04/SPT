@@ -1,0 +1,87 @@
+﻿@model SPT.Models.Mentor
+@{
+    ViewData["Title"] = "Edit Mentor";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-warning">
+            <h3>Edit Mentor</h3>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="EditMentor" method="post" enctype="multipart/form-data">
+
+                <input type="hidden" asp-for="Id" />
+
+                <h5 class="text-primary border-bottom pb-2 mb-3">Login Details</h5>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Email</label>
+                        <input value="@Model.User?.Email" class="form-control" readonly />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Date Joined</label>
+                        <input value="@Model.DateJoined.ToString("yyyy-MM-dd")" class="form-control" readonly />
+                    </div>
+                </div>
+
+                <h5 class="text-primary border-bottom pb-2 mb-3 mt-3">Profile Details</h5>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Full Name</label>
+                        <input asp-for="FullName" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Profile Picture</label>
+                        <input type="file" name="profilePicture" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Phone</label>
+                        <input asp-for="Phone" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Address</label>
+                        <input asp-for="Address" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label>Specialty Track</label>
+                        <select asp-for="TrackId" asp-items="ViewBag.Tracks" class="form-select"></select>
+                    </div>
+                </div>
+
+                <h5 class="text-primary border-bottom pb-2 mb-3 mt-3">Emergency Details</h5>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Next Of Kin</label>
+                        <input asp-for="NextOfKin" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label>Phone</label>
+                        <input asp-for="NextOfKinPhone" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label>Address</label>
+                        <input asp-for="NextOfKinAddress" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button class="btn btn-primary">Save Changes</button>
+                    <a asp-action="Mentors" class="btn btn-secondary">Cancel</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

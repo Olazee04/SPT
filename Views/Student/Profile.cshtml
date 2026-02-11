@@ -20,6 +20,26 @@
                     <input type="file" name="profilePicture" class="d-none" onchange="this.form.submit()">
                 </label>
             </form>
+
+            <div class="custom-card mt-4">
+                <h5 class="card-title-custom">🔐 Change Password</h5>
+
+                <form asp-action="ChangePassword" method="post">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" name="currentPassword" class="form-control" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" name="newPassword" class="form-control" required />
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary">Update Password</button>
+                </form>
+            </div>
+
         </div>
 
         <div class="custom-card">

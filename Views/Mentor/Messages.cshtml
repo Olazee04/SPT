@@ -1,0 +1,22 @@
+﻿@model List<SPT.Models.Student>
+
+<h3>Student Contacts</h3>
+
+<table class="table">
+    <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Action</th>
+    </tr>
+
+    @foreach (var s in Model)
+    {
+        <tr>
+            <td>@s.FullName</td>
+            <td>@s.Email</td>
+            <td>
+                <a href="mailto:@s.Email" class="btn btn-sm btn-primary">Email</a>
+            </td>
+        </tr>
+    }
+</table>

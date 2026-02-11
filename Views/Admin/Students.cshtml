@@ -123,11 +123,48 @@
                         </td>
 
                         <td class="text-end pe-4">
-                            <a asp-action="Details" asp-route-id="@s.StudentId" class="btn btn-sm btn-light text-muted"><i class="fas fa-ellipsis-v"></i></a>
+
+                            <a asp-action="Details"
+                               asp-route-id="@s.StudentId"
+                               class="btn btn-sm btn-light text-muted mb-1">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </a>
+
+                            <form asp-action="ResetUserPassword" method="post">
+                                <input type="hidden" name="userId" value="@s.UserId" />
+                                <button class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                            </form>
+
                         </td>
+
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+
+    <div class="col-lg-4">
+        <div class="custom-card">
+            <h5 class="card-title-custom">⚡ Mentor Actions</h5>
+            <div class="d-grid gap-3 mt-3">
+
+                <a asp-action="Students" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
+                    <div class="icon-btn bg-primary text-white me-3 shadow-sm"><i class="fas fa-users"></i></div>
+                    <div>
+                        <span class="d-block fw-bold text-dark">My Students</span>
+                        <small class="text-muted">View progress & details</small>
+                    </div>
+                </a>
+
+                <a asp-action="Messages" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
+                    <div class="icon-btn bg-secondary text-white me-3 shadow-sm"><i class="fas fa-comment-dots"></i></div>
+                    <div>
+                        <span class="d-block fw-bold text-dark">Messages</span>
+                        <small class="text-muted">Chat with students</small>
+                    </div>
+                </a>
+            </div>
+        </div>
 </div>

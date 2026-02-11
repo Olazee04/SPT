@@ -25,7 +25,12 @@
     foreach (var alert in ViewBag.DashboardAlerts)
 
     {
-        <div class="alert alert-@(alert.Type == "Success" ? "success" : "danger") alert-dismissible fade show">
+        <div class="alert alert-@(
+    alert.Type == "Success" ? "success" :
+    alert.Type == "Info" ? "info" :
+    "danger"
+) alert-dismissible fade show">
+
             <strong>@alert.Title</strong><br />
             @alert.Message
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -186,19 +191,47 @@
                                                 {
                                                     <span class="badge bg-light text-dark border">Self-Study / Other</span>
                                                 }
+                                                @if (!string.IsNullOrWhiteSpace(log.MentorResponse))
+
+                                                {
+                                                    <div class="alert alert-info mt-2 mb-0 p-2 small">
+                                                        <strong>💬 Mentor Advice:</strong><br />
+                                                        @log.MentorResponse
+                                                    </div>
+                                                }
+
+                                                @if (log.IsRejected && !string.IsNullOrWhiteSpace(log.RejectionReason))
+
+                                                {
+                                                    <div class="alert alert-danger mt-2 mb-0 p-2 small">
+                                                        <strong>❌ Rejection Reason:</strong><br />
+                                                        @log.RejectionReason
+                                                    </div>
+                                                }
+
+
                                             </td>
                                             <td>@log.Hours hrs</td>
                                             <td>
                                                 @if (log.IsApproved)
+
                                                 {
                                                     <span class="badge bg-success bg-opacity-10 text-success">Verified</span>
                                                 }
 
+                                                else if (log.IsRejected)
+
+                                                {
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger">Rejected</span>
+                                                }
+
                                                 else
+
                                                 {
                                                     <span class="badge bg-warning bg-opacity-10 text-warning">Pending</span>
                                                 }
                                             </td>
+
                                         </tr>
                                     }
 

@@ -11,7 +11,7 @@ using SPT.Services;
 namespace SPT.Controllers
 {
     // ✅ Allow Mentors to access Dashboard and Reviews, but restrict specific actions below
-    [Authorize(Roles = "Admin,Mentor")]
+    [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -187,10 +187,29 @@ namespace SPT.Controllers
                     string body = $"<p>Your log for {log.Date:d} was rejected.</p><p><strong>Reason:</strong> {reason}</p>";
                     await _emailService.SendEmailAsync(log.Student.Email, "Log Rejected", body);
                 }
-                _context.ProgressLogs.Remove(log);
+                log.IsApproved = false;
+                log.IsRejected = true;
+                log.RejectionReason = "Did not meet requirements";
+                log.UpdatedAt = DateTime.UtcNow;
+
+                try
+                {
+                    if (log.Student?.User != null)
+                    {
+                        await _emailService.SendEmailAsync(
+                            log.Student.Email,
+                            "Log Rejected",
+                            $"Your log for {log.Date:d} was rejected."
+                        );
+                    }
+                }
+                catch { } // prevent crash if email misconfigured
+
                 await _context.SaveChangesAsync();
-                TempData["Error"] = "❌ Log rejected and removed.";
+
+                TempData["Error"] = "❌ Log rejected.";
                 return RedirectToAction("ProgressLogs");
+
             }
 
             var dateToCheck = log.Date.Date;
@@ -209,7 +228,35 @@ namespace SPT.Controllers
             log.Hours = proposedHours;
             if (!string.IsNullOrEmpty(description)) log.ActivityDescription = description;
             if (mentorRating.HasValue) log.MentorRating = mentorRating;
+            if (!log.PracticeDone)
+                log.QuizScore = null;
+
             if (quizScore.HasValue) log.QuizScore = quizScore;
+            var mentorResponse = Request.Form["mentorResponse"].ToString();
+
+            if (!string.IsNullOrWhiteSpace(mentorResponse)
+     && log.MentorResponse != mentorResponse)
+            {
+                log.MentorResponse = mentorResponse;
+
+                if (log.Student?.User != null)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        UserId = log.Student.User.Id,
+                        Title = "Mentor Feedback",
+                        Message = $"💬 Mentor responded to your log ({log.Date:MMM dd}).",
+                        Type = "Info",
+                        Url = "/Student/Dashboard",
+                        TargetPage = "Dashboard",
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false
+                    });
+                }
+            }
+
+
+
 
             log.IsApproved = true;
             log.UpdatedAt = DateTime.UtcNow;
@@ -527,11 +574,15 @@ namespace SPT.Controllers
             ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
             return View();
         }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateMentor(Mentor model, string email, string password, string username)
+        public async Task<IActionResult> CreateMentor(
+            Mentor mentor,
+            string username,
+            string email,
+            string password,
+            IFormFile? profilePicture)
         {
             ModelState.Remove("User");
             ModelState.Remove("UserId");
@@ -540,43 +591,166 @@ namespace SPT.Controllers
             if (!ModelState.IsValid)
             {
                 ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
-                return View(model);
+                return View(mentor);
             }
 
-            var user = new ApplicationUser { UserName = username, Email = email, EmailConfirmed = true };
+            var user = new ApplicationUser
+            {
+                UserName = username,
+                Email = email,
+                EmailConfirmed = true
+            };
+
             var result = await _userManager.CreateAsync(user, password);
 
             if (!result.Succeeded)
             {
-                foreach (var error in result.Errors) ModelState.AddModelError("", error.Description);
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError("", error.Description);
+
                 ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
-                return View(model);
+                return View(mentor);
             }
 
             await _userManager.AddToRoleAsync(user, "Mentor");
 
-            model.UserId = user.Id;
-            _context.Mentors.Add(model);
+            mentor.UserId = user.Id;
+            mentor.DateJoined = DateTime.UtcNow;
+
+            if (profilePicture != null && profilePicture.Length > 0)
+            {
+                var uploads = Path.Combine(_env.WebRootPath, "uploads", "profiles");
+                Directory.CreateDirectory(uploads);
+
+                var fileName = Guid.NewGuid() + Path.GetExtension(profilePicture.FileName);
+                var path = Path.Combine(uploads, fileName);
+
+                using var stream = new FileStream(path, FileMode.Create);
+                await profilePicture.CopyToAsync(stream);
+
+                mentor.ProfilePicture = "/uploads/profiles/" + fileName;
+            }
+
+            _context.Mentors.Add(mentor);
             await _context.SaveChangesAsync();
 
             TempData["Success"] = $"✅ Mentor Created! Login: {username}";
-            return RedirectToAction("Dashboard");
+            return RedirectToAction("Mentors");
         }
 
-        // =========================
-        // LIST MENTORS
-        // =========================
-        [HttpGet]
+
+            // =========================
+            // LIST MENTORS
+            // =========================
+            [HttpGet]
         public async Task<IActionResult> Mentors()
         {
             // Include the User to get email, and Students to count them
             var mentors = await _context.Mentors
                 .Include(m => m.User)
                 .Include(m => m.Students)
+                .Include(m => m.Track)
                 .ToListAsync();
+
+            ViewBag.TotalStudents = await _context.Students.CountAsync();
 
             return View(mentors);
         }
+        [HttpGet]
+        public async Task<IActionResult> EditMentor(int id)
+        {
+            var mentor = await _context.Mentors.FindAsync(id);
+            if (mentor == null) return NotFound();
+
+            ViewBag.Tracks = new SelectList(_context.Tracks, "Id", "Name", mentor.TrackId);
+            return View("CreateMentor", mentor);
+            
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EditMentor(Mentor mentor, IFormFile? profilePicture)
+        {
+            var dbMentor = await _context.Mentors.FindAsync(mentor.Id);
+            if (dbMentor == null) return NotFound();
+
+            dbMentor.FullName = mentor.FullName;
+            dbMentor.Phone = mentor.Phone;
+            dbMentor.Address = mentor.Address;
+            dbMentor.NextOfKin = mentor.NextOfKin;
+            dbMentor.NextOfKinPhone = mentor.NextOfKinPhone;
+            dbMentor.NextOfKinAddress = mentor.NextOfKinAddress;
+
+            if (profilePicture != null && profilePicture.Length > 0)
+            {
+                var uploads = Path.Combine(_env.WebRootPath, "uploads", "profiles");
+                Directory.CreateDirectory(uploads);
+
+                var fileName = Guid.NewGuid() + Path.GetExtension(profilePicture.FileName);
+                var path = Path.Combine(uploads, fileName);
+
+                using var stream = new FileStream(path, FileMode.Create);
+                await profilePicture.CopyToAsync(stream);
+
+                dbMentor.ProfilePicture = "/uploads/profiles/" + fileName;
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "Mentor updated";
+            return RedirectToAction("Mentors");
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMentor(int id)
+        {
+            var mentor = await _context.Mentors
+                .Include(m => m.User)
+                 .Include(m => m.Students)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (mentor == null) return NotFound();
+
+            // optional safety — block if has students
+            if (mentor.Students.Any())
+            {
+                TempData["Error"] = "Cannot delete mentor with assigned students.";
+                return RedirectToAction("Mentors");
+            }
+
+            _context.Mentors.Remove(mentor);
+            await _userManager.DeleteAsync(mentor.User);
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Mentor deleted successfully.";
+            return RedirectToAction("Mentors");
+        }
+
+
+       
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetUserPassword(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            var newPassword = "Temp@" + new Random().Next(1000, 9999);
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+            if (!result.Succeeded)
+            {
+                TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
+                return RedirectToAction("Mentors");
+            }
+
+            TempData["Success"] = $"Password reset. New password: {newPassword}";
+            return RedirectToAction("Mentors");
+        }
+
 
         // =========================
         // ANNOUNCEMENTS
