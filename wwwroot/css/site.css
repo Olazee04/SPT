@@ -77,7 +77,8 @@ html, body {
     overflow-y: auto;
 }
 
-2. SIDEBAR STYLING =========================== */ .sidebar-heading {
+
+.sidebar-heading {
     padding: 1.5rem;
     font-size: 1.3rem;
     font-weight: 800;
@@ -165,6 +166,25 @@ html, body {
     border-bottom: 2px solid var(--border-color);
 }
 
+/* ===========================
+   CARD THEME FIX
+   =========================== */
+
+#page-content-wrapper .card {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+#page-content-wrapper .bg-white,
+#page-content-wrapper .bg-light {
+    background-color: var(--card-bg) !important;
+}
+
+#page-content-wrapper .bg-dark {
+    background-color: var(--card-bg-dark) !important;
+}
+
+
 /* Profile Image Area */
 .profile-img-container {
     width: 150px;
@@ -200,7 +220,7 @@ html, body {
 .form-value-custom {
     flex: 1;
     font-weight: 500;
-    color: #212529;
+    color: var(--text-primary);
 }
 
 /* Big Action Buttons */
@@ -277,3 +297,51 @@ html, body {
         font-weight: 700;
     }
 
+/* ===========================
+   GLOBAL THEME TEXT FIXES
+
+
+/* Main content wrapper only */
+#page-content-wrapper,
+#page-content-wrapper *:not(.sidebar-wrapper):not(.top-navbar) {
+    /* Force theme-aware text */
+    color: var(--text-primary);
+}
+
+    /* Fix Bootstrap text helpers */
+    #page-content-wrapper .text-dark {
+        color: var(--text-primary) !important;
+    }
+
+    #page-content-wrapper .text-muted {
+        color: var(--text-secondary) !important;
+    }
+
+    #page-content-wrapper .text-white {
+        color: var(--card-text-light) !important;
+    }
+  
+
+    #page-content-wrapper .table {
+        color: var(--text-primary);
+        background-color: transparent;
+    }
+
+    #page-content-wrapper .table-striped > tbody > tr:nth-of-type(odd) {
+        background-color: rgba(0,0,0,0.03);
+    }
+
+[data-bs-theme="dark"] #page-content-wrapper .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(255,255,255,0.05);
+}
+
+#page-content-wrapper thead {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+}
+
+#page-content-wrapper .card {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}

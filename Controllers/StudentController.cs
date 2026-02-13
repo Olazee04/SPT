@@ -397,6 +397,12 @@ public async Task<IActionResult> LogWork(
                 student.ProfilePicture = $"/uploads/profiles/{fileName}";
 
                 _context.Update(student);
+                await _auditService.LogAsync(
+    "STUDENT_PROFILE_UPDATED",
+    $"Student updated profile",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Profile picture updated successfully!";
             }
@@ -418,8 +424,14 @@ public async Task<IActionResult> LogWork(
                 }
                 TempData["Success"] = "Password changed successfully!";
             }
-
+            await _auditService.LogAsync(
+"PASSWORD_CHANGED",
+"User changed password",
+User.Identity.Name,
+_userManager.GetUserId(User));
             return RedirectToAction(nameof(Profile));
+        
+
 
 
         }

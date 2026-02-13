@@ -283,6 +283,12 @@ namespace SPT.Controllers
             }
 
             await _context.SaveChangesAsync();
+            await _auditService.LogAsync(
+    "LOG_APPROVED",
+    $"Approved log #{log.Id} for {log.Student.FullName}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
             return RedirectToAction(nameof(Dashboard));
         }
 
@@ -335,6 +341,12 @@ namespace SPT.Controllers
                 }
                 mentor.ProfilePicture = $"/uploads/profiles/{fileName}";
                 _context.Update(mentor);
+                await _auditService.LogAsync(
+    "MENTOR_PROFILE_UPDATED",
+    $"Mentor updated profile",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Profile picture updated!";
             }
@@ -355,8 +367,14 @@ namespace SPT.Controllers
                 }
                 TempData["Success"] = "Password changed successfully!";
             }
+            await _auditService.LogAsync(
+  "PASSWORD_CHANGED",
+  "User changed password",
+  User.Identity.Name,
+  _userManager.GetUserId(User));
 
             return RedirectToAction(nameof(Profile));
+          
         }
     }
 }

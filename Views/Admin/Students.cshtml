@@ -62,7 +62,7 @@
                 {
                     <tr>
                         <td class="ps-4">
-                            <a asp-action="Details" asp-route-id="@s.StudentId" class="text-decoration-none text-dark">
+                            <a asp-action="Details" asp-route-id="@s.StudentId" class="text-decoration-none fw-bold">
                                 <div class="d-flex align-items-center">
                                     <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle me-3 border" style="width:35px;height:35px;object-fit:cover;">
                                     <div>
@@ -73,7 +73,7 @@
                             </a>
                         </td>
                         <td>@s.CohortName</td>
-                        <td><span class="badge bg-light text-dark border">@s.TrackCode</span></td>
+                        <td><span class="badge bg-light fw-bold border">@s.TrackCode</span></td>
                         <td>@s.MentorName</td>
 
                         <td class="text-center">
@@ -151,17 +151,17 @@
             <div class="d-grid gap-3 mt-3">
 
                 <a asp-action="Students" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                    <div class="icon-btn bg-primary text-white me-3 shadow-sm"><i class="fas fa-users"></i></div>
+                    <div class="icon-btn bg-primary me-3 shadow-sm"><i class="fas fa-users"></i></div>
                     <div>
-                        <span class="d-block fw-bold text-dark">My Students</span>
+                        <span class="d-block fw-bold">My Students</span>
                         <small class="text-muted">View progress & details</small>
                     </div>
                 </a>
 
                 <a asp-action="Messages" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                    <div class="icon-btn bg-secondary text-white me-3 shadow-sm"><i class="fas fa-comment-dots"></i></div>
+                    <div class="icon-btn bg-secondary me-3 shadow-sm"><i class="fas fa-comment-dots"></i></div>
                     <div>
-                        <span class="d-block fw-bold text-dark">Messages</span>
+                        <span class="d-block fw-bold">Messages</span>
                         <small class="text-muted">Chat with students</small>
                     </div>
                 </a>

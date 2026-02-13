@@ -39,7 +39,7 @@
                                 @ticket.Subject
                                 <div class="small text-muted text-truncate" style="max-width: 250px;">@ticket.Message</div>
                             </td>
-                            <td><span class="badge bg-light text-dark border">@ticket.Category</span></td>
+                            <td><span class="badge bg-light fw-bold border">@ticket.Category</span></td>
                             <td class="small text-muted">@ticket.CreatedAt.ToString("MMM dd")</td>
                             <td class="text-end pe-4">
                                 @if (!ticket.IsResolved)

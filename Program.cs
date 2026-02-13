@@ -8,7 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Add Services
 builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages(); // 🔴 REQUIRED: Enables Identity Pages (Login/Logout)
+builder.Services.AddRazorPages();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuditService>();
 
 // 2. Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -17,7 +19,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // 3. Identity Configuration
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
-    // Optional: Relax password requirements for development if needed
+
     options.Password.RequireDigit = false;
     options.Password.RequireLowercase = false;
     options.Password.RequireNonAlphanumeric = false;
@@ -27,7 +29,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// 4. Configure Cookie (Optional but helpful for fixing login loops)
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Identity/Account/Login";
@@ -50,8 +52,15 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // 🔴 REQUIRED: Checks "Who are you?"
-app.UseAuthorization();  // 🔴 REQUIRED: Checks "Allowed to be here?"
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseMiddleware<SPT.Middleware.AuditMiddleware>();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
 
 // 6. Map Routes
 app.MapControllerRoute(

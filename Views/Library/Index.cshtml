@@ -39,10 +39,10 @@
                                     <i class="fas fa-link text-info"></i>
                                 }
                             </div>
-                            <span class="badge bg-light text-dark border">@item.CreatedAt.ToString("MMM dd")</span>
+                            <span class="badge bg-light border">@item.CreatedAt.ToString("MMM dd")</span>
                         </div>
 
-                        <h5 class="fw-bold text-dark mb-2">@item.Title</h5>
+                        <h5 class="fw-bold mb-2">@item.Title</h5>
                         <p class="text-muted small flex-grow-1">
                             @(string.IsNullOrEmpty(item.Description) ? "No description available." : item.Description)
                         </p>

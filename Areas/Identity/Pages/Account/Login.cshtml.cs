@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SPT.Services;
 using SPT.Models;
 
 namespace SPT.Areas.Identity.Pages.Account
@@ -12,12 +13,18 @@ namespace SPT.Areas.Identity.Pages.Account
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginModel> _logger;
+        private readonly AuditService _audit;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ILogger<LoginModel> logger)
+        public LoginModel(
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager,
+            ILogger<LoginModel> logger,
+            AuditService audit)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _logger = logger;
+            _audit = audit;
         }
 
         [BindProperty]
@@ -55,43 +62,51 @@ namespace SPT.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return Page();
+
+            var result = await _signInManager.PasswordSignInAsync(
+                Input.Email,
+                Input.Password,
+                Input.RememberMe,
+                lockoutOnFailure: false);
+
+            if (result.Succeeded)
             {
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-                if (result.Succeeded)
+                _logger.LogInformation("User logged in.");
+
+                var user = await _userManager.FindByEmailAsync(Input.Email);
+
+                await _audit.LogAsync(
+                    "LOGIN_SUCCESS",
+                    $"User logged in: {Input.Email}",
+                    Input.Email,
+                    user?.Id);
+
+                if (user != null)
                 {
-                    _logger.LogInformation("User logged in.");
+                    if (await _userManager.IsInRoleAsync(user, "Admin"))
+                        return RedirectToAction("Dashboard", "Admin");
 
-                    // 🚀 REDIRECT LOGIC: Check Role and Send to Dashboard
-                    var user = await _signInManager.UserManager.FindByNameAsync(Input.Email) ?? await _signInManager.UserManager.FindByEmailAsync(Input.Email);
+                    if (await _userManager.IsInRoleAsync(user, "Mentor"))
+                        return RedirectToAction("Dashboard", "Mentor");
 
-                    if (user != null)
-                    {
-                        if (await _signInManager.UserManager.IsInRoleAsync(user, "Admin"))
-                        {
-                            return RedirectToAction("Dashboard", "Admin", new { area = "" });
-                        }
-                    if (await _signInManager.UserManager.IsInRoleAsync(user, "Mentor"))
-{
-    return RedirectToAction("Dashboard", "Mentor", new { area = "" });
-}
-
-                        if (await _signInManager.UserManager.IsInRoleAsync(user, "Student"))
-                        {
-                            return RedirectToAction("Dashboard", "Student", new { area = "" });
-                        }
-                    }
-
-                    // Fallback
-                    return LocalRedirect(returnUrl);
+                    if (await _userManager.IsInRoleAsync(user, "Student"))
+                        return RedirectToAction("Dashboard", "Student");
                 }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return Page();
-                }
+
+                return LocalRedirect(returnUrl);
             }
+
+            // ❌ LOGIN FAILED
+            await _audit.LogAsync(
+                "LOGIN_FAILED",
+                "Invalid login attempt",
+                Input.Email);
+
+            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             return Page();
         }
+
     }
 }

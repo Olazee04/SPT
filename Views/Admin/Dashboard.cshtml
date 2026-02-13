@@ -145,7 +145,7 @@
                                 <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")" class="rounded-circle me-2 border" width="40" height="40" style="object-fit:cover;">
                                 <div>
                                     <div class="fw-bold">@s.FullName</div>
-                                    <small class="text-muted badge bg-light text-dark border">@s.Track</small>
+                                    <small class="text-muted badge bg-light fw-bold border">@s.Track</small>
                                 </div>
                             </div>
                         </td>
@@ -183,7 +183,7 @@
 
                             {
                                 <div class="text-warning">
-                                    <span class="fw-bold text-dark me-1">@s.AverageMentorScore</span>
+                                    <span class="fw-bold me-1">@s.AverageMentorScore</span>
                                     <i class="fas fa-star"></i>
                                 </div>
                             }

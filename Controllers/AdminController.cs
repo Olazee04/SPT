@@ -204,6 +204,7 @@ namespace SPT.Controllers
                     }
                 }
                 catch { } // prevent crash if email misconfigured
+        
 
                 await _context.SaveChangesAsync();
 
@@ -277,10 +278,21 @@ namespace SPT.Controllers
                         CreatedAt = DateTime.UtcNow,
                         IsRead = false
                     };
+                    await _auditService.LogAsync(
+    "LOG_APPROVED_ADMIN",
+    $"Admin approved log #{log.Id}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                     _context.Notifications.Add(notification);
                 }
 
                 _context.Entry(log).State = EntityState.Modified;
+                await _auditService.LogAsync(
+    "LOG_APPROVED_ADMIN",
+    $"Admin approved log #{log.Id}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "✅ Log verified successfully.";
             }
@@ -475,9 +487,15 @@ namespace SPT.Controllers
 
             _context.Students.Add(model);
             await _context.SaveChangesAsync();
+            await _auditService.LogAsync(
+    "CREATE_STUDENT",
+    $"Student created: {model.FullName}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
 
             TempData["Success"] = $"✅ Student Created! Username: {username} | Password: {finalPassword}";
-            return RedirectToAction(nameof(Students));
+            return RedirectToAction(nameof(Students));    
+
         }
 
         // =========================
@@ -547,7 +565,11 @@ namespace SPT.Controllers
             if (student == null) return NotFound();
 
             // ✅ THIS IS WHERE YOU ADD THE AUDIT LOG
-            await _auditService.LogAsync("Delete Student", $"Deleted student: {student.FullName} (ID: {id})", User.Identity.Name);
+            await _auditService.LogAsync(
+    "DELETE_STUDENT",
+    $"Deleted student {student.FullName} ({student.Email})",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
 
             // Delete User (Cascade deletes student profile)
             if (student.User != null)
@@ -574,6 +596,8 @@ namespace SPT.Controllers
             ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
             return View();
         }
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -633,16 +657,22 @@ namespace SPT.Controllers
 
             _context.Mentors.Add(mentor);
             await _context.SaveChangesAsync();
+            await _auditService.LogAsync(
+ "CREATE_MENTOR",
+ $"Mentor created: {mentor.FullName}",
+ User.Identity.Name,
+_userManager.GetUserId(User));
 
             TempData["Success"] = $"✅ Mentor Created! Login: {username}";
             return RedirectToAction("Mentors");
+
         }
 
 
-            // =========================
-            // LIST MENTORS
-            // =========================
-            [HttpGet]
+        // =========================
+        // LIST MENTORS
+        // =========================
+        [HttpGet]
         public async Task<IActionResult> Mentors()
         {
             // Include the User to get email, and Students to count them
@@ -748,6 +778,11 @@ namespace SPT.Controllers
             }
 
             TempData["Success"] = $"Password reset. New password: {newPassword}";
+            await _auditService.LogAsync(
+"PASSWORD_RESET",
+$"Admin reset password for {user.Email}",
+User.Identity.Name,
+_userManager.GetUserId(User));
             return RedirectToAction("Mentors");
         }
 
@@ -772,6 +807,12 @@ namespace SPT.Controllers
                 model.PostedBy = User.Identity?.Name ?? "Admin";
                 model.CreatedAt = DateTime.UtcNow;
                 _context.Announcements.Add(model);
+                await _auditService.LogAsync(
+    "ANNOUNCEMENT_CREATED",
+    $"Announcement: {model.Title}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                 await _context.SaveChangesAsync();
 
                 // 🔔 Trigger Notifications Logic
@@ -999,6 +1040,12 @@ namespace SPT.Controllers
             {
                 model.CreatedAt = DateTime.UtcNow;
                 _context.Resources.Add(model);
+                await _auditService.LogAsync(
+    "RESOURCE_CREATED",
+    $"Resource added: {model.Title}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Resource added successfully!";
                 return RedirectToAction(nameof(ManageLibrary));
@@ -1015,6 +1062,12 @@ namespace SPT.Controllers
             if (resource != null)
             {
                 _context.Resources.Remove(resource);
+                await _auditService.LogAsync(
+    "RESOURCE_DELETED",
+    $"Resource deleted: {resource.Title}",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Resource deleted.";
             }
@@ -1151,6 +1204,12 @@ namespace SPT.Controllers
                         errors.Add($"{email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                     }
                 }
+                await _auditService.LogAsync(
+    "STUDENT_IMPORT",
+    $"Imported {successCount} students",
+    User.Identity.Name,
+    _userManager.GetUserId(User));
+
                 await _context.SaveChangesAsync();
             }
 

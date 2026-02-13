@@ -8,7 +8,7 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow border-0 leaderboard-card">
-                <div class="card-header bg-primary text-white text-center py-4">
+                <div class="card-header bg-primary  text-center py-4">
                     <h3 class="mb-0 fw-bold">@module.ModuleName Quiz</h3>
                     <p class="mb-0 opacity-75">Answer all questions to unlock the next module.</p>
                 </div>
@@ -21,7 +21,7 @@
                         {
                             var q = Model[i];
                             <div class="mb-4">
-                                <h5 class="fw-bold text-dark leaderboard-card">@(i + 1). @q.QuestionText</h5>
+                                <h5 class="fw-bold leaderboard-card">@(i + 1). @q.QuestionText</h5>
                                 <div class="list-group mt-2">
                                     @foreach (var opt in q.Options)
                                     {

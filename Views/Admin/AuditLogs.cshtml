@@ -9,7 +9,7 @@
         <div class="card shadow-sm border-0 leaderboard-card">
 
             <table class="table table-striped mb-0 leaderboard-card">
-                <thead class="bg-dark text-white">
+                <thead class="table-dark">
                     <tr>
                         <th>Time</th>
                         <th>Action</th>
@@ -22,9 +22,17 @@
                     {
                         <tr>
                             <td>@log.Timestamp.ToString("g")</td>
-                           <td><span class="badge bg-info">@log.Action</span></td>
+                               <td><span class="badge 
+@(log.Action.Contains("DELETE") ? "bg-danger" :
+  log.Action.Contains("CREATE") ? "bg-success" :
+  log.Action.Contains("LOGIN") ? "bg-primary" :
+  log.Action.Contains("REJECT") ? "bg-warning" :
+  "bg-secondary")">
+                                    @log.Action
+    </span>
+    </td>
                             <td>@log.Details</td>
-                            <td class="font-weight-bold text-dark">@log.PerformedBy</td>
+                            <td class="font-weight-bold">@log.PerformedBy</td>
                         </tr>
                     }
                 </tbody>

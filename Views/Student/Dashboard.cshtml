@@ -79,7 +79,7 @@
                     </div>
                     @if (pendingHours > 0)
                     {
-                        <div class="mt-2 badge bg-warning text-dark"><i class="fas fa-clock"></i> @pendingHours hrs pending</div>
+                        <div class="mt-2 badge bg-warning"><i class="fas fa-clock"></i> @pendingHours hrs pending</div>
                     }
                     else
                     {
@@ -138,7 +138,7 @@
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold">Your Mentor</h6>
                     <div class="d-flex align-items-center mt-2">
-                        <div class="avatar-circle bg-warning text-white me-2" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">
+                        <div class="avatar-circle bg-warning me-2" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">
                             @(Model.Mentor?.FullName.Substring(0, 1) ?? "?")
                         </div>
                         <div>
@@ -154,7 +154,7 @@
     <div class="row">
         <div class="col-lg-8">
             <div class="card shadow-sm leaderboard-card mb-4">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div class="card-header custom-card py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold">📅 Recent Activity</h5>
                 </div>
                 <div class="card-body p-0">
@@ -189,7 +189,7 @@
                                                 else
 
                                                 {
-                                                    <span class="badge bg-light text-dark border">Self-Study / Other</span>
+                                                    <span class="badge bg-light border">Self-Study / Other</span>
                                                 }
                                                 @if (!string.IsNullOrWhiteSpace(log.MentorResponse))
 
@@ -258,11 +258,11 @@
 
             @if (nextModule != null)
             {
-                <div class="card shadow-sm mb-4 leaderboard-card border-0 bg-primary text-white position-relative overflow-hidden">
+                <div class="card shadow-sm mb-4 leaderboard-card border-0 bg-primary position-relative overflow-hidden">
                     <div class="card-body position-relative" style="z-index:1;">
                         <h6 class="text-uppercase small opacity-75 fw-bold mb-2">🚀 Next Milestone</h6>
                         <h5 class="fw-bold mb-1">@nextModule.ModuleCode</h5>
-                        <p class="mb-3 text-white-50 small">@nextModule.ModuleName</p>
+                        <p class="mb-3  small">@nextModule.ModuleName</p>
                         <a asp-action="Curriculum" class="btn btn-light text-primary btn-sm fw-bold w-100">
                             Start Learning <i class="fas fa-arrow-right ms-1"></i>
                         </a>
@@ -274,7 +274,7 @@
             @if (ViewBag.Leaderboard != null)
             {
                 <div class="card shadow-sm mb-4 border-0 leaderboard-card">
-                    <div class="card-header bg-white fw-bold border-bottom-0 pt-3">
+                    <div class="card-header custom-card fw-bold border-bottom-0 pt-3">
                         <i class="fas fa-trophy text-warning me-1"></i> Top Students
                     </div>
                     <div class="card-body pt-0">
@@ -287,7 +287,7 @@
                                         <img src="@(s.ProfilePic ?? "/images/default-avatar.png")" class="rounded-circle me-2 border" style="width:30px;height:30px;object-fit:cover;">
                                         <span class="small fw-bold">@s.Name</span>
                                     </div>
-                                    <span class="badge bg-light text-dark border">@s.TotalHours hrs</span>
+                                    <span class="badge bg-light border">@s.TotalHours hrs</span>
                                 </li>
                             }
                         </ul>
