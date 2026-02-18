@@ -11,7 +11,7 @@ using SPT.Services;
 namespace SPT.Controllers
 {
     // ✅ Allow Mentors to access Dashboard and Reviews, but restrict specific actions below
-    [Authorize(Roles = "Admin")]
+    
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -35,6 +35,7 @@ namespace SPT.Controllers
         // =========================
         // ADMIN DASHBOARD (MERGED)
         // =========================
+        [Authorize(Roles = "Admin, Mentor")]
         public async Task<IActionResult> Dashboard()
         {
            
@@ -313,6 +314,7 @@ namespace SPT.Controllers
         // LIST STUDENTS (Performance Table)
         // =========================
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Students(string searchString, string cohortFilter, string trackFilter)
         {
             ViewBag.TotalStudents = await _context.Students.CountAsync();
@@ -397,7 +399,7 @@ namespace SPT.Controllers
         // CREATE STUDENT (ADMIN ONLY)
         // =========================
         [HttpGet]
-        [Authorize(Roles = "Admin")] // 🔒 Strict Admin
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> CreateStudent()
         {
             await PopulateDropdowns();
@@ -406,7 +408,7 @@ namespace SPT.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")] // 🔒 Strict Admin
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> CreateStudent(Student model, IFormFile? profilePicture, string password)
         {
             ModelState.Remove("UserId");
@@ -673,6 +675,7 @@ _userManager.GetUserId(User));
         // LIST MENTORS
         // =========================
         [HttpGet]
+
         public async Task<IActionResult> Mentors()
         {
             // Include the User to get email, and Students to count them
@@ -698,6 +701,7 @@ _userManager.GetUserId(User));
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditMentor(Mentor mentor, IFormFile? profilePicture)
         {
             var dbMentor = await _context.Mentors.FindAsync(mentor.Id);
@@ -731,6 +735,7 @@ _userManager.GetUserId(User));
 
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteMentor(int id)
         {
@@ -760,6 +765,7 @@ _userManager.GetUserId(User));
 
        
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetUserPassword(string userId)
         {
@@ -907,6 +913,7 @@ _userManager.GetUserId(User));
         // STUDENT DETAILS (Profile View for Admin)
         // =========================
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Details(int id)
         {
             var student = await _context.Students
@@ -944,6 +951,7 @@ _userManager.GetUserId(User));
         // SUPPORT TICKET MANAGEMENT
         // =========================
         [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> SupportTickets(string status = "Open")
         {
             var query = _context.SupportTickets
@@ -964,7 +972,9 @@ _userManager.GetUserId(User));
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Mentor")]
         [ValidateAntiForgeryToken]
+
         public async Task<IActionResult> ResolveTicket(int id, string response, string actionType)
         {
             // ✅ FIX 1: Include Student data to prevent NullReferenceException
@@ -1016,6 +1026,7 @@ _userManager.GetUserId(User));
         // LIBRARY MANAGEMENT
         // =========================
         [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> ManageLibrary()
         {
             var resources = await _context.Resources
@@ -1026,6 +1037,7 @@ _userManager.GetUserId(User));
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> CreateResource()
         {
             ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
@@ -1033,6 +1045,7 @@ _userManager.GetUserId(User));
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Mentor")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateResource(Resource model)
         {
@@ -1055,6 +1068,7 @@ _userManager.GetUserId(User));
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Mentor")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteResource(int id)
         {
@@ -1076,6 +1090,7 @@ _userManager.GetUserId(User));
         // =========================
         // GET: MANAGE QUIZZES
         // =========================
+        [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> ManageQuizzes(int? trackId)
         {
             // 1. Start Query for Modules
@@ -1091,6 +1106,7 @@ _userManager.GetUserId(User));
 
             // 3. Execute Query
             var modules = await query
+                .AsNoTracking()
                 .OrderBy(m => m.Track.Name)
                 .ThenBy(m => m.DisplayOrder)
                 .ToListAsync();

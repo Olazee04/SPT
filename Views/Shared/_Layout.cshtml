@@ -2,7 +2,6 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject SPT.Data.ApplicationDbContext Db
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,39 +20,27 @@
         }
     </script>
 </head>
+
 <body>
-    <div id="wrapper">
 
-        <div id="sidebar-wrapper">
-            <div class="sidebar-heading">
-                <i class="fas fa-graduation-cap me-2"></i> RMSys SPT <span class="fw-light">PORTAL</span>
-            </div>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div id="wrapper">
 
-            <div class="list-group list-group-flush w-100 flex-grow-1">
+            <div id="sidebar-wrapper">
+                <div class="sidebar-heading">
+                    <i class="fas fa-graduation-cap me-2"></i> RMSys SPT <span class="fw-light">PORTAL</span>
+                </div>
 
-                @if (!User.Identity.IsAuthenticated)
+                <div class="list-group list-group-flush w-100 flex-grow-1">
 
-                {
-                    <div class="sidebar-header-label">Welcome</div>
-                    <a asp-controller="Home" asp-action="Index" class="list-group-item">
-                        <i class="fas fa-home"></i> Home Page
-                    </a>
-                    <a asp-area="Identity" asp-page="/Account/Login" class="list-group-item text-warning">
-                        <i class="fas fa-sign-in-alt"></i> Login Now
-                    </a>
-                    
-                }
-
-                else
-
-                {
                     @if (User.IsInRole("Student"))
                     {
                         <div class="sidebar-header-label">Student Area</div>
                         <a asp-controller="Student" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                             <i class="fas fa-home"></i> Dashboard
                         </a>
-                        
+
 
                         <a asp-controller="Student"
                            asp-action="Curriculum"
@@ -68,12 +55,12 @@
                             <i class="fas fa-folder-open"></i> Resources
                         </a>
 
-                @if (User.IsInRole("Student") && (ViewBag.CapstoneUnlocked ?? false))
-{
-    <a asp-controller="Capstone" asp-action="Index" class="list-group-item">
-        <i class="fas fa-rocket"></i> Capstone
-    </a>
-}
+                        @if (User.IsInRole("Student") && (ViewBag.CapstoneUnlocked ?? false))
+                        {
+                            <a asp-controller="Capstone" asp-action="Index" class="list-group-item">
+                                <i class="fas fa-rocket"></i> Capstone
+                            </a>
+                        }
                         @if (ViewBag.CanViewCertificate == true)
 
                         {
@@ -131,14 +118,14 @@
                         @if (User.IsInRole("Mentor"))
 
                         {
-                           <a asp-controller="Mentor"
-                                asp-action="Students"
-                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
+                            <a asp-controller="Mentor"
+                               asp-action="Students"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
                                 <i class="fas fa-users"></i> My Mentees
                             </a>
 
                             <a asp-controller="Mentor"
-                                                            asp-action="Messages"
+                               asp-action="Messages"
                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active-link" : "")">
                                 <i class="fas fa-comment-dots"></i> Message A Student
                             </a>
@@ -149,7 +136,7 @@
                                 <i class="fas fa-user-cog"></i> My Profile
                             </a>
                         }
-                      
+
                         <a asp-controller="Attendance" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Attendance" ? "active-link" : "")">
                             <i class="fas fa-calendar-check"></i> Attendance
                         </a>
@@ -194,180 +181,138 @@
                             <i class="fas fa-shield-alt"></i> Audit Logs
                         </a>
                     }
+                    }
+                </div>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <div class="sidebar-footer">
+                        <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                            <button type="submit" class="btn btn-outline-light w-100 btn-sm fw-bold">
+                                <i class="fas fa-sign-out-alt me-2"></i> Log Out
+                            </button>
+                        </form>
+                        <div class="text-center mt-3 small text-muted opacity-50">
+                            &copy; 2026 RMSys Solution
+                        </div>
+                    </div>
                 }
             </div>
 
-            @if (User.Identity.IsAuthenticated)
-            {
-                <div class="sidebar-footer">
-                    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
-                        <button type="submit" class="btn btn-outline-light w-100 btn-sm fw-bold">
-                            <i class="fas fa-sign-out-alt me-2"></i> Log Out
-                        </button>
-                    </form>
-                    <div class="text-center mt-3 small text-muted opacity-50">
-                        &copy; 2026 RMSys Solution
-                    </div>
-                </div>
-            }
-        </div>
+            <div id="page-content-wrapper" class="w-100">
 
-        <div id="page-content-wrapper" class="w-100">
-
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
-                <div class="d-flex w-100 justify-content-between align-items-center">
-
+                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
                     <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
+                </nav>
 
-                    <div class="d-flex align-items-center">
-
-                        @if (User.Identity.IsAuthenticated)
-
-                        {
-
-                            var currentUser = await UserManager.GetUserAsync(User);
-
-                            string avatarUrl = null;
-
-
-
-                            if (currentUser != null)
-
-                            {
-
-                                var mentor = Db.Mentors.FirstOrDefault(m => m.UserId == currentUser.Id);
-
-                                var student = Db.Students.FirstOrDefault(s => s.UserId == currentUser.Id);
-
-                                avatarUrl = mentor?.ProfilePicture ?? student?.ProfilePicture;
-
-                            }
-
-                            <button class="btn btn-light rounded-circle me-3" id="theme-toggle">
-                                <i class="fas fa-moon"></i>
-                            </button>
-
-                            <div class="dropdown me-4">
-                                <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
-                                    <i class="fas fa-bell fa-lg text-secondary"></i>
-                                    <span id="notif-count"
-                                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                          style="display:none;font-size:.6rem;">0</span>
-                                </a>
-
-                                <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="width:320px;">
-                                    <div class="bg-primary text-white p-2 text-center small fw-bold">NOTIFICATIONS</div>
-                                    <div id="notif-list" style="max-height:300px;overflow-y:auto;"></div>
-                                    <div class="p-2 border-top text-center bg-light">
-                                        <a class="small fw-bold text-decoration-none" href="#" onclick="markAllRead()">Mark All as Read</a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="d-flex align-items-center border-start ps-3">
-
-                                <div class="text-end me-3 d-none d-lg-block">
-                                    <div class="small fw-bold">@User.Identity.Name</div>
-                                    <div class="badge bg-secondary">
-                                        @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value
-                                    </div>
-                                </div>
-
-                                @if (!string.IsNullOrEmpty(avatarUrl))
-
-                                {
-                                    <img src="@avatarUrl"
-                                         class="rounded-circle shadow-sm"
-                                         style="width:40px;height:40px;object-fit:cover;" />
-                                }
-
-                                else
-
-                                {
-                                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold"
-                                         style="width:40px;height:40px;">
-                                        @(User.Identity.Name.Substring(0, 1).ToUpper())
-                                    </div>
-                                }
-
-                            </div>
-                        }
-
-                    </div>
+                <div class="container-fluid p-4">
+                    @RenderBody()
                 </div>
-            </nav>
 
-            <div class="container-fluid p-4">
-                @RenderBody()
             </div>
 
         </div>
+    }
+    else
+    {
+        <!-- Public navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+            <div class="d-flex w-100 justify-content-between align-items-center">
 
+                <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    var currentUser = await UserManager.GetUserAsync(User);
+                    string avatarUrl = null;
+
+                    if (currentUser != null)
+                    {
+                        var mentor = Db.Mentors.FirstOrDefault(m => m.UserId == currentUser.Id);
+                        var student = Db.Students.FirstOrDefault(s => s.UserId == currentUser.Id);
+                        avatarUrl = mentor?.ProfilePicture ?? student?.ProfilePicture;
+                    }
+
+                    <div class="d-flex align-items-center">
+
+                        <!-- Theme Toggle -->
+                        <button class="btn btn-light rounded-circle me-3" id="theme-toggle" title="Toggle Mode">
+                            <i class="fas fa-moon"></i>
+                        </button>
+
+                        <!-- Notifications -->
+                        <div class="dropdown me-3">
+                            <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
+                                <i class="fas fa-bell fa-lg text-secondary"></i>
+                                <span id="notif-count"
+                                      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                      style="display:none;font-size:.6rem;">0</span>
+                            </a>
+
+                            <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="width:320px;">
+                                <div class="bg-primary text-white p-2 text-center small fw-bold">
+                                    NOTIFICATIONS
+                                </div>
+                                <div id="notif-list" style="max-height:300px;overflow-y:auto;"></div>
+                                <div class="p-2 border-top text-center bg-light">
+                                    <a class="small fw-bold text-decoration-none" href="#" onclick="markAllRead()">Mark All as Read</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Info -->
+                        <div class="d-flex align-items-center border-start ps-3">
+
+                            <div class="text-end me-3 d-none d-lg-block">
+                                <div class="small fw-bold">@User.Identity.Name</div>
+                                <div class="badge bg-secondary">
+                                    @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(avatarUrl))
+                            {
+                                <img src="@avatarUrl"
+                                     class="rounded-circle shadow-sm"
+                                     style="width:40px;height:40px;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold"
+                                     style="width:40px;height:40px;">
+                                    @(User.Identity.Name.Substring(0, 1).ToUpper())
+                                </div>
+                            }
+
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        </nav>
+
+
+        <div class="container py-4">
+            @RenderBody()
+        </div>
+    }
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/site.js"></script>
 
     @if (User.Identity.IsAuthenticated)
-
     {
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 fetchNotifications();
                 setInterval(fetchNotifications, 60000);
             });
-
-            function fetchNotifications() {
-                fetch('/Notification/GetNotifications')
-                    .then(response => response.json())
-                    .then(data => {
-                        const countBadge = document.getElementById('notif-count');
-                        const list = document.getElementById('notif-list');
-
-                        if (data.count > 0) {
-                            countBadge.innerText = data.count > 9 ? '9+' : data.count;
-                            countBadge.style.display = 'inline-block';
-                        } else {
-                            countBadge.style.display = 'none';
-                        }
-
-                        list.innerHTML = '';
-                        if (data.notifications.length === 0) {
-                            list.innerHTML = '<div class="text-center py-4 small text-muted">No new alerts</div>';
-                        } else {
-                            data.notifications.forEach(n => {
-                                let bgClass = n.isRead ? 'bg-white' : 'bg-light fw-bold border-start border-4 border-primary';
-                                let item = `
-                                                <a class="dropdown-item d-flex align-items-center p-3 border-bottom ${bgClass}" href="${n.url || '#'}" onclick="markRead(${n.id})">
-                                                    <div class="me-3">
-                                                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
-                                                            <i class="fas fa-info small"></i>
-                                                        </div>
-                                                    </div>
-                                                    <div style="white-space: normal; line-height: 1.2;">
-                                                        <div class="small text-muted mb-1" style="font-size:0.75rem;">${n.timeAgo}</div>
-                                                        <span class="d-block text-dark small">${n.message}</span>
-                                                    </div>
-                                                </a>`;
-                                list.innerHTML += item;
-                            });
-                        }
-                    });
-            }
-
-            function markRead(id) { fetch('/Notification/MarkAsRead?id=' + id, { method: 'POST' }); }
-            function markAllRead() { fetch('/Notification/MarkAllRead', { method: 'POST' }).then(() => fetchNotifications()); }
-
-            const themeToggle = document.getElementById('theme-toggle');
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-bs-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
-            });
         </script>
     }
+
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>
-

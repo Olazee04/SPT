@@ -1,8 +1,175 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "RMSys SPT Portal";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container py-5">
+
+    <!-- HERO -->
+    <section class="py-5 text-center">
+        <div class="container">
+
+            <h1 class="display-4 fw-bold mb-3">
+                RMSys Student Progress Tracking Portal
+            </h1>
+
+            <p class="lead mb-4">
+                Smart Progress Tracking platform for structured student training,
+                mentor supervision, and performance analytics.
+            </p>
+
+            <p>
+                Built for RMSys Institute to monitor student learning,
+                track consistency, verify work logs, and support mentorship workflows.
+            </p>
+
+            <p class="display-4 fw-bold mb-3">
+                   About The SPT Portal supports:
+                </p>
+
+                <ul>
+                    <li>Student learning logs</li>
+                    <li>Mentor review & approval</li>
+                    <li>Consistency tracking</li>
+                    <li>Module completion analytics</li>
+                    <li>Support ticket management</li>
+                </ul>
+
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-area="Identity" asp-page="/Account/Login"
+                   class="btn btn-primary btn-lg">
+                    Student Login
+                </a>
+
+                <a asp-area="Identity" asp-page="/Account/Login"
+                   class="btn btn-outline-primary btn-lg">
+                    Admin / Mentor Login
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="py-5 text-center hero-animate">     
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card custom-card p-4">
+                    <h3>About RMSYS Solutions Ltd</h3>
+                <p>
+                        RMSYS Solutions Ltd was founded in 2024 by Azeez Rasaq,
+                      RMSYS Solutions Ltd is a dynamic, newly established tech company 
+                      dedicated to delivering innovative and customized technology solutions 
+                      that empower businesses to thrive in the digital age.
+                      <br />
+                        RMSys Institute provides structured technical training programs
+                    focused on real-world skills development, guided mentorship,
+                    and measurable student progress.
+                    <br />
+                        We specialize in developing cutting-edge software, providing IT 
+                        consulting services, and offering comprehensive digital transformation 
+                        strategies. Our mission is to help organizations harness the power of 
+                        technology to drive growth, improve efficiency, and stay ahead of the competition.
+                     At RMSYS Solutions Ltd, we are committed to excellence, innovation, and creating value
+                     for our clients through tailored solutions that meet their unique needs.
+                  </p>
+                    <p>
+                        We help high-potential talent launch their careers in tech through our software engineering
+                        and leadership program.
+                        Become part of a dynamic legacy of success through our Alumni Community, where members support
+                        each other in fostering ongoing growth and advancing their careers.
+                    </p>
+            </div>
+        </div>
+
+                <div class="col-md-6">
+                    <div class="card custom-card p-4 h-100">
+                        <h3>Our Facility</h3>
+
+                            <img src="~/images/softwae.jpg"
+                             class="img-fluid rounded shadow mb-3">
+
+                        <p>
+                            Modern training environment focused on
+                            real-world technical skill development.
+                        </p>
+
+                    </div>
+                </div>
+
+            </div>
+    </section>
+    
+    <!-- IMAGE GALLERY -->
+    <section class="py-5 text-center hero-animate">
+        <h3 class="mb-4 text-center">Training Gallery</h3>
+
+        <div class="row g-3">
+
+            <div class="col-md-4">
+                <img src="~/images/office.jpg"
+                     class="img-fluid rounded shadow">
+            </div>
+            
+            <div class="col-md-4">
+                <img src="~/images/about.jpg"
+                     class="img-fluid rounded shadow">
+            </div>
+
+            <div class="col-md-4">
+                <img src="~/images/farce.jpg"
+                     class="img-fluid rounded shadow">
+            </div>
+
+            <div class="col-md-4">
+                <img src="~/images/fullStack.jpg"
+                     class="img-fluid rounded shadow">
+            </div>
+
+            <div class="col-md-4">
+                <img src="~/images/get2g.jpg"
+                     class="img-fluid rounded shadow">
+            </div>
+
+            <div class="col-md-4">
+                <img src="~/images/frontEnd.jpg"
+                     class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </section>
+
+  
+
+
+    <!-- CONTACT -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="custom-card p-4">
+                <h4>Get In Touch</h4>
+                <p><strong>Institute:</strong> RMSys Solutions Ltd</p>
+                <p>
+                    <strong>Website:</strong> <a href="https://rmsys.institute" target="_blank">
+                        https://rmsys.institute
+                    </a>
+                </p>
+                <p><strong>Call:</strong> +234 802 365 2222 </p>
+                <p><strong>Email:</strong> rmsyssolutions@gmail.com </p>
+                <p><strong>Location:</strong> 8b Adenekan Salako Street, behind Keystone and Access Bank, 
+                    Caterpillar bus stop, Ogba, Lagos</p>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="custom-card p-4">
+                <h4>Platform Features</h4>
+                <ul>
+                    <li>Role-based dashboards</li>
+                    <li>Mentor performance tracking</li>
+                    <li>Student analytics</li>
+                    <li>Audit logging</li>
+                    <li>Secure authentication</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
 </div>

@@ -345,3 +345,93 @@ html, body {
     color: var(--text-primary);
     border-color: var(--border-color);
 }
+
+.hero-animate {
+    animation: fadeUp 1s ease forwards;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* =======================
+   HOMEPAGE HERO
+======================= */
+
+.hero-section {
+    padding: 100px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #4361ee, #3a0ca3);
+    color: white;
+    border-radius: 20px;
+    margin-bottom: 40px;
+    animation: fadeIn 1s ease-in-out;
+}
+
+    .hero-section h1 {
+        font-size: 3rem;
+        font-weight: 800;
+    }
+
+    .hero-section p {
+        font-size: 1.2rem;
+        opacity: 0.95;
+    }
+
+/* =======================
+   HOMEPAGE CARDS
+======================= */
+
+.home-card {
+    background: var(--card-bg);
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+    .home-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+
+/* =======================
+   IMAGE GALLERY
+======================= */
+
+.gallery-img {
+    width: 100%;
+    height: 230px;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    transition: transform 0.4s ease;
+}
+
+    .gallery-img:hover {
+        transform: scale(1.05);
+    }
+
+/* =======================
+   FADE ANIMATION
+======================= */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

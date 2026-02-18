@@ -44,20 +44,18 @@ namespace SPT.Areas.Identity.Pages.Account
             [DataType(DataType.Password)]
             public string Password { get; set; }
 
-            [Display(Name = "Remember me?")]
             public bool RememberMe { get; set; }
+
+            public string LoginType { get; set; } // Student / AdminMentor
         }
 
         public async Task OnGetAsync(string returnUrl = null)
         {
-            if (!string.IsNullOrEmpty(ErrorMessage))
-            {
-                ModelState.AddModelError(string.Empty, ErrorMessage);
-            }
             returnUrl ??= Url.Content("~/");
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
             ReturnUrl = returnUrl;
         }
+
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
@@ -65,48 +63,48 @@ namespace SPT.Areas.Identity.Pages.Account
             if (!ModelState.IsValid)
                 return Page();
 
-            var result = await _signInManager.PasswordSignInAsync(
-                Input.Email,
-                Input.Password,
-                Input.RememberMe,
-                lockoutOnFailure: false);
+            // Try find by email first
+            var user = await _userManager.FindByEmailAsync(Input.Email);
 
-            if (result.Succeeded)
+            // If not found → try username
+            if (user == null)
+                user = await _userManager.FindByNameAsync(Input.Email);
+
+            if (user == null)
             {
-                _logger.LogInformation("User logged in.");
-
-                var user = await _userManager.FindByEmailAsync(Input.Email);
-
-                await _audit.LogAsync(
-                    "LOGIN_SUCCESS",
-                    $"User logged in: {Input.Email}",
-                    Input.Email,
-                    user?.Id);
-
-                if (user != null)
-                {
-                    if (await _userManager.IsInRoleAsync(user, "Admin"))
-                        return RedirectToAction("Dashboard", "Admin");
-
-                    if (await _userManager.IsInRoleAsync(user, "Mentor"))
-                        return RedirectToAction("Dashboard", "Mentor");
-
-                    if (await _userManager.IsInRoleAsync(user, "Student"))
-                        return RedirectToAction("Dashboard", "Student");
-                }
-
-                return LocalRedirect(returnUrl);
+                await _audit.LogAsync("LOGIN_FAILED", "User not found", Input.Email);
+                ModelState.AddModelError("", "Invalid login attempt.");
+                return Page();
             }
 
-            // ❌ LOGIN FAILED
-            await _audit.LogAsync(
-                "LOGIN_FAILED",
-                "Invalid login attempt",
-                Input.Email);
+            var result = await _signInManager.PasswordSignInAsync(
+                user.UserName,
+                Input.Password,
+                Input.RememberMe,
+                false);
 
-            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-            return Page();
+            if (!result.Succeeded)
+            {
+                await _audit.LogAsync("LOGIN_FAILED", "Wrong password", user.UserName, user.Id);
+                ModelState.AddModelError("", "Invalid login attempt.");
+                return Page();
+            }
+
+            await _audit.LogAsync("LOGIN_SUCCESS", "User logged in", user.UserName, user.Id);
+
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+                return RedirectToAction("Dashboard", "Admin");
+
+            if (await _userManager.IsInRoleAsync(user, "Mentor"))
+                return RedirectToAction("Dashboard", "Mentor");
+
+            if (await _userManager.IsInRoleAsync(user, "Student"))
+                return RedirectToAction("Dashboard", "Student");
+
+            return RedirectToAction("Index", "Home");
         }
-
+       
     }
+
 }
+

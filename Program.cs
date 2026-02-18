@@ -14,7 +14,7 @@ builder.Services.AddScoped<AuditService>();
 
 // 2. Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
+    options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 3. Identity Configuration
