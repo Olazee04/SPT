@@ -39,6 +39,13 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<AuditService>();
 var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+
+    await SeedData.InitializeAsync(scope.ServiceProvider);
+}
 
 // 5. Middleware Pipeline
 if (!app.Environment.IsDevelopment())
