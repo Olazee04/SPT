@@ -12,8 +12,8 @@ using SPT.Data;
 namespace SPT.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260218173832_InitialIdentity")]
-    partial class InitialIdentity
+    [Migration("20260221132225_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

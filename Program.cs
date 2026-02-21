@@ -47,6 +47,7 @@ using (var scope = app.Services.CreateScope())
     await SeedData.InitializeAsync(scope.ServiceProvider);
 }
 
+
 // 5. Middleware Pipeline
 if (!app.Environment.IsDevelopment())
 {
