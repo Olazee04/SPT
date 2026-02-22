@@ -116,7 +116,7 @@ namespace SPT.Controllers
             // PART B: Chart Data Preparation
             // ----------------------------------------------------
 
-            // Chart 1: Students per Track
+            
             var trackGroups = students
                 .Where(s => s.EnrollmentStatus == "Active")
                 .GroupBy(s => s.Track?.Code ?? "Unassigned")
@@ -126,7 +126,6 @@ namespace SPT.Controllers
             model.TrackLabels = trackGroups.Select(x => x.Track).ToArray();
             model.TrackCounts = trackGroups.Select(x => x.Count).ToArray();
 
-            // Chart 2: Activity (Logs per Day)
             var allLogsLast7Days = await _context.ProgressLogs
                 .Where(l => l.Date >= sevenDaysAgo)
                 .GroupBy(l => l.Date.Date)
@@ -206,7 +205,7 @@ namespace SPT.Controllers
                         );
                     }
                 }
-                catch { } // prevent crash if email misconfigured
+                catch { } 
         
 
                 await _context.SaveChangesAsync();
