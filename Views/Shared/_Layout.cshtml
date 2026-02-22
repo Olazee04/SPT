@@ -41,7 +41,6 @@
                             <i class="fas fa-home"></i> Dashboard
                         </a>
 
-
                         <a asp-controller="Student"
                            asp-action="Curriculum"
                            class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Curriculum" ? "active-link" : "")">
@@ -62,7 +61,6 @@
                             </a>
                         }
                         @if (ViewBag.CanViewCertificate == true)
-
                         {
                             <a asp-controller="Student"
                                asp-action="Certificate"
@@ -70,9 +68,7 @@
                                 <i class="fas fa-certificate text-warning"></i> Certificate
                             </a>
                         }
-
                         else
-
                         {
                             <a href="javascript:void(0)"
                                class="list-group-item disabled text-muted"
@@ -80,7 +76,6 @@
                                 <i class="fas fa-lock"></i> Certificate (Locked)
                             </a>
                         }
-
 
                         <div class="sidebar-header-label">Account</div>
                         <a asp-controller="Student" asp-action="Settings" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active-link" : "")">
@@ -96,7 +91,6 @@
                         <div class="sidebar-header-label">Management</div>
 
                         @if (User.IsInRole("Admin"))
-
                         {
                             <a asp-controller="Admin" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                                 <i class="fas fa-tachometer-alt"></i> Master Dashboard
@@ -106,9 +100,7 @@
                                 <i class="fas fa-clipboard-check"></i> Review Logs
                             </a>
                         }
-
                         else
-
                         {
                             <a asp-controller="Mentor" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                                 <i class="fas fa-chart-line"></i> Mentor Dashboard
@@ -116,7 +108,6 @@
                         }
 
                         @if (User.IsInRole("Mentor"))
-
                         {
                             <a asp-controller="Mentor"
                                asp-action="Students"
@@ -181,7 +172,6 @@
                             <i class="fas fa-shield-alt"></i> Audit Logs
                         </a>
                     }
-                    }
                 </div>
 
                 @if (User.Identity.IsAuthenticated)
@@ -198,31 +188,10 @@
                     </div>
                 }
             </div>
-
+            
             <div id="page-content-wrapper" class="w-100">
 
-                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
-                    <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
-                </nav>
-
-                <div class="container-fluid p-4">
-                    @RenderBody()
-                </div>
-
-            </div>
-
-        </div>
-    }
-    else
-    {
-        <!-- Public navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
-            <div class="d-flex w-100 justify-content-between align-items-center">
-
-                <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
-
-                @if (User.Identity.IsAuthenticated)
-                {
+                @{
                     var currentUser = await UserManager.GetUserAsync(User);
                     string avatarUrl = null;
 
@@ -232,8 +201,12 @@
                         var student = Db.Students.FirstOrDefault(s => s.UserId == currentUser.Id);
                         avatarUrl = mentor?.ProfilePicture ?? student?.ProfilePicture;
                     }
+                }
 
-                    <div class="d-flex align-items-center">
+                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+                    <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
+
+                    <div class="d-flex align-items-center ms-auto">
 
                         <!-- Theme Toggle -->
                         <button class="btn btn-light rounded-circle me-3" id="theme-toggle" title="Toggle Mode">
@@ -248,7 +221,6 @@
                                       class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                                       style="display:none;font-size:.6rem;">0</span>
                             </a>
-
                             <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="width:320px;">
                                 <div class="bg-primary text-white p-2 text-center small fw-bold">
                                     NOTIFICATIONS
@@ -262,7 +234,6 @@
 
                         <!-- User Info -->
                         <div class="d-flex align-items-center border-start ps-3">
-
                             <div class="text-end me-3 d-none d-lg-block">
                                 <div class="small fw-bold">@User.Identity.Name</div>
                                 <div class="badge bg-secondary">
@@ -283,15 +254,28 @@
                                     @(User.Identity.Name.Substring(0, 1).ToUpper())
                                 </div>
                             }
-
                         </div>
 
                     </div>
-                }
+                </nav>
+
+                <div class="container-fluid p-4">
+                    @RenderBody()
+                   
+                </div>
 
             </div>
-        </nav>
 
+        </div>
+    }
+    else
+    {
+        <!-- Public navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+            <div class="d-flex w-100 justify-content-between align-items-center">
+                <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
+            </div>
+        </nav>
 
         <div class="container py-4">
             @RenderBody()

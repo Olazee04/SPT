@@ -17,7 +17,17 @@
                         <i class="fas fa-user-plus"></i> Create New Student
                     </h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body"
+                @if (TempData["Error"] != null)
+
+                {
+        <div class="alert alert-danger fw-bold">@TempData["Error"]</div>
+                }
+                @if (TempData["Success"] != null)
+
+                {
+        <div class="alert alert-success fw-bold">@TempData["Success"]</div>
+                }>
 
                     <form asp-action="CreateStudent" method="post" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()

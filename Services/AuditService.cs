@@ -34,7 +34,8 @@ namespace SPT.Services
                 TableName = "SYSTEM",
                 FieldName = "-",
                 RecordId = 0,
-                Timestamp = DateTime.UtcNow
+                // ✅ Correct
+                Timestamp = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)
             };
 
             _context.AuditLogs.Add(log);

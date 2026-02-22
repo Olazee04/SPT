@@ -19,6 +19,8 @@ namespace SPT.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly IEmailService _emailService; 
         private readonly AuditService _auditService;
+        private static DateTime ToUtc(DateTime dt) =>
+    DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         public AdminController(
               ApplicationDbContext context,
               UserManager<ApplicationUser> userManager,
@@ -408,7 +410,7 @@ namespace SPT.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")] 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStudent(Student model, IFormFile? profilePicture, string password)
         {
             ModelState.Remove("UserId");
@@ -419,85 +421,122 @@ namespace SPT.Controllers
 
             if (!ModelState.IsValid)
             {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .Select(x => $"{x.Key}: {string.Join(", ", x.Value.Errors.Select(e => e.ErrorMessage))}")
+                    .ToList();
+
+                TempData["Error"] = "VALIDATION FAILED: " + string.Join(" | ", errors);
                 await PopulateDropdowns();
                 return View(model);
             }
 
-            // 1. Generate Username
-            var nameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            string surname = nameParts.Length > 0 ? nameParts[0] : "Student";
-            string firstInitial = nameParts.Length > 1 ? nameParts[1].Substring(0, 1) : "X";
-            int nextId = await _context.Students.CountAsync() + 1;
-            string username = $"{surname}{firstInitial}{nextId:D3}";
-
-            // 2. Create Identity User
-            var user = new ApplicationUser
+            try
             {
-                UserName = username,
-                Email = model.Email,
-                EmailConfirmed = true
-            };
-            string finalPassword = string.IsNullOrEmpty(password) ? "Student@123" : password;
-            var result = await _userManager.CreateAsync(user, finalPassword);
+                // STEP 1: Generate Username
+                var nameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string surname = nameParts.Length > 0 ? nameParts[0] : "Student";
+                string firstInitial = nameParts.Length > 1 ? nameParts[1].Substring(0, 1) : "X";
+                int nextId = await _context.Students.AnyAsync()
+                    ? await _context.Students.MaxAsync(s => s.Id) + 1
+                    : 1;
+                string username = $"{surname}{firstInitial}{nextId:D3}";
 
-            if (!result.Succeeded)
-            {
-                foreach (var error in result.Errors) ModelState.AddModelError("", error.Description);
-                await PopulateDropdowns();
-                return View(model);
-            }
-
-            await _userManager.AddToRoleAsync(user, "Student");
-
-            // 3. Auto-Generate Cohort
-            var track = await _context.Tracks.FindAsync(model.TrackId);
-            string cohortName = $"{track.Code}{model.DateJoined:MMyy}";
-            var cohort = await _context.Cohorts.FirstOrDefaultAsync(c => c.Name == cohortName);
-
-            if (cohort == null)
-            {
-                cohort = new Cohort
+                while (await _userManager.FindByNameAsync(username) != null)
                 {
-                    Name = cohortName,
-                    StartDate = model.DateJoined,
-                    EndDate = model.DateJoined.AddMonths(6),
-                    IsActive = true
-                };
-                _context.Cohorts.Add(cohort);
-                await _context.SaveChangesAsync();
-            }
-
-            // 4. Handle Profile Picture
-            if (profilePicture != null && profilePicture.Length > 0)
-            {
-                var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
-                Directory.CreateDirectory(uploadsFolder);
-                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(profilePicture.FileName)}";
-                using (var stream = new FileStream(Path.Combine(uploadsFolder, fileName), FileMode.Create))
-                {
-                    await profilePicture.CopyToAsync(stream);
+                    nextId++;
+                    username = $"{surname}{firstInitial}{nextId:D3}";
                 }
-                model.ProfilePicture = $"/uploads/profiles/{fileName}";
+
+                // STEP 2: Create Identity User
+                var user = new ApplicationUser
+                {
+                    UserName = username,
+                    Email = model.Email,
+                    EmailConfirmed = true
+                };
+                string finalPassword = string.IsNullOrEmpty(password) ? "Student@123" : password;
+                var result = await _userManager.CreateAsync(user, finalPassword);
+
+                if (!result.Succeeded)
+                {
+                     await PopulateDropdowns();
+                    return View(model);
+                }
+
+                await _userManager.AddToRoleAsync(user, "Student");
+
+                // STEP 3: Auto-Generate Cohort
+                var track = await _context.Tracks.FindAsync(model.TrackId);
+                if (track == null)
+                {
+                    await _userManager.DeleteAsync(user);
+                    await PopulateDropdowns();
+                    return View(model);
+                }
+
+                var joinedUtc = DateTime.SpecifyKind(model.DateJoined, DateTimeKind.Utc);
+                string cohortName = $"{track.Code}{joinedUtc:MMyy}";
+                var cohort = await _context.Cohorts.FirstOrDefaultAsync(c => c.Name == cohortName);
+
+                if (cohort == null)
+                {
+                    cohort = new Cohort
+                    {
+                        Name = cohortName,
+                        StartDate = joinedUtc,
+                        EndDate = joinedUtc.AddMonths(6),
+                        IsActive = true
+                    };
+                    _context.Cohorts.Add(cohort);
+                    await _context.SaveChangesAsync();
+                }
+
+                // STEP 4: Handle Profile Picture
+                if (profilePicture != null && profilePicture.Length > 0)
+                {
+                    var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
+                    Directory.CreateDirectory(uploadsFolder);
+                    var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(profilePicture.FileName)}";
+                    using (var stream = new FileStream(Path.Combine(uploadsFolder, fileName), FileMode.Create))
+                    {
+                        await profilePicture.CopyToAsync(stream);
+                    }
+                    model.ProfilePicture = $"/uploads/profiles/{fileName}";
+                }
+
+                // STEP 5: Save Student
+                model.UserId = user.Id;
+                model.CohortId = cohort.Id;
+                model.TargetHoursPerWeek = 25;
+                model.EnrollmentStatus = "Active";
+                model.DateJoined = joinedUtc;
+                model.CreatedAt = DateTime.UtcNow;
+                model.UpdatedAt = DateTime.UtcNow;
+                model.Track = null;
+                model.Cohort = null;
+                model.Mentor = null;
+                model.User = null;
+
+                _context.ChangeTracker.Clear();
+                _context.Students.Add(model);
+                await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync(
+                    "CREATE_STUDENT",
+                    $"Student created: {model.FullName}",
+                    User.Identity.Name,
+                    _userManager.GetUserId(User));
+
+                TempData["Success"] = $"✅ Student Created! Username: {username} | Password: {finalPassword}";
+                return RedirectToAction(nameof(Students));
             }
-
-            // 5. Save Student
-            model.UserId = user.Id;
-            model.CohortId = cohort.Id;
-            model.TargetHoursPerWeek = 25;
-            model.CreatedAt = DateTime.UtcNow;
-            model.UpdatedAt = DateTime.UtcNow;
-
-            _context.Students.Add(model);
-            await _context.SaveChangesAsync();
-            await _auditService.LogAsync(
-    "CREATE_STUDENT",
-    $"Student created: {model.FullName}",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
-
-            TempData["Success"] = $"✅ Student Created! Username: {username} | Password: {finalPassword}";
-            return RedirectToAction(nameof(Students));    
-
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"EXCEPTION: {ex.Message} | INNER: {ex.InnerException?.Message}";
+                await PopulateDropdowns();
+                return RedirectToAction(nameof(Students));
+            }
         }
 
         // =========================
@@ -943,7 +982,9 @@ _userManager.GetUserId(User));
         [HttpGet]
         public async Task<IActionResult> GetNextStudentId()
         {
-            int nextId = await _context.Students.CountAsync() + 1;
+            int nextId = await _context.Students.AnyAsync()
+                ? await _context.Students.MaxAsync(s => s.Id) + 1
+                : 1;
             return Json(nextId);
         }
 

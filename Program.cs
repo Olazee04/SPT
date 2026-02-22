@@ -38,6 +38,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<AuditService>();
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {

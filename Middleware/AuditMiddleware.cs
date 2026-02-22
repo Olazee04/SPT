@@ -60,7 +60,8 @@ namespace SPT.Middleware
                 TableName = "HTTP",
                 FieldName = role,
                 RecordId = 0,
-                Timestamp = DateTime.UtcNow
+                // ✅ Correct
+                Timestamp = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)
             };
 
             db.AuditLogs.Add(audit);
