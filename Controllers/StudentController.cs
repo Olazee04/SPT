@@ -38,16 +38,14 @@ namespace SPT.Controllers
         // =========================
         public async Task<IActionResult> Dashboard()
         {
-            
-
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
 
             var alerts = await _context.Notifications
-    .Where(n => n.UserId == user.Id && !n.IsRead)
-    .OrderByDescending(n => n.CreatedAt)
-    .Take(3)
-    .ToListAsync();
+                .Where(n => n.UserId == user.Id && !n.IsRead)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(3)
+                .ToListAsync();
 
             ViewBag.DashboardAlerts = alerts;
 
@@ -62,6 +60,23 @@ namespace SPT.Controllers
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return RedirectToAction("CreateProfile");
+
+            // ✅ NEW: Calculate module statistics and pass to ViewBag
+            var totalModules = await _context.SyllabusModules
+                .Where(m => m.TrackId == student.TrackId && m.IsActive)
+                .CountAsync();
+
+            var completedModules = student.ModuleCompletions
+                .Count(mc => mc.IsCompleted);
+
+            ViewBag.TotalModules = totalModules;
+            ViewBag.CompletedModules = completedModules;
+            ViewBag.ProgressPercentage = totalModules > 0
+                ? (int)((double)completedModules / totalModules * 100)
+                : 0;
+
+            // Check if certificate can be viewed
+            ViewBag.CanViewCertificate = completedModules == totalModules && totalModules > 0;
 
             // 2. Fetch Active Modules for Dropdown
             var modules = await _context.SyllabusModules
@@ -113,7 +128,6 @@ namespace SPT.Controllers
 
             ViewBag.Rank = betterStudentsCount + 1;
 
-            
             var weeklyAttendance = await _context.ProgressLogs
                 .Where(l => l.StudentId == student.Id &&
                             l.Date >= DateTime.UtcNow.AddDays(-6))
@@ -122,7 +136,6 @@ namespace SPT.Controllers
                 .CountAsync();
 
             ViewBag.WeeklyAttendance = weeklyAttendance;
-
 
             // ---------------------------------------------------------
             // 🔒 MODULE LOCKING LOGIC (Fixed Property Names)
@@ -134,8 +147,8 @@ namespace SPT.Controllers
                 .OrderBy(m => m.DisplayOrder)
                 .Select(m => new {
                     Id = m.Id,
-                    ModuleCode = m.ModuleCode, // ✅ Keep as ModuleCode
-                    ModuleName = m.ModuleName, // ✅ Keep as ModuleName
+                    ModuleCode = m.ModuleCode,
+                    ModuleName = m.ModuleName,
                     DisplayOrder = m.DisplayOrder
                 })
                 .ToListAsync();
@@ -165,10 +178,9 @@ namespace SPT.Controllers
             ViewBag.CurrentModules = unlockedModules;
 
             bool capstoneUnlocked = student.ModuleCompletions
-    .Any(mc => mc.ModuleId == 19 && mc.IsCompleted);
+                .Any(mc => mc.ModuleId == 19 && mc.IsCompleted);
 
             ViewBag.CapstoneUnlocked = capstoneUnlocked;
-
 
             // ---------------------------------------------------------
             // 🚀 NEW FEATURES (Announcement, Next Up, Leaderboard)
@@ -176,12 +188,12 @@ namespace SPT.Controllers
 
             // 1. Announcement
             ViewBag.LatestAnnouncement = await _context.Announcements
-    .Where(a =>
-        a.TargetPage == "Dashboard" &&
-        (a.Audience == "All" || a.Audience == "Students")
-    )
-    .OrderByDescending(a => a.CreatedAt)
-    .FirstOrDefaultAsync();
+                .Where(a =>
+                    a.TargetPage == "Dashboard" &&
+                    (a.Audience == "All" || a.Audience == "Students")
+                )
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
 
             // 2. Next Up Module
             var nextModule = allModules.FirstOrDefault(m => !completedModuleIds.Contains(m.Id));
@@ -206,7 +218,6 @@ namespace SPT.Controllers
 
             return View(student);
         }
-
 
         // =========================
         // POST: LOG WORK (Detailed Version)
@@ -581,10 +592,12 @@ _userManager.GetUserId(User));
         public async Task<IActionResult> TakeQuiz(int moduleId)
         {
             var user = await _userManager.GetUserAsync(User);
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
+            var student = await _context.Students
+                .Include(s => s.ModuleCompletions)
+                .Include(s => s.ProgressLogs)
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            // 1. Security Check: Is this module actually unlocked?
-            // (You can reuse the logic from Curriculum() here for strict security)
+            if (student == null) return NotFound();
 
             var module = await _context.SyllabusModules
                 .Include(m => m.Track)
@@ -592,7 +605,38 @@ _userManager.GetUserId(User));
 
             if (module == null) return NotFound();
 
-            // 2. Fetch Questions (Randomize order if you want!)
+            // ✅ RULE 1: Must have logged at least 8 hours on this module
+            decimal hoursOnModule = student.ProgressLogs
+                .Where(l => l.ModuleId == moduleId)
+                .Sum(l => l.Hours);
+
+            if (hoursOnModule < 8)
+            {
+                decimal remaining = 8 - hoursOnModule;
+                TempData["QuizError"] = $"📚 You need to study more before taking this quiz. Log at least {remaining:0.#} more hour(s) on this module (minimum 8hrs required).";
+                return RedirectToAction("Curriculum");
+            }
+
+            // ✅ RULE 2: If previously failed, must log 2 extra hours since last failure
+            var lastFailure = await _context.QuizAttempts
+                .Where(a => a.StudentId == student.Id && a.ModuleId == moduleId && !a.Passed)
+                .OrderByDescending(a => a.AttemptedAt)
+                .FirstOrDefaultAsync();
+
+            if (lastFailure != null)
+            {
+                decimal hoursSinceFailure = student.ProgressLogs
+                    .Where(l => l.ModuleId == moduleId && l.CreatedAt > lastFailure.AttemptedAt)
+                    .Sum(l => l.Hours);
+
+                if (hoursSinceFailure < 2)
+                {
+                    decimal needed = 2 - hoursSinceFailure;
+                    TempData["QuizError"] = $"❌ You failed this quiz on {lastFailure.AttemptedAt:MMM dd}. Log {needed:0.#} more hour(s) on this module before retaking.";
+                    return RedirectToAction("Curriculum");
+                }
+            }
+
             var questions = await _context.QuizQuestions
                 .Include(q => q.Options)
                 .Where(q => q.ModuleId == moduleId)
@@ -600,7 +644,7 @@ _userManager.GetUserId(User));
 
             if (!questions.Any())
             {
-                TempData["Error"] = "No quiz questions found for this module yet.";
+                TempData["QuizError"] = "No quiz questions found for this module yet.";
                 return RedirectToAction("Curriculum");
             }
 
@@ -618,34 +662,38 @@ _userManager.GetUserId(User));
             var user = await _userManager.GetUserAsync(User);
             var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
 
-            // 1. Calculate Score
             int correctCount = 0;
             int totalQuestions = answers.Count;
 
             foreach (var answer in answers)
             {
-                int questionId = answer.Key;
-                int selectedOptionId = answer.Value;
-
                 var isCorrect = await _context.QuizOptions
-                    .AnyAsync(o => o.Id == selectedOptionId && o.QuestionId == questionId && o.IsCorrect);
-
+                    .AnyAsync(o => o.Id == answer.Value && o.QuestionId == answer.Key && o.IsCorrect);
                 if (isCorrect) correctCount++;
             }
 
             double percentage = totalQuestions == 0 ? 0 : ((double)correctCount / totalQuestions) * 100;
-            bool passed = percentage >= 75; // Pass mark is 75%
+            bool passed = percentage >= 75;
 
-            // 2. Save Result
+            // ✅ Always save the attempt (pass or fail)
+            _context.QuizAttempts.Add(new QuizAttempt
+            {
+                StudentId = student.Id,
+                ModuleId = moduleId,
+                Score = (int)percentage,
+                Passed = passed,
+                AttemptedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             if (passed)
             {
-                // Check if already completed to avoid duplicates
                 var existing = await _context.ModuleCompletions
                     .FirstOrDefaultAsync(mc => mc.StudentId == student.Id && mc.ModuleId == moduleId);
 
                 if (existing == null)
                 {
-                    var completion = new ModuleCompletion
+                    _context.ModuleCompletions.Add(new ModuleCompletion
                     {
                         StudentId = student.Id,
                         ModuleId = moduleId,
@@ -653,29 +701,22 @@ _userManager.GetUserId(User));
                         QuizCompleted = true,
                         CompletionDate = DateTime.UtcNow,
                         VerifiedBy = "System (Quiz Passed)"
-                    };
-                    _context.ModuleCompletions.Add(completion);
+                    });
                     await _context.SaveChangesAsync();
-                    await _auditService.LogAsync(
-    passed ? "QUIZ PASSED" : "QUIZ FAILED",
-    $"ModuleId: {moduleId}, Score: {percentage}%",
-    student.FullName,
-    HttpContext.Connection.RemoteIpAddress?.ToString()
-);
                 }
 
-                TempData["Success"] = $"🎉 Passed! You scored {percentage}%. The next module is unlocked.";
+                await _auditService.LogAsync("QUIZ_PASSED", $"ModuleId: {moduleId}, Score: {percentage}%", student.FullName, HttpContext.Connection.RemoteIpAddress?.ToString());
+                TempData["Success"] = $"🎉 Passed! You scored {percentage:0}%. Next module unlocked!";
             }
             else
             {
-                TempData["Error"] = $"❌ Failed. You scored {percentage}%. You need 75% to pass. Try again!";
+                await _auditService.LogAsync("QUIZ_FAILED", $"ModuleId: {moduleId}, Score: {percentage}%", student.FullName, HttpContext.Connection.RemoteIpAddress?.ToString());
+                TempData["QuizError"] = $"❌ You scored {percentage:0}%. You need 75% to pass. Log 2 more hours on this module before retrying.";
             }
 
             return RedirectToAction("Curriculum");
         }
-      
 
-        
         // =========================
         // GET: Certificate of Completion
         // =========================

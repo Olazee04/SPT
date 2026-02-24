@@ -76,6 +76,46 @@
             </div>
         </div>
     </div>
+
+    @if (Model.AtRiskStudents != null && Model.AtRiskStudents.Any())
+
+    {
+        <div class="card border-danger shadow-sm mb-4">
+            <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-exclamation-triangle me-2"></i> At-Risk Students — No log in 5+ days</span>
+                <span class="badge bg-white text-danger">@Model.AtRiskStudents.Count</span>
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var s in Model.AtRiskStudents)
+
+                {
+                    <li class="list-group-item d-flex align-items-center justify-content-between py-3">
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(s.ProfilePicture))
+                            {
+                                <img src="@s.ProfilePicture" class="rounded-circle me-3"
+                                     style="width:38px;height:38px;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <div class="rounded-circle bg-danger text-white d-flex align-items-center
+                                        justify-content-center me-3 fw-bold" style="width:38px;height:38px;">
+                                    @s.FullName.Substring(0, 1).ToUpper()
+                                </div>
+                            }
+                            <div>
+                                <div class="fw-semibold">@s.FullName</div>
+                                <small class="text-muted">Last log: @s.DaysInactive</small>
+                            </div>
+                        </div>
+                        <a asp-controller="Admin" asp-action="ProgressLogs"
+                           asp-route-studentId="@s.StudentId"
+                           class="btn btn-sm btn-outline-danger">View Logs</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
     <div class="col-md-3">
         <div class="custom-card border-start border-4 border-info p-3 h-100">
             <h6 class="text-muted text-uppercase small fw-bold">Avg Consistency</h6>

@@ -2,7 +2,7 @@
 @model SPT.Areas.Identity.Pages.Account.LoginModel
 @{
     ViewData["Title"] = "Log in";
-    Layout = null; /* Removes Sidebar */
+    Layout = null;
 }
 
 <!DOCTYPE html>
@@ -29,7 +29,7 @@
         .login-card {
             width: 900px;
             max-width: 95%;
-            height: 550px;
+            min-height: 550px;
             display: flex;
             background: white;
             border-radius: 20px;
@@ -85,9 +85,11 @@
             color: white;
         }
 
-        .theme-admin label,
-        .theme-admin p,
-        .theme-admin small {
+            .theme-admin .form-control::placeholder {
+                color: #94a3b8;
+            }
+
+        .theme-admin label, .theme-admin p, .theme-admin small {
             color: #cbd5f1 !important;
         }
 
@@ -98,6 +100,22 @@
         .theme-admin .btn-action {
             background-color: #38bdf8;
             color: #0f172a;
+        }
+
+        .theme-admin .forgot-link {
+            color: #38bdf8 !important;
+        }
+
+        .theme-admin .input-group-text {
+            background-color: #475569;
+            border-color: #475569;
+            color: #cbd5e1;
+        }
+
+        .theme-admin .toggle-password {
+            background-color: #475569;
+            border-color: #475569;
+            color: #cbd5e1;
         }
 
         .role-switch {
@@ -136,7 +154,31 @@
             font-weight: bold;
             width: 100%;
             margin-top: 20px;
+            cursor: pointer;
         }
+
+        .toggle-password {
+            border: 1px solid #ced4da;
+            border-left: none;
+            background: #f8f9fa;
+            cursor: pointer;
+            padding: 0 12px;
+            border-radius: 0 6px 6px 0;
+        }
+
+            .toggle-password:hover {
+                background: #e9ecef;
+            }
+
+        .forgot-link {
+            font-size: 0.82rem;
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+            .forgot-link:hover {
+                text-decoration: underline;
+            }
     </style>
 </head>
 
@@ -165,31 +207,62 @@
             </div>
 
             <form method="post">
+                @Html.AntiForgeryToken()
 
-                <!-- 🔐 REQUIRED FOR ROLE LOCK -->
                 <input type="hidden" name="Input.LoginType" id="loginType" value="student" />
 
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger small py-2">@Model.ErrorMessage</div>
+                }
 
+                <!-- Email / Username -->
                 <div class="mb-3">
-                    <label asp-for="Input.Email" class="form-label fw-bold small">Email</label>
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" required />
+                    <label asp-for="Input.Email" class="form-label fw-bold small">Email or Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input asp-for="Input.Email" class="form-control" placeholder="Enter email or username" autocomplete="username" required />
+                    </div>
                     <span asp-validation-for="Input.Email" class="text-danger small"></span>
                 </div>
 
-                <div class="mb-3">
+                <!-- Password with toggle -->
+                <div class="mb-2">
                     <label asp-for="Input.Password" class="form-label fw-bold small">Password</label>
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" required />
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <input asp-for="Input.Password"
+                               id="passwordField"
+                               class="form-control"
+                               type="password"
+                               placeholder="Enter your password"
+                               autocomplete="current-password"
+                               required />
+                        <!-- ✅ Show/Hide toggle -->
+                        <button type="button" class="toggle-password" id="togglePassword" title="Show/Hide Password">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
                     <span asp-validation-for="Input.Password" class="text-danger small"></span>
                 </div>
 
-                <div class="form-check mb-3">
-                    <input asp-for="Input.RememberMe" class="form-check-input" />
-                    <label asp-for="Input.RememberMe" class="form-check-label small"></label>
+                <!-- Remember me + Forgot password -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input asp-for="Input.RememberMe" class="form-check-input" />
+                        <label asp-for="Input.RememberMe" class="form-check-label small">Remember me</label>
+                    </div>
+                    <!-- ✅ Forgot Password link -->
+                    <a asp-page="./ForgotPassword" class="forgot-link">
+                        <i class="fas fa-key me-1"></i> Forgot password?
+                    </a>
                 </div>
 
-                <button type="submit" class="btn-action shadow-sm">Log In</button>
+                <button type="submit" class="btn-action shadow-sm">
+                    <i class="fas fa-sign-in-alt me-2"></i> Log In
+                </button>
 
             </form>
         </div>
@@ -197,29 +270,38 @@
     </div>
 
     <script>
-        function setRole(role, btn) {
+        // ✅ Password show/hide toggle
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const field = document.getElementById('passwordField');
+            const icon = document.getElementById('eyeIcon');
+            const isHidden = field.type === 'password';
+            field.type = isHidden ? 'text' : 'password';
+            icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+        });
 
+        // ✅ Role theme switcher
+        function setRole(role, btn) {
             const card = document.getElementById('loginCard');
             const btns = document.querySelectorAll('.role-btn');
 
             btns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
-            document.getElementById('loginType').value = role; 
+            document.getElementById('loginType').value = role;
 
             if (role === 'student') {
-                card.className = "login-card theme-student";
-                document.body.style.backgroundColor = "#f0f2f5";
-                document.getElementById('visualTitle').innerText = "Welcome Student";
-                document.getElementById('formHeader').innerText = "Student Login";
-                document.getElementById('visualIcon').className = "fas fa-graduation-cap";
-            }
-            else {
-                card.className = "login-card theme-admin";
-                document.body.style.backgroundColor = "#0f172a";
-                document.getElementById('visualTitle').innerText = "Admin Portal";
-                document.getElementById('formHeader').innerText = "Admin / Mentor Login";
-                document.getElementById('visualIcon').className = "fas fa-user-shield";
+                card.className = 'login-card theme-student';
+                document.body.style.backgroundColor = '#f0f2f5';
+                document.getElementById('visualTitle').innerText = 'Welcome Student';
+                document.getElementById('formHeader').innerText = 'Student Login';
+                document.getElementById('visualText').innerText = 'Access your dashboard, track progress, and learn.';
+                document.getElementById('visualIcon').className = 'fas fa-graduation-cap';
+            } else {
+                card.className = 'login-card theme-admin';
+                document.body.style.backgroundColor = '#0f172a';
+                document.getElementById('visualTitle').innerText = 'Admin Portal';
+                document.getElementById('formHeader').innerText = 'Admin / Mentor Login';
+                document.getElementById('visualText').innerText = 'Manage students, review logs, and monitor performance.';
+                document.getElementById('visualIcon').className = 'fas fa-user-shield';
             }
         }
     </script>

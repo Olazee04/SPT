@@ -1,69 +1,136 @@
-﻿@model IEnumerable<SPT.Models.QuizQuestion>
+﻿@model SPT.Models.SyllabusModule
 
 @{
-    ViewData["Title"] = "Manage Questions";
-    var module = ViewBag.Module as SPT.Models.SyllabusModule;
+    ViewData["Title"] = "Manage Quiz";
 }
 
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-primary">
-                <i class="fas fa-question-circle"></i> Quiz: @module?.ModuleName
+                <i class="fas fa-question-circle me-2"></i>Quiz Manager
             </h2>
-            <p class="text-muted">Manage questions for module <strong>@module?.ModuleCode</strong></p>
+            <p class="text-muted mb-0">Module: <strong>@Model.ModuleName</strong> (@Model.ModuleCode)</p>
         </div>
         <div>
-            <a asp-controller="Admin" asp-action="ManageQuizzes" class="btn btn-outline-secondary me-2">Back to List</a>
-            <a asp-action="CreateQuestion" asp-route-moduleId="@module?.Id" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New Question
+            <a asp-action="AddQuestion" asp-route-moduleId="@Model.Id" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Question
+            </a>
+            <a asp-controller="Admin" asp-action="ManageQuizzes" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Modules
             </a>
         </div>
     </div>
 
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success">@TempData["Success"]</div>
-    }
-
-    <div class="card shadow border-0 leaderboard-card">
+    <!-- Quiz Settings Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Quiz Settings</h5>
+        </div>
         <div class="card-body">
-            @if (!Model.Any())
-            {
-                <div class="text-center py-5 text-muted">
-                    <i class="fas fa-clipboard-list fa-3x mb-3 opacity-50"></i>
-                    <p>No questions added yet.</p>
+            <form asp-action="UpdateQuizSettings" method="post">
+                <input type="hidden" name="moduleId" value="@Model.Id" />
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Enable Quiz</label>
+                        <div class="form-check form-switch">
+                            <input type="checkbox"
+                                   name="hasQuiz"
+                                   class="form-check-input"
+                            @(Model.HasQuiz ? "checked" : "")
+                                   id="hasQuizSwitch" />
+                            <label class="form-check-label" for="hasQuizSwitch">
+                                Quiz @(Model.HasQuiz ? "Enabled" : "Disabled")
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Pass Score (%)</label>
+                        <input type="number"
+                               name="passScore"
+                               class="form-control"
+                               value="75"
+                               min="0"
+                               max="100" />
+                    </div>
+
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-save me-2"></i>Save Settings
+                        </button>
+                    </div>
                 </div>
-            }
-            else
+            </form>
+        </div>
+    </div>
+
+    <!-- Questions List -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Quiz Questions
+            </h5>
+            <span class="badge bg-light text-dark">
+                @ViewBag.Questions?.Count ?? 0 Questions
+            </span>
+        </div>
+        <div class="card-body p-0">
+
+            @if (ViewBag.Questions != null && ViewBag.Questions.Count > 0)
             {
-                <div class="accordion" id="questionsAccordion">
-                    @foreach (var q in Model)
+                <div class="list-group list-group-flush">
+                    @for (int i = 0; i < ViewBag.Questions.Count; i++)
                     {
-                        <div class="accordion-item mb-3 border rounded overflow-hidden">
-                            <h2 class="accordion-header" id="heading-@q.Id">
-                                <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@q.Id">
-                                    <strong>@q.QuestionText</strong>
-                                </button>
-                            </h2>
-                            <div id="collapse-@q.Id" class="accordion-collapse collapse" data-bs-parent="#questionsAccordion">
-                                <div class="accordion-body">
-                                    <ul class="list-group mb-3">
-                                        @foreach (var opt in q.Options)
+                        var question = ViewBag.Questions[i];
+
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-2">
+                                        <span class="badge bg-primary me-2">Q@(i + 1)</span>
+                                        @question.QuestionText
+                                    </h6>
+
+                                    <div class="ms-4">
+                                        @if (question.Options != null)
                                         {
-                                            <li class="list-group-item d-flex justify-content-between align-items-center @(opt.IsCorrect ? "list-group-item-success" : "")">
-                                                @opt.OptionText
-                                                @if (opt.IsCorrect)
-                                                {
-                                                    <span class="badge bg-success">Correct Answer</span>
-                                                }
-                                            </li>
+                                            @foreach (var option in question.Options)
+                                            {
+                                                <div class="form-check mb-1">
+                                                    <input class="form-check-input"
+                                                           type="radio"
+                                                           disabled
+                                                    @(option.IsCorrect ? "checked" : "") />
+                                                    <label class="form-check-label @(option.IsCorrect ? "text-success fw-bold" : "")">
+                                                        @option.OptionText
+                                                        @if (option.IsCorrect)
+                                                        {
+                                                            <i class="fas fa-check-circle text-success ms-1"></i>
+                                                        }
+                                                    </label>
+                                                </div>
+                                            }
                                         }
-                                    </ul>
-                                    <form asp-action="DeleteQuestion" method="post" onsubmit="return confirm('Delete this question?');">
-                                        <input type="hidden" name="id" value="@q.Id" />
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Delete Question
+                                    </div>
+                                </div>
+
+                                <div class="ms-3">
+                                    <a asp-action="EditQuestion"
+                                       asp-route-id="@question.Id"
+                                       class="btn btn-sm btn-outline-warning me-1">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                    <form asp-action="DeleteQuestion"
+                                          method="post"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Delete this question?');">
+                                        <input type="hidden" name="id" value="@question.Id" />
+                                        <input type="hidden" name="moduleId" value="@Model.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
                                 </div>
@@ -72,6 +139,15 @@
                     }
                 </div>
             }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No questions added yet</h5>
+                    <p class="text-muted">Click "Add New Question" to create your first quiz question</p>
+                </div>
+            }
+
         </div>
     </div>
 </div>

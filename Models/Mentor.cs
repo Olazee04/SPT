@@ -83,7 +83,7 @@ namespace SPT.Models
         [Display(Name = "Date Joined")]
 
         public DateTime DateJoined { get; set; } = DateTime.UtcNow;
-
+        public bool DarkMode { get; set; } = false;
         public int? TrackId { get; set; }
 
         [ForeignKey(nameof(TrackId))]

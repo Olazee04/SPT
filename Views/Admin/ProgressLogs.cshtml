@@ -69,7 +69,8 @@
                         <th>Date</th>
                         <th>Module / Description</th>
                         <th>Blocker</th>
-                        <th class="text-center">Hours</th>
+                        <th class="text-center">Hours</th
+                        <th class="text-center">Quiz</th>
                         <th class="text-center">Evidence</th>
                         <th class="text-center">Status</th>
                         <th class="text-right pr-4">Actions</th>
@@ -113,7 +114,19 @@
                                 </td>
 
                                 <td class="text-center font-weight-bold">@log.Hours</td>
-
+                           
+                                <td class="text-center">
+                                    @if (log.QuizScore.HasValue)
+                                    {
+                                        <span class="badge @(log.QuizScore >= 70 ? "bg-success" : "bg-danger")">
+                                            @log.QuizScore%
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
                                 <td class="text-center">
                                     @if (!string.IsNullOrEmpty(log.EvidenceUrl))
                                     {
@@ -168,10 +181,17 @@
                                                     <small class="text-muted">@log.Date.ToString("D")</small>
                                                 </div>
 
-                                                <div class="ml-auto text-right">
-                                                    <h4 class="font-weight-bold text-primary mb-0">@log.Hours</h4>
-                                                    <small class="text-muted">Hours</small>
-                                                </div>
+                                             <div class="d-flex align-items-center mb-3 p-3 bg-light rounded border">
+    <div>
+        <h6 class="mb-0 font-weight-bold text-gray-800">@log.Student?.FullName</h6>
+        <small class="text-muted">@log.Date.ToString("D")</small>
+    </div>
+    <div class="ml-auto text-right">
+        <h4 class="font-weight-bold text-primary mb-0">@log.Hours</h4>
+        <small class="text-muted">Hours</small>
+    </div>
+</div>
+
                                             </div>
 
                                             <div class="mb-3 leaderboard-card">
@@ -289,8 +309,22 @@
                 </tbody>
             </table>
         </div>
+
     </div>
 </div>
-
+@section Scripts {
+    <script>
+        function decreaseHours(logId) {
+            const input = document.getElementById(`hoursInput_${logId}`);
+            let value = parseFloat(input.value);
+            if (value > 0.5) input.value = (value - 0.5).toFixed(1);
+        }
+        function increaseHours(logId) {
+            const input = document.getElementById(`hoursInput_${logId}`);
+            let value = parseFloat(input.value);
+            if (value < 5) input.value = (value + 0.5).toFixed(1);
+        }
+    </script>
+}
 
 

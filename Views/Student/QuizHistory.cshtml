@@ -1,0 +1,60 @@
+﻿@model List<QuizAttempt>
+@{
+    ViewData["Title"] = "My Quiz History";
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white fw-bold border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-history me-2 text-primary"></i> Quiz Attempt History</span>
+        <span class="badge bg-secondary">@Model.Count total attempts</span>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-clipboard fa-3x mb-3 opacity-25"></i>
+                <p class="mb-0">No quiz attempts yet.</p>
+                <small>Complete a module quiz to see your history here.</small>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Module</th>
+                            <th style="width:180px;">Score</th>
+                            <th style="width:100px;">Result</th>
+                            <th style="width:140px;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in Model)
+                        {
+                            bool passed = a.Score >= 70;
+                            <tr>
+                                <td class="fw-semibold">@(a.Module?.ModuleCode ?? "Unknown Module")</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height:8px;">
+                                            <div class="progress-bar bg-@(passed ? "success" : "danger")"
+                                                 style="width:@a.Score%"></div>
+                                        </div>
+                                        <span class="fw-bold small">@a.Score%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(passed ? "success" : "danger") px-3 py-2">
+                                        @(passed ? "✅ Pass" : "❌ Fail")
+                                    </span>
+                                </td>
+                                <td class="text-muted small">@a.AttemptedAt.ToString("MMM dd, yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

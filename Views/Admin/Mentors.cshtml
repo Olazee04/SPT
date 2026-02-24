@@ -33,6 +33,7 @@
 
 
                 <h5 class="fw-bold mb-1">@mentor.FullName</h5>
+
                 <div class="badge bg-info">@mentor.Specialization</div>
                 @if (mentor.Track != null)
                 {
@@ -45,7 +46,11 @@
 
 
                 <span class="badge bg-light fw-bold border mb-3">@mentor.User?.Email</span>
-
+                
+                <div class="mb-2">
+                    <small class="text-muted" style="font-size:0.7rem;">USERNAME</small>
+                    <div class="fw-bold small">@mentor.User?.UserName</div>
+                </div>
                 <hr />
 
                 <div class="d-flex justify-content-around text-start">

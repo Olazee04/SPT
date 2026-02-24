@@ -36,11 +36,11 @@ namespace SPT.Controllers
             if (mentor == null) return View("Error");
 
             IQueryable<Student> studentQuery;
-
-            if (mentor.Specialization == "General")
+            if (mentor.Specialization == "General" || mentor.TrackId == null)
                 studentQuery = _context.Students;
             else
-                studentQuery = _context.Students.Where(s => s.MentorId == mentor.Id);
+                studentQuery = _context.Students
+                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
 
             var students = await studentQuery
                 .Include(s => s.Track)
@@ -124,7 +124,7 @@ namespace SPT.Controllers
                     .CountAsync();
             }
 
-            return View("~/Views/Admin/Dashboard.cshtml", model);
+            return View(model);
         }
 
         // =========================
@@ -152,11 +152,11 @@ namespace SPT.Controllers
             if (mentor == null) return RedirectToAction(nameof(Students));
 
             IQueryable<Student> studentQuery;
-
-            if (mentor.Specialization == "General")
+            if (mentor.Specialization == "General" || mentor.TrackId == null)
                 studentQuery = _context.Students;
             else
-                studentQuery = _context.Students.Where(s => s.MentorId == mentor.Id);
+                studentQuery = _context.Students
+                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
 
             var students = await studentQuery
                 .Include(s => s.Track)
@@ -220,6 +220,8 @@ namespace SPT.Controllers
                 });
             }
 
+
+
             // =========================
             // DASHBOARD METRICS
             // =========================
@@ -251,6 +253,127 @@ namespace SPT.Controllers
             return View(modelList);
         }
 
+        // =========================
+        // MENTOR: PROGRESS LOGS (scoped to mentor's students)
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> ProgressLogs(string status = "All", string search = "")
+        {
+            var mentor = await GetCurrentMentorAsync();
+            if (mentor == null) return View("Error");
+
+            // Build the set of student IDs this mentor can see
+            IQueryable<Student> studentScope;
+            if (mentor.Specialization == "General" || mentor.TrackId == null)
+                studentScope = _context.Students;
+            else
+                studentScope = _context.Students.Where(s => s.MentorId == mentor.Id || s.TrackId == mentor.TrackId);
+
+            var studentIds = await studentScope.Select(s => s.Id).ToListAsync();
+
+            var query = _context.ProgressLogs
+                .Include(l => l.Student).ThenInclude(s => s.Track)
+                .Include(l => l.Module)
+                .Where(l => studentIds.Contains(l.StudentId))
+                .AsQueryable();
+
+            if (status == "Pending")
+                query = query.Where(l => !l.IsApproved);
+            else if (status == "Approved")
+                query = query.Where(l => l.IsApproved);
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(l => l.Student.FullName.Contains(search));
+
+            ViewBag.CurrentStatus = status;
+            ViewBag.CurrentSearch = search;
+
+            var logs = await query.OrderByDescending(l => l.Date).ToListAsync();
+            return View("~/Views/Admin/ProgressLogs.cshtml", logs); // reuse the same view
+        }
+
+        // =========================
+        // MENTOR: UPDATE LOG (scoped — replaces broken ApproveLog)
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateLog(int id, decimal? hours, string? description,
+            int? mentorRating, int? quizScore, string? action)
+        {
+            var mentor = await GetCurrentMentorAsync();
+            if (mentor == null) return Forbid();
+
+            var log = await _context.ProgressLogs
+                .Include(l => l.Student).ThenInclude(s => s.User)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
+            if (log == null) return NotFound();
+
+            // Security: ensure mentor owns this student's track or is assigned
+            bool canAccess = mentor.Specialization == "General"
+                || log.Student.MentorId == mentor.Id
+                || log.Student.TrackId == mentor.TrackId;
+
+            if (!canAccess) return Forbid();
+
+            if (action == "Reject")
+            {
+                log.IsApproved = false;
+                log.IsRejected = true;
+                log.RejectionReason = "Did not meet requirements";
+                log.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                TempData["Error"] = "❌ Log rejected.";
+                return RedirectToAction(nameof(ProgressLogs));
+            }
+
+            var dateToCheck = log.Date.Date;
+            decimal otherLogsTotal = await _context.ProgressLogs
+                .Where(l => l.StudentId == log.StudentId && l.Date.Date == dateToCheck && l.Id != id)
+                .SumAsync(l => l.Hours);
+
+            decimal proposedHours = hours ?? log.Hours;
+            if ((otherLogsTotal + proposedHours) > 5)
+            {
+                TempData["Error"] = $"⚠️ Limit Exceeded! {otherLogsTotal} hrs already logged. Max 5/day.";
+                return RedirectToAction(nameof(ProgressLogs));
+            }
+
+            log.Hours = proposedHours;
+            if (!string.IsNullOrEmpty(description)) log.ActivityDescription = description;
+            if (mentorRating.HasValue) log.MentorRating = mentorRating;
+            if (quizScore.HasValue && log.PracticeDone) log.QuizScore = quizScore;
+
+            var mentorResponse = Request.Form["mentorResponse"].ToString();
+            if (!string.IsNullOrWhiteSpace(mentorResponse))
+                log.MentorResponse = mentorResponse;
+
+            log.IsApproved = true;
+            log.UpdatedAt = DateTime.UtcNow;
+            log.VerifiedByUserId = _userManager.GetUserId(User);
+
+            if (log.Student?.User != null)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = log.Student.User.Id,
+                    Title = "Log Approved",
+                    Message = $"Your log for {log.Date:MMM dd} was approved by your mentor.",
+                    Type = "Success",
+                    Url = "/Student/Dashboard",
+                    TargetPage = "Dashboard",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await _auditService.LogAsync("LOG_APPROVED_MENTOR",
+                $"Mentor approved log #{log.Id}", User.Identity.Name, _userManager.GetUserId(User));
+
+            TempData["Success"] = "✅ Log approved.";
+            return RedirectToAction(nameof(ProgressLogs));
+        }
 
         // =========================
         // APPROVE LOG (Scoped)
@@ -293,6 +416,40 @@ namespace SPT.Controllers
         }
 
         // =========================
+        // QUIZ SCORES — Mentor sees only their track's students
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> QuizScores(string search = "")
+        {
+            var mentor = await GetCurrentMentorAsync();
+            if (mentor == null) return View("Error");
+
+            IQueryable<Student> studentScope;
+            if (mentor.Specialization == "General" || mentor.TrackId == null)
+                studentScope = _context.Students;
+            else
+                studentScope = _context.Students
+                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
+
+            var studentIds = await studentScope.Select(s => s.Id).ToListAsync();
+
+            var query = _context.ProgressLogs
+                .Include(l => l.Student).ThenInclude(s => s.Track)
+                .Include(l => l.Module)
+                .Where(l => l.QuizScore.HasValue && studentIds.Contains(l.StudentId))
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(l => l.Student.FullName.Contains(search));
+
+            ViewBag.Search = search;
+            ViewBag.MentorName = mentor.FullName;
+
+            var logs = await query.OrderByDescending(l => l.Date).ToListAsync();
+            return View(logs);
+        }
+
+        // =========================
         // GET: PROFILE
         // =========================
         public async Task<IActionResult> Profile()
@@ -306,11 +463,24 @@ namespace SPT.Controllers
         public async Task<IActionResult> Messages()
         {
             var mentor = await GetCurrentMentorAsync();
+            if (mentor == null) return RedirectToAction("Dashboard");
 
-            var students = mentor.Specialization == "General"
-                ? await _context.Students.ToListAsync()
-                : await _context.Students.Where(s => s.MentorId == mentor.Id).ToListAsync();
+            IQueryable<Student> studentScope;
+            if (mentor.Specialization == "General" || mentor.TrackId == null)
+                studentScope = _context.Students;
+            else
+                studentScope = _context.Students
+                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
 
+            var students = await studentScope.OrderBy(s => s.FullName).ToListAsync();
+
+            var otherMentors = await _context.Mentors
+                .Include(m => m.User)
+                .Where(m => m.Id != mentor.Id)
+                .OrderBy(m => m.FullName)
+                .ToListAsync();
+
+            ViewBag.OtherMentors = otherMentors;
             return View(students);
         }
 

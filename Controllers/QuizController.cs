@@ -68,13 +68,16 @@ namespace SPT.Controllers
 
             if (module == null) return NotFound();
 
+            // ✅ Fetch questions and pass via ViewBag
             var questions = await _context.QuizQuestions
                 .Include(q => q.Options)
                 .Where(q => q.ModuleId == moduleId)
+                .OrderBy(q => q.Id)
                 .ToListAsync();
 
-            ViewBag.Module = module;
-            return View(questions);
+            ViewBag.Questions = questions;
+
+            return View(module);
         }
 
         // =========================
@@ -133,6 +136,59 @@ namespace SPT.Controllers
 
             TempData["Success"] = "Question added successfully!";
             return RedirectToAction(nameof(Manage), new { moduleId });
+        }
+
+        // GET: Edit Question
+        [HttpGet]
+        public async Task<IActionResult> EditQuestion(int id)
+        {
+            var question = await _context.QuizQuestions
+                .Include(q => q.Options)
+                .Include(q => q.Module)
+                .FirstOrDefaultAsync(q => q.Id == id);
+
+            if (question == null) return NotFound();
+
+            ViewBag.ModuleName = question.Module.ModuleName;
+            return View(question);
+        }
+
+        // POST: Update Question
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditQuestion(int id, QuizQuestion model, List<string> optionTexts, List<bool> isCorrectFlags)
+        {
+            if (id != model.Id) return NotFound();
+
+            var question = await _context.QuizQuestions
+                .Include(q => q.Options)
+                .FirstOrDefaultAsync(q => q.Id == id);
+
+            if (question == null) return NotFound();
+
+            // Update question text
+            question.QuestionText = model.QuestionText;
+
+            // Remove old options
+            _context.QuizOptions.RemoveRange(question.Options);
+
+            // Add updated options
+            for (int i = 0; i < optionTexts.Count; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(optionTexts[i]))
+                {
+                    question.Options.Add(new QuizOption
+                    {
+                        OptionText = optionTexts[i].Trim(),
+                        IsCorrect = isCorrectFlags.Count > i && isCorrectFlags[i]
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "✅ Question updated successfully!";
+            return RedirectToAction("Manage", new { moduleId = question.ModuleId });
         }
 
         // =========================

@@ -36,6 +36,9 @@
         <a asp-action="ImportStudents" class="btn btn-success btn-sm mr-1">
             <i class="fas fa-file-csv fa-sm"></i> Bulk Import
         </a>
+        <a asp-controller="Admin" asp-action="ExportStudents" class="btn btn-outline-success btn-sm">
+            <i class="fas fa-file-csv me-1"></i> Export CSV
+        </a>
         <a asp-action="CreateStudent" class="btn btn-success"><i class="fas fa-plus"></i> New Student</a>
     </div>
 </div>
@@ -145,26 +148,6 @@
         </table>
     </div>
 
-    <div class="col-lg-4">
-        <div class="custom-card">
-            <h5 class="card-title-custom">⚡ Mentor Actions</h5>
-            <div class="d-grid gap-3 mt-3">
-
-                <a asp-action="Students" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                    <div class="icon-btn bg-primary me-3 shadow-sm"><i class="fas fa-users"></i></div>
-                    <div>
-                        <span class="d-block fw-bold">My Students</span>
-                        <small class="text-muted">View progress & details</small>
-                    </div>
-                </a>
-
-                <a asp-action="Messages" class="btn btn-light text-start p-3 border shadow-sm d-flex align-items-center transition-hover">
-                    <div class="icon-btn bg-secondary me-3 shadow-sm"><i class="fas fa-comment-dots"></i></div>
-                    <div>
-                        <span class="d-block fw-bold">Messages</span>
-                        <small class="text-muted">Chat with students</small>
-                    </div>
-                </a>
-            </div>
-        </div>
+            @await Html.PartialAsync("_Pagination")
+        
 </div>

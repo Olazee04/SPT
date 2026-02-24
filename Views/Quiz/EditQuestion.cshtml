@@ -1,0 +1,62 @@
+﻿@model SPT.Models.QuizQuestion
+@{
+    ViewData["Title"] = "Edit Quiz Question";
+}
+
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Quiz Question</h4>
+            <small class="text-muted">Module: @ViewBag.ModuleName</small>
+        </div>
+        <div class="card-body p-4">
+
+            <form asp-action="EditQuestion" method="post">
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="ModuleId" />
+
+                <!-- Question Text -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Question Text *</label>
+                    <textarea asp-for="QuestionText" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <!-- Answer Options -->
+                <h5 class="mb-3">Answer Options</h5>
+
+                @for (int i = 0; i < Math.Max(4, Model.Options.Count); i++)
+                {
+                    var option = Model.Options.Skip(i).FirstOrDefault();
+
+                    <div class="input-group mb-2">
+                        <span class="input-group-text bg-light fw-bold">@((char)('A' + i))</span>
+                        <input type="text"
+                               name="optionTexts[@i]"
+                               class="form-control"
+                               value="@(option?.OptionText ?? "")"
+                               placeholder="Enter option text"
+                               required />
+                        <div class="input-group-text">
+                            <input type="checkbox"
+                                   name="isCorrectFlags[@i]"
+                                   value="true"
+                            @(option?.IsCorrect == true ? "checked" : "")
+                                   class="form-check-input mt-0" />
+                            <label class="ms-2 mb-0 small">Correct</label>
+                        </div>
+                    </div>
+                }
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="Manage" asp-route-moduleId="@Model.ModuleId" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-warning btn-lg px-5">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>

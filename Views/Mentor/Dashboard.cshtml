@@ -1,0 +1,331 @@
+﻿@model SPT.Models.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Mentor Dashboard";
+}
+
+<div class="container-fluid p-4">
+
+    <!-- Welcome Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white shadow-lg border-0">
+                <div class="card-body p-4">
+                    <h2 class="mb-2"><i class="fas fa-chalkboard-teacher me-2"></i>Welcome, @User.Identity.Name!</h2>
+                    <p class="mb-0 opacity-75">Monitor your mentees' progress and provide guidance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">My Students</h6>
+                            <h2 class="fw-bold text-primary mb-0">@Model.TotalStudents</h2>
+                        </div>
+                        <div class="text-primary opacity-25">
+                            <i class="fas fa-users fa-3x"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">Under your mentorship</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <a asp-action="Students" asp-route-status="Pending" class="text-decoration-none">
+                <div class="card border-0 shadow-sm border-start border-4 border-warning transition-hover">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted text-uppercase small fw-bold mb-1">Pending Logs</h6>
+                                <h2 class="fw-bold text-warning mb-0">@Model.PendingLogs</h2>
+                            </div>
+                            <div class="text-warning opacity-25">
+                                <i class="fas fa-clipboard-list fa-3x"></i>
+                            </div>
+                        </div>
+                        <small class="text-muted">Click to review</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Active Students</h6>
+                            <h2 class="fw-bold text-success mb-0">@Model.ActiveStudents</h2>
+                        </div>
+                        <div class="text-success opacity-25">
+                            <i class="fas fa-chart-line fa-3x"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">3+ check-ins/week</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase small fw-bold mb-1">Avg Consistency</h6>
+                            <h2 class="fw-bold text-info mb-0">@Math.Round(Model.AvgConsistency)%</h2>
+                        </div>
+                        <div class="text-info opacity-25">
+                            <i class="fas fa-star fa-3x"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">Class performance</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- At-Risk Students Alert -->
+    @if (Model.AtRiskStudents != null && Model.AtRiskStudents.Any())
+    {
+        <div class="card border-danger shadow-sm mb-4">
+            <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-exclamation-triangle me-2"></i>At-Risk Students — No log in 5+ days</span>
+                <span class="badge bg-white text-danger">@Model.AtRiskStudents.Count</span>
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var s in Model.AtRiskStudents)
+                {
+                    <li class="list-group-item d-flex align-items-center justify-content-between py-3">
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(s.ProfilePicture))
+                            {
+                                <img src="@s.ProfilePicture" class="rounded-circle me-3"
+                                     style="width:40px;height:40px;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center me-3 fw-bold"
+                                     style="width:40px;height:40px;">
+                                    @s.FullName.Substring(0, 1).ToUpper()
+                                </div>
+                            }
+                            <div>
+                                <div class="fw-semibold">@s.FullName</div>
+                                <small class="text-muted">Last log: @s.DaysInactive</small>
+                            </div>
+                        </div>
+                        <a asp-controller="Admin" asp-action="ProgressLogs"
+                           asp-route-studentId="@s.StudentId"
+                           class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-eye me-1"></i>View Logs
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-area text-primary me-2"></i>Learning Activity (Last 7 Days)</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div style="height: 300px;">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-graduation-cap text-primary me-2"></i>Students by Track</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="trackChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Performance Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-table text-primary me-2"></i>Student Performance Details</h5>
+            <input type="text" class="form-control w-25" placeholder="Search student..." id="studentSearch">
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="studentTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Student</th>
+                            <th>Status</th>
+                            <th>Hours (7d)</th>
+                            <th>Consistency</th>
+                            <th>Syllabus Progress</th>
+                            <th>Mentor Rating</th>
+                            <th class="pe-4 text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.StudentPerformance)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")"
+                                             class="rounded-circle me-2 border"
+                                             width="40" height="40"
+                                             style="object-fit:cover;">
+                                        <div>
+                                            <div class="fw-bold">@s.FullName</div>
+                                            <small class="text-muted badge bg-light fw-bold border">@s.Track</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (s.Status == "Active")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger">Inactive</span>
+                                    }
+                                    <div class="small text-muted mt-1">@s.WeeklyCheckIns check-ins</div>
+                                </td>
+                                <td><h6 class="mb-0 fw-bold">@s.WeeklyHours hrs</h6></td>
+                                <td style="width: 15%;">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span>Score</span><span class="fw-bold">@s.ConsistencyScore%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar @(s.ConsistencyScore >= 70 ? "bg-success" : "bg-warning")"
+                                             style="width: @s.ConsistencyScore%"></div>
+                                    </div>
+                                </td>
+                                <td style="width: 15%;">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span>@s.CompletedModules / @s.TotalModules</span>
+                                        <span class="fw-bold">@s.SyllabusProgress%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" style="width: @s.SyllabusProgress%"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (s.AverageMentorScore > 0)
+                                    {
+                                        <div class="text-warning">
+                                            <span class="fw-bold me-1">@s.AverageMentorScore</span>
+                                            <i class="fas fa-star"></i>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">No ratings</span>
+                                    }
+                                </td>
+                                <td class="pe-4 text-end">
+                                    <a asp-controller="Admin" asp-action="ProgressLogs" asp-route-studentId="@s.StudentId"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Logs
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Data from Controller
+        const trackLabels = @Html.Raw(Json.Serialize(Model.TrackLabels));
+        const trackCounts = @Html.Raw(Json.Serialize(Model.TrackCounts));
+        const dateLabels = @Html.Raw(Json.Serialize(Model.ActivityDates));
+        const logCounts = @Html.Raw(Json.Serialize(Model.ActivityCounts));
+
+        // Activity Chart
+        new Chart(document.getElementById('activityChart'), {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [{
+                    label: 'Logs Submitted',
+                    data: logCounts,
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Track Distribution Chart
+        new Chart(document.getElementById('trackChart'), {
+            type: 'doughnut',
+            data: {
+                labels: trackLabels,
+                datasets: [{
+                    data: trackCounts,
+                    backgroundColor: ['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Search functionality
+        document.getElementById('studentSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#studentTable tbody tr');
+
+            rows.forEach(row => {
+                const studentName = row.querySelector('.fw-bold').textContent.toLowerCase();
+                row.style.display = studentName.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    </script>
+
+    <style>
+        .transition-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .transition-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+}

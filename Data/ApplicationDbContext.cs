@@ -20,10 +20,12 @@ namespace SPT.Data
 
         public DbSet<ProgressLog> ProgressLogs { get; set; }
         public DbSet<MentorReview> MentorReviews { get; set; }
+        public DbSet<MentorNote> MentorNotes { get; set; }
         public DbSet<ModuleCompletion> ModuleCompletions { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<QuizQuestion> QuizQuestions { get; set; }
         public DbSet<QuizOption> QuizOptions { get; set; }
+        public DbSet<QuizAttempt> QuizAttempts { get; set; }
         public DbSet<StudentReflection> StudentReflections { get; set; }
         public DbSet<SupportTicket> SupportTickets { get; set; }
         public DbSet<Announcement> Announcements { get; set; }

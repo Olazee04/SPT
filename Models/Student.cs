@@ -84,7 +84,7 @@ namespace SPT.Models
         // ===== Timestamps =====
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
+        public bool DarkMode { get; set; } = false;
         // ===== Navigation Properties =====
         public ICollection<ProgressLog> ProgressLogs { get; set; } = new List<ProgressLog>();
         public ICollection<StudentReflection> Reflections { get; set; } = new List<StudentReflection>();

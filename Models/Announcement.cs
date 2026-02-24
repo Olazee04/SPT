@@ -12,7 +12,7 @@ namespace SPT.Models
 
         [Required]
         public string Message { get; set; } = string.Empty;
-
+        public DateTime? ExpiresAt { get; set; }
         public bool IsRead { get; set; }
         public string? TargetPage { get; set; } // Dashboard, Curriculum, Support
         public string Audience { get; set; } = "All"; // "All", "Students", "Mentors"

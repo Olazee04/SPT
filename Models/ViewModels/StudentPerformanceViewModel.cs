@@ -13,6 +13,8 @@ namespace SPT.Models.ViewModels
         public string? CohortName { get; set; }
         public string? TrackCode { get; set; }
         public string? MentorName { get; set; }
+       
+        public string Username { get; set; } = string.Empty;
 
         // 📊 Stats for the Table
         public int TargetHoursPerWeek { get; set; }

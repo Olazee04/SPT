@@ -10,23 +10,23 @@ using SPT.Services;
 
 namespace SPT.Controllers
 {
-    // ✅ Allow Mentors to access Dashboard and Reviews, but restrict specific actions below
-    
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
-        private readonly IEmailService _emailService; 
+        private readonly IEmailService _emailService;
         private readonly AuditService _auditService;
+
         private static DateTime ToUtc(DateTime dt) =>
-    DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+
         public AdminController(
-              ApplicationDbContext context,
-              UserManager<ApplicationUser> userManager,
-              IWebHostEnvironment env,
-              IEmailService emailService,
-              AuditService auditService)
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            IWebHostEnvironment env,
+            IEmailService emailService,
+            AuditService auditService)
         {
             _context = context;
             _userManager = userManager;
@@ -34,13 +34,13 @@ namespace SPT.Controllers
             _emailService = emailService;
             _auditService = auditService;
         }
+
         // =========================
-        // ADMIN DASHBOARD (MERGED)
+        // ADMIN DASHBOARD
         // =========================
         [Authorize(Roles = "Admin, Mentor")]
         public async Task<IActionResult> Dashboard()
         {
-           
             var mentors = await _userManager.GetUsersInRoleAsync("Mentor");
             var students = await _context.Students
                 .Include(s => s.Track)
@@ -50,7 +50,6 @@ namespace SPT.Controllers
 
             var allModules = await _context.SyllabusModules.ToListAsync();
 
-            // 2. Initialize ViewModel
             var model = new AdminDashboardViewModel
             {
                 PendingLogs = await _context.ProgressLogs.CountAsync(l => !l.IsApproved),
@@ -59,28 +58,21 @@ namespace SPT.Controllers
                 TotalMentors = mentors.Count
             };
 
-            // ----------------------------------------------------
-            // PART A: Student Analytics Table Calculation
-            // ----------------------------------------------------
             var performanceList = new List<StudentPerformanceDTO>();
-            var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6); // Ensure 7 day range
+            var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6);
 
             foreach (var s in students)
             {
-                // Filter Logs for Last 7 Days
                 var recentLogs = s.ProgressLogs
                     .Where(l => l.Date >= sevenDaysAgo && l.IsApproved)
                     .ToList();
 
-                // Weekly Stats
                 decimal weeklyHours = recentLogs.Sum(l => l.Hours);
                 int checkIns = recentLogs.Select(l => l.Date.Date).Distinct().Count();
 
-                // Modules
                 int totalTrackModules = allModules.Count(m => m.TrackId == s.TrackId);
                 int completedCount = s.ModuleCompletions.Count(mc => mc.IsCompleted);
 
-                // Mentor Score
                 var ratedLogs = s.ProgressLogs
                     .Where(l => l.MentorRating.HasValue)
                     .OrderByDescending(l => l.Date)
@@ -108,15 +100,8 @@ namespace SPT.Controllers
             model.StudentPerformance = performanceList.OrderByDescending(p => p.ConsistencyScore).ToList();
             model.ActiveStudents = performanceList.Count(p => p.Status == "Active");
             if (performanceList.Any())
-            {
                 model.AvgConsistency = (decimal)performanceList.Average(p => p.ConsistencyScore);
-            }
 
-            // ----------------------------------------------------
-            // PART B: Chart Data Preparation
-            // ----------------------------------------------------
-
-            
             var trackGroups = students
                 .Where(s => s.EnrollmentStatus == "Active")
                 .GroupBy(s => s.Track?.Code ?? "Unassigned")
@@ -146,11 +131,31 @@ namespace SPT.Controllers
             model.ActivityDates = dateLabels.ToArray();
             model.ActivityCounts = logCounts.ToArray();
 
+            // At-Risk Students: no approved log in last 5 days
+            var fiveDaysAgo = DateTime.UtcNow.Date.AddDays(-5);
+
+            model.AtRiskStudents = students
+                .Where(s => s.EnrollmentStatus == "Active" &&
+                            !s.ProgressLogs.Any(l => l.IsApproved && l.Date >= fiveDaysAgo))
+                .Select(s => new AtRiskStudentDTO
+                {
+                    StudentId = s.Id,
+                    FullName = s.FullName,
+                    ProfilePicture = s.ProfilePicture,
+                    LastLogDate = s.ProgressLogs
+                        .Where(l => l.IsApproved)
+                        .OrderByDescending(l => l.Date)
+                        .Select(l => (DateTime?)l.Date)
+                        .FirstOrDefault()
+                })
+                .ToList();
+
             return View(model);
+
         }
 
         // =========================
-        // PENDING LOGS (View All)
+        // PENDING LOGS
         // =========================
         public async Task<IActionResult> PendingLogs()
         {
@@ -163,8 +168,9 @@ namespace SPT.Controllers
 
             return View(logs);
         }
+
         // =========================
-        // POST: Update, Approve, or Reject Log (Merged Logic)
+        // UPDATE / APPROVE / REJECT LOG
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -172,7 +178,7 @@ namespace SPT.Controllers
         {
             var log = await _context.ProgressLogs
                 .Include(l => l.Student)
-                .ThenInclude(s => s.User) 
+                .ThenInclude(s => s.User)
                 .FirstOrDefaultAsync(l => l.Id == id);
 
             if (log == null)
@@ -187,32 +193,17 @@ namespace SPT.Controllers
                 {
                     string reason = "The submission did not meet the requirements.";
                     string body = $"<p>Your log for {log.Date:d} was rejected.</p><p><strong>Reason:</strong> {reason}</p>";
-                    await _emailService.SendEmailAsync(log.Student.Email, "Log Rejected", body);
+                    try { await _emailService.SendEmailAsync(log.Student.Email, "Log Rejected", body); } catch { }
                 }
+
                 log.IsApproved = false;
                 log.IsRejected = true;
                 log.RejectionReason = "Did not meet requirements";
                 log.UpdatedAt = DateTime.UtcNow;
 
-                try
-                {
-                    if (log.Student?.User != null)
-                    {
-                        await _emailService.SendEmailAsync(
-                            log.Student.Email,
-                            "Log Rejected",
-                            $"Your log for {log.Date:d} was rejected."
-                        );
-                    }
-                }
-                catch { } 
-        
-
                 await _context.SaveChangesAsync();
-
                 TempData["Error"] = "❌ Log rejected.";
                 return RedirectToAction("ProgressLogs");
-
             }
 
             var dateToCheck = log.Date.Date;
@@ -231,17 +222,13 @@ namespace SPT.Controllers
             log.Hours = proposedHours;
             if (!string.IsNullOrEmpty(description)) log.ActivityDescription = description;
             if (mentorRating.HasValue) log.MentorRating = mentorRating;
-            if (!log.PracticeDone)
-                log.QuizScore = null;
-
+            if (!log.PracticeDone) log.QuizScore = null;
             if (quizScore.HasValue) log.QuizScore = quizScore;
-            var mentorResponse = Request.Form["mentorResponse"].ToString();
 
-            if (!string.IsNullOrWhiteSpace(mentorResponse)
-     && log.MentorResponse != mentorResponse)
+            var mentorResponse = Request.Form["mentorResponse"].ToString();
+            if (!string.IsNullOrWhiteSpace(mentorResponse) && log.MentorResponse != mentorResponse)
             {
                 log.MentorResponse = mentorResponse;
-
                 if (log.Student?.User != null)
                 {
                     _context.Notifications.Add(new Notification
@@ -258,108 +245,97 @@ namespace SPT.Controllers
                 }
             }
 
-
-
-
             log.IsApproved = true;
             log.UpdatedAt = DateTime.UtcNow;
             log.VerifiedByUserId = _userManager.GetUserId(User);
 
+            if (log.Student?.User != null)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = log.Student.User.Id,
+                    Title = "Log Approved",
+                    Message = $"Your log for {log.Date:MMM dd} was approved.",
+                    Type = "Success",
+                    Url = "/Student/Dashboard",
+                    TargetPage = "SomePage",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                });
+            }
+
             try
             {
-                if (log.Student?.User != null)
-                {
-                    var notification = new Notification
-                    {
-                        UserId = log.Student.User.Id, 
-                        Title = "Log Approved",       
-                        Message = $"Your log for {log.Date:MMM dd} was approved.",
-                        Type = "Success",
-                        Url = "/Student/Dashboard",
-                        TargetPage = "SomePage",
-                        CreatedAt = DateTime.UtcNow,
-                        IsRead = false
-                    };
-                    await _auditService.LogAsync(
-    "LOG_APPROVED_ADMIN",
-    $"Admin approved log #{log.Id}",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
-
-                    _context.Notifications.Add(notification);
-                }
-
                 _context.Entry(log).State = EntityState.Modified;
-                await _auditService.LogAsync(
-    "LOG_APPROVED_ADMIN",
-    $"Admin approved log #{log.Id}",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
                 await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync(
+                    "LOG_APPROVED_ADMIN",
+                    $"Admin approved log #{log.Id}",
+                    User.Identity.Name,
+                    _userManager.GetUserId(User));
+
                 TempData["Success"] = "✅ Log verified successfully.";
             }
             catch (Exception ex)
             {
                 TempData["Error"] = "Database Error: " + ex.Message;
             }
-    
+
             string referer = Request.Headers["Referer"].ToString();
             if (!string.IsNullOrEmpty(referer) && referer.Contains("Dashboard"))
-            {
                 return RedirectToAction("Dashboard");
-            }
+
             return RedirectToAction("ProgressLogs");
         }
 
         // =========================
-        // LIST STUDENTS (Performance Table)
+        // LIST STUDENTS — with search + pagination
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Students(string searchString, string cohortFilter, string trackFilter)
+        public async Task<IActionResult> Students(string searchString, int page = 1, int pageSize = 20)
         {
             ViewBag.TotalStudents = await _context.Students.CountAsync();
-    
-                var query = _context.Students
+
+            var query = _context.Students
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.Mentor)
+                  .Include(s => s.User)
                 .Include(s => s.ProgressLogs)
                 .Include(s => s.ModuleCompletions)
                 .AsQueryable();
 
-            // 2. Apply Filters (If search is used)
             if (!string.IsNullOrEmpty(searchString))
-            {
                 query = query.Where(s => s.FullName.Contains(searchString) || s.Email.Contains(searchString));
-            }
 
-            var students = await query.ToListAsync();
+            int totalCount = await query.CountAsync();
+
+            var students = await query
+                .OrderBy(s => s.FullName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
             var modelList = new List<StudentPerformanceViewModel>();
-
             var today = DateTime.UtcNow.Date;
             var last7Days = today.AddDays(-7);
 
-            // 3. Get Total Modules per Track (Dictionary for speed)
             var trackModuleCounts = await _context.SyllabusModules
                 .Where(m => m.IsActive)
                 .GroupBy(m => m.TrackId)
                 .ToDictionaryAsync(g => g.Key, g => g.Count());
 
-            // 4. Transform Data
             foreach (var s in students)
             {
-                // Calculate recent stats
                 var recentLogs = s.ProgressLogs.Where(l => l.Date >= last7Days && l.IsApproved).ToList();
                 decimal hours7Days = recentLogs.Sum(l => l.Hours);
                 int checkIns7Days = recentLogs.Select(l => l.Date.Date).Distinct().Count();
 
-                // Module Progress
                 int totalMods = trackModuleCounts.ContainsKey(s.TrackId) ? trackModuleCounts[s.TrackId] : 1;
                 int completedMods = s.ModuleCompletions.Count(mc => mc.IsCompleted);
 
-                // Calculate Consistency (Simple logic: If < 50% of target hours in last 4 weeks, score drops)
-                // We'll use a simplified version here for the table
                 int consistency = 0;
                 if (s.TargetHoursPerWeek > 0)
                 {
@@ -367,16 +343,15 @@ namespace SPT.Controllers
                     if (consistency > 100) consistency = 100;
                 }
 
-                // Determine Status
                 string status = "Active";
-                string statusColor = "success";
-
                 if (s.EnrollmentStatus == "Suspended") status = "Inactive";
-                else if (consistency < 30) status = "At Risk"; // Low activity
+                else if (consistency < 30) status = "At Risk";
 
                 modelList.Add(new StudentPerformanceViewModel
                 {
                     StudentId = s.Id,
+                    UserId = s.UserId,       
+                    Username = s.User?.UserName,
                     FullName = s.FullName,
                     Email = s.Email,
                     ProfilePicture = s.ProfilePicture,
@@ -393,14 +368,19 @@ namespace SPT.Controllers
                 });
             }
 
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            ViewBag.SearchString = searchString;
+
             return View(modelList);
         }
+
 
         // =========================
         // CREATE STUDENT (ADMIN ONLY)
         // =========================
         [HttpGet]
-        [Authorize(Roles = "Admin")] 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStudent()
         {
             await PopulateDropdowns();
@@ -430,6 +410,10 @@ namespace SPT.Controllers
                 return View(model);
             }
 
+            // ✅ FIX 1: Declare username here (only once)
+            string username = string.Empty;
+            string finalPassword = string.IsNullOrEmpty(password) ? "Student@123" : password;
+
             try
             {
                 // STEP 1: Generate Username
@@ -439,7 +423,9 @@ namespace SPT.Controllers
                 int nextId = await _context.Students.AnyAsync()
                     ? await _context.Students.MaxAsync(s => s.Id) + 1
                     : 1;
-                string username = $"{surname}{firstInitial}{nextId:D3}";
+
+                // ✅ FIX 1: ASSIGN don't redeclare (no 'string' keyword here)
+                username = $"{surname}{firstInitial}{nextId:D3}";
 
                 while (await _userManager.FindByNameAsync(username) != null)
                 {
@@ -454,12 +440,12 @@ namespace SPT.Controllers
                     Email = model.Email,
                     EmailConfirmed = true
                 };
-                string finalPassword = string.IsNullOrEmpty(password) ? "Student@123" : password;
+
                 var result = await _userManager.CreateAsync(user, finalPassword);
 
                 if (!result.Succeeded)
                 {
-                     await PopulateDropdowns();
+                    await PopulateDropdowns();
                     return View(model);
                 }
 
@@ -527,9 +513,31 @@ namespace SPT.Controllers
                     User.Identity.Name,
                     _userManager.GetUserId(User));
 
-                TempData["Success"] = $"✅ Student Created! Username: {username} | Password: {finalPassword}";
+                // Email credentials to student
+                try
+                {
+                    string emailBody = $@"
+<h2>Welcome to RMSys SPT Academy! 🎓</h2>
+<p>Hi {model.FullName},</p>
+<p>Your student account has been created. Here are your login details:</p>
+<table style='border-collapse:collapse;'>
+    <tr><td style='padding:8px;font-weight:bold;'>Username:</td><td style='padding:8px;'>{username}</td></tr>
+    <tr><td style='padding:8px;font-weight:bold;'>Password:</td><td style='padding:8px;'>{finalPassword}</td></tr>
+</table>
+<p>Please login at <a href='https://rmsysspt.onrender.com'>rmsysspt.onrender.com</a> and change your password immediately.</p>
+<p>Best regards,<br/>RMSys SPT Team</p>";
+
+                    await _emailService.SendEmailAsync(model.Email, "Your SPT Account Credentials", emailBody);
+                    TempData["Success"] = $"✅ Student Created! Username: {username} — Login details sent to {model.Email}";
+                }
+                catch
+                {
+                    TempData["Success"] = $"✅ Student Created! Username: {username} | Temp Password: {finalPassword} (Email delivery failed — note this down)";
+                }
+
                 return RedirectToAction(nameof(Students));
             }
+            // ✅ FIX 2: Outer catch was missing entirely
             catch (Exception ex)
             {
                 TempData["Error"] = $"EXCEPTION: {ex.Message} | INNER: {ex.InnerException?.Message}";
@@ -537,6 +545,7 @@ namespace SPT.Controllers
                 return RedirectToAction(nameof(Students));
             }
         }
+
 
         // =========================
         // EDIT STUDENT (ADMIN ONLY)
@@ -589,8 +598,11 @@ namespace SPT.Controllers
             }
 
             await _context.SaveChangesAsync();
-            TempData["Success"] = "✅ Student updated successfully!";
-            return RedirectToAction(nameof(Details), new { id = model.Id });
+            // ✅ Email credentials privately instead of showing password in UI
+            
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "✅ Student updated successfully.";
+            return RedirectToAction(nameof(Students));
         }
 
         // ================
@@ -955,13 +967,18 @@ _userManager.GetUserId(User));
         public async Task<IActionResult> Details(int id)
         {
             var student = await _context.Students
-                .Include(s => s.Track)
-                .Include(s => s.Cohort)
-                .Include(s => s.Mentor)
-                .Include(s => s.User)
-                .FirstOrDefaultAsync(s => s.Id == id);
+    .Include(s => s.Track)
+    .Include(s => s.Cohort)
+    .Include(s => s.Mentor)
+    .Include(s => s.User)
+    .Include(s => s.ProgressLogs.Where(l => l.QuizScore.HasValue))  // ← quiz logs only
+        .ThenInclude(l => l.Module)
+    .FirstOrDefaultAsync(s => s.Id == id);
 
             if (student == null) return NotFound();
+
+            // Pass username via ViewBag
+            ViewBag.Username = student.User?.UserName ?? "N/A";
 
             return View(student);
         }
@@ -1158,6 +1175,32 @@ _userManager.GetUserId(User));
             return View(modules); // 👈 We are sending "List<SyllabusModule>"
         }
 
+        // =========================
+        // QUIZ SCORES — Admin sees all students
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> QuizScores(string search = "", int? trackId = null)
+        {
+            var query = _context.ProgressLogs
+                .Include(l => l.Student).ThenInclude(s => s.Track)
+                .Include(l => l.Module)
+                .Where(l => l.QuizScore.HasValue)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(l => l.Student.FullName.Contains(search));
+
+            if (trackId.HasValue)
+                query = query.Where(l => l.Student.TrackId == trackId.Value);
+
+            ViewBag.Tracks = await _context.Tracks.ToListAsync();
+            ViewBag.SelectedTrack = trackId;
+            ViewBag.Search = search;
+
+            var logs = await query.OrderByDescending(l => l.Date).ToListAsync();
+            return View(logs);
+        }
         // =========================
         // BULK IMPORT STUDENTS
         // =========================

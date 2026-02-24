@@ -1,0 +1,30 @@
+﻿@{
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string search = ViewBag.SearchString ?? "";
+}
+
+@if (totalPages > 1)
+{
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center flex-wrap gap-1">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(currentPage - 1)&search=@search">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link" href="?page=@i&search=@search">@i</a>
+                </li>
+            }
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link" href="?page=@(currentPage + 1)&search=@search">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+        <p class="text-center text-muted small mt-1">Page @currentPage of @totalPages</p>
+    </nav>
+}

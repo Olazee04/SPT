@@ -150,7 +150,42 @@
             </div>
         </div>
     </div>
+    <!-- Module Progress Bar Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0"><i class="fas fa-map-signs me-2 text-primary"></i>Your Learning Journey</h6>
+                <span class="badge bg-primary">@ViewBag.CompletedModules / @ViewBag.TotalModules Modules</span>
+            </div>
+            @{
+                int pct = ViewBag.TotalModules > 0
+                ? (int)((double)ViewBag.CompletedModules / ViewBag.TotalModules * 100)
+                : 0;
+                string barColor = pct >= 80 ? "success" : pct >= 50 ? "primary" : pct >= 25 ? "warning" : "danger";
+            }
+            <div class="progress" style="height: 22px; border-radius: 12px;">
+                <div class="progress-bar bg-@barColor progress-bar-striped progress-bar-animated fw-bold"
+                     role="progressbar"
+                     style="width: @ViewBag.ProgressPercentage%"
+                     aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100">
+                    @pct%
+                </div>
+            </div>
+            <div class="mt-2 small text-muted">
+                @if (pct == 100)
 
+                {
+                    <span class="text-success fw-bold"><i class="fas fa-trophy me-1"></i>🎉 All modules complete! You're eligible for your certificate.</span>
+                }
+
+                else
+
+                {
+                    <span>@(ViewBag.TotalModules - ViewBag.CompletedModules) modules remaining to unlock your certificate.</span>
+                }
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-lg-8">
             <div class="card shadow-sm leaderboard-card mb-4">

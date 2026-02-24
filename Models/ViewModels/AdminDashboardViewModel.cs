@@ -12,7 +12,7 @@
 
         // The Big Table Data
         public List<StudentPerformanceDTO> StudentPerformance { get; set; } = new List<StudentPerformanceDTO>();
-
+        public List<AtRiskStudentDTO> AtRiskStudents { get; set; } = new();
         // 📊 NEW: Chart Data
         public string[] TrackLabels { get; set; }
         public int[] TrackCounts { get; set; }

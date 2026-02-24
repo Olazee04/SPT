@@ -40,6 +40,14 @@
                                 <option value="Support">Support</option>
                             </select>
                         </div>
+
+                        <div class="mb-3">
+    <label class="form-label fw-semibold">
+        Expiry Date
+        <span class="text-muted small fw-normal">(optional — leave blank to never expire)</span>
+    </label>
+    <input type="date" asp-for="ExpiresAt" class="form-control" />
+</div>
                         <button type="submit" class="btn btn-danger w-100">
                             <i class="fas fa-paper-plane"></i> Send Broadcast
                         </button>
