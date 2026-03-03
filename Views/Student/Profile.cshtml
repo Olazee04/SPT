@@ -23,21 +23,41 @@
 
             <div class="custom-card mt-4">
                 <h5 class="card-title-custom">🔐 Change Password</h5>
+<form asp-action="UpdateProfile" method="post">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <label class="form-label fw-semibold small">Current Password</label>
+        <div class="input-group">
+            <input type="password" name="currentPassword" id="currentPwd" class="form-control" placeholder="Enter current password" required />
+            <button type="button" class="btn btn-outline-secondary" onclick="togglePwd('currentPwd','eye1')">
+                <i class="fas fa-eye" id="eye1"></i>
+            </button>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-semibold small">New Password</label>
+        <div class="input-group">
+            <input type="password" name="newPassword" id="newPwd" class="form-control" placeholder="Enter new password" required />
+            <button type="button" class="btn btn-outline-secondary" onclick="togglePwd('newPwd','eye2')">
+                <i class="fas fa-eye" id="eye2"></i>
+            </button>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 fw-bold">
+        <i class="fas fa-key me-2"></i> Update Password
+    </button>
+</form>
 
-                <form asp-action="ChangePassword" method="post">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Current Password</label>
-                            <input type="password" name="currentPassword" class="form-control" required />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">New Password</label>
-                            <input type="password" name="newPassword" class="form-control" required />
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary">Update Password</button>
-                </form>
+@section Scripts {
+    <script>
+        function togglePwd(fieldId, iconId) {
+            const field = document.getElementById(fieldId);
+            const icon = document.getElementById(iconId);
+            field.type = field.type === 'password' ? 'text' : 'password';
+            icon.className = field.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+        }
+    </script>
+}
             </div>
 
         </div>
