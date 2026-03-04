@@ -104,9 +104,27 @@
                 {
                     foreach (var m in ViewBag.Modules)
                     {
-                        <option value="@m.Id" selected="@(ViewBag.SelectedModule?.ToString() == m.Id.ToString())">
-                            @m.ModuleCode – @m.ModuleName
-                        </option>
+                        <select name="moduleId" class="form-select" style="width:200px">
+    <option value="">All Modules</option>
+    @if (ViewBag.Modules != null)
+    {
+        int selectedModuleId = (int)(ViewBag.SelectedModule ?? 0);
+        
+        foreach (var mod in ViewBag.Modules)
+        {
+            if (selectedModuleId > 0 && mod.Id == selectedModuleId)
+            {
+                <option value="@mod.Id" selected>@mod.ModuleCode – @mod.ModuleName</option>
+            }
+            else
+            {
+                <option value="@mod.Id">@mod.ModuleCode – @mod.ModuleName</option>
+            }
+        }
+    }
+</select>
+
+                        
                     }
                 }
             </select>

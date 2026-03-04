@@ -44,7 +44,7 @@ namespace SPT.Controllers
             // 3. FETCH RESOURCES: Filter by the Student's TrackId
             // This replaces your old "ModuleResources" logic with the new "Resource" table
             var resources = await _context.Resources
-                .Where(r => r.TrackId == student.TrackId)
+                .Where(r => r.TrackId == null || r.TrackId == student.TrackId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 

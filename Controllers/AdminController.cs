@@ -1354,7 +1354,7 @@ _userManager.GetUserId(User));
 
 
         public IActionResult QuizResults(string search = "", string result = "",
-            int? moduleId = null, int page = 1, int pageSize = 20)
+    int? moduleId = null, int page = 1, int pageSize = 20)
         {
             var query = _context.QuizAttempts
                 .Include(a => a.Student).ThenInclude(s => s.Track)
@@ -1363,22 +1363,29 @@ _userManager.GetUserId(User));
 
             if (!string.IsNullOrEmpty(search))
                 query = query.Where(a => a.Student.FullName.Contains(search));
+
             if (result == "pass") query = query.Where(a => a.Score >= 70);
             else if (result == "fail") query = query.Where(a => a.Score < 70);
-            if (moduleId.HasValue && moduleId > 0)
+
+            // ✅ FIX: guard with .HasValue before using .Value
+            if (moduleId.HasValue && moduleId.Value > 0)
                 query = query.Where(a => a.ModuleId == moduleId.Value);
 
             int total = query.Count();
+
             ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
             ViewBag.CurrentPage = page;
             ViewBag.TotalRecords = total;
             ViewBag.Search = search;
             ViewBag.ResultFilter = result;
-            ViewBag.SelectedModule = moduleId;   // now int? — no cast error
-            ViewBag.Modules = _context.SyllabusModules
-                .Select(m => new { m.Id, m.ModuleCode, m.ModuleName }).ToList();
+            ViewBag.SelectedModule = moduleId ?? 0;
 
-            var data = query.OrderByDescending(a => a.AttemptedAt)
+            ViewBag.Modules = _context.SyllabusModules
+                .Select(m => new { m.Id, m.ModuleCode, m.ModuleName })
+                .ToList();
+
+            var data = query
+                .OrderByDescending(a => a.AttemptedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
