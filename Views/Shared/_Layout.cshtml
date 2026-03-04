@@ -183,7 +183,7 @@
                     @* ── ADMIN-ONLY LINKS ── *@
                     @if (User.IsInRole("Admin"))
                     {
-                        <div class="sidebar-header-label">System Admin</div>
+                        <div class="sidebar-header-label">System Admin & Quiz</div>
                         <a asp-controller="Admin" asp-action="QuizScores"
                            class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "QuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active-link" : "")">
                             <i class="fas fa-clipboard-list"></i> Exercise Scores
