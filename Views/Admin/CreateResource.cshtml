@@ -7,11 +7,15 @@
     <div class="col-md-6">
         <div class="custom-card">
             <h5 class="card-title-custom">Add New Resource</h5>
-            <form asp-action="CreateResource" method="post">
+
+            @* FIX: Was missing method="post" antiforgery token and enctype *@
+            <form asp-action="CreateResource" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Title</label>
                     <input asp-for="Title" class="form-control" placeholder="e.g. C# Cheat Sheet" required />
+                    <span asp-validation-for="Title" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
@@ -28,18 +32,30 @@
                             <option value="PDF">PDF Document</option>
                         </select>
                     </div>
-                    <div class="col-6">
+                    <div class="mb-3">
                         <label class="form-label fw-bold">Assign to Track</label>
-                        <select asp-for="TrackId" class="form-select" asp-items="ViewBag.Tracks"></select>
+                        <select name="trackId" class="form-select">
+                            <option value="">📚 All Courses</option>
+                            @if (ViewBag.TrackList != null)
+                            {
+                                foreach (var track in ViewBag.TrackList as IEnumerable<SPT.Models.Track>)
+                                {
+                                    <option value="@track.Id">@track.Name (@track.Code)</option>
+                                }
+                            }
+                        </select>
+                        <small class="text-muted">Leave as "All Courses" to share with everyone</small>
                     </div>
-                </div>
 
                 <div class="mb-4">
                     <label class="form-label fw-bold">URL / Link</label>
                     <input asp-for="Url" type="url" class="form-control" placeholder="https://..." required />
+                    <span asp-validation-for="Url" class="text-danger small"></span>
                 </div>
 
-                <button type="submit" class="btn btn-success w-100">Add to Library</button>
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fas fa-plus-circle me-2"></i>Add to Library
+                </button>
                 <a asp-action="ManageLibrary" class="btn btn-link w-100 mt-2 text-muted">Cancel</a>
             </form>
         </div>

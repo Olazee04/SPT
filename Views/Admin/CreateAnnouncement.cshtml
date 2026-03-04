@@ -1,5 +1,4 @@
 ﻿@model SPT.Models.Announcement
-@Html.AntiForgeryToken()
 @{
     ViewData["Title"] = "Post Announcement";
 }
@@ -7,50 +6,60 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-danger">
-                    <h5 class="mb-0"><i class="fas fa-bullhorn"></i> Broadcast Announcement</h5>
+            <div class="card shadow border-0">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-bullhorn me-2"></i> Broadcast Announcement</h5>
                 </div>
                 <div class="card-body">
-                    <form asp-action="CreateAnnouncement" method="post">
+
+                    <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-4">
+                        <i class="fas fa-info-circle"></i>
+                        <small>Announcements appear on the <strong>Dashboard</strong> and the <strong>🔔 notification bell</strong> for selected users. Admins always receive all announcements.</small>
+                    </div>
+
+                    <form asp-action="CreateAnnouncement" asp-controller="Admin" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden" asp-for="TargetPage" value="Dashboard" />
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Title</label>
-                            <input asp-for="Title" class="form-control" placeholder="e.g. Server Maintenance" required />
+                            <input asp-for="Title" class="form-control" placeholder="e.g. Server Maintenance Tonight" required />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Message</label>
-                            <textarea asp-for="Message" class="form-control" rows="3" required></textarea>
+                            <textarea asp-for="Message" class="form-control" rows="4"
+                                      placeholder="Write your announcement here..." required></textarea>
+                            <span asp-validation-for="Message" class="text-danger small"></span>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Audience</label>
                             <select asp-for="Audience" class="form-select">
-                                <option value="All">Everyone</option>
-                                <option value="Students">Students Only</option>
-                                <option value="Mentors">Mentors Only</option>
+                                <option value="All">👥 Everyone (Students + Mentors)</option>
+                                <option value="Students">🎓 Students Only</option>
+                                <option value="Mentors">👨‍🏫 Mentors Only</option>
                             </select>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Admins always receive notifications regardless of audience selection.
+                            </small>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Show On Page</label>
-                            <select asp-for="TargetPage" class="form-select" required>
-                                <option value="Dashboard">Dashboard</option>
-                                <option value="Curriculum">Curriculum</option>
-                                <option value="Support">Support</option>
-                            </select>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                Expiry Date
+                                <span class="text-muted small fw-normal">(optional — leave blank to never expire)</span>
+                            </label>
+                            <input type="date" asp-for="ExpiresAt" class="form-control" />
                         </div>
 
-                        <div class="mb-3">
-    <label class="form-label fw-semibold">
-        Expiry Date
-        <span class="text-muted small fw-normal">(optional — leave blank to never expire)</span>
-    </label>
-    <input type="date" asp-for="ExpiresAt" class="form-control" />
-</div>
                         <button type="submit" class="btn btn-danger w-100">
-                            <i class="fas fa-paper-plane"></i> Send Broadcast
+                            <i class="fas fa-paper-plane me-2"></i> Send Broadcast
                         </button>
+                        <a asp-action="Dashboard" class="btn btn-link w-100 mt-1 text-muted">Cancel</a>
                     </form>
                 </div>
             </div>

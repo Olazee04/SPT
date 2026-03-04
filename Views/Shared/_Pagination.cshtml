@@ -1,30 +1,77 @@
 ﻿@{
     int currentPage = ViewBag.CurrentPage ?? 1;
     int totalPages = ViewBag.TotalPages ?? 1;
-    string search = ViewBag.SearchString ?? "";
+
+    // Collect ALL current query string params except 'page'
+    // so filters like status, search, trackId are preserved
+    var queryParams = Context.Request.Query
+        .Where(q => q.Key != "page")
+        .Select(q => $"{q.Key}={Uri.EscapeDataString(q.Value)}")
+        .ToList();
+
+    string baseQuery = queryParams.Any() ? "&" + string.Join("&", queryParams) : "";
 }
 
 @if (totalPages > 1)
 {
-    <nav class="mt-4">
+    <nav class="mt-4" aria-label="Page navigation">
         <ul class="pagination justify-content-center flex-wrap gap-1">
+
             <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage - 1)&search=@search">
+                <a class="page-link" href="?page=@(currentPage - 1)@baseQuery" aria-label="Previous">
                     <i class="fas fa-chevron-left"></i>
                 </a>
             </li>
-            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
-            {
-                <li class="page-item @(i == currentPage ? "active" : "")">
-                    <a class="page-link" href="?page=@i&search=@search">@i</a>
-                </li>
+
+            @{
+                int startPage = Math.Max(1, currentPage - 2);
+                int endPage = Math.Min(totalPages, currentPage + 2);
+
+                // Always show first page
+                if (startPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1@baseQuery">1</a>
+                    </li>
+                    if (startPage > 2)
+                    {
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                    }
+                }
+
+                for (int i = startPage; i <= endPage; i++)
+                {
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <a class="page-link" href="?page=@i@baseQuery">@i</a>
+                    </li>
+                }
+
+                // Always show last page
+                if (endPage < totalPages)
+                {
+                    if (endPage < totalPages - 1)
+                    {
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                    }
+                    <li class="page-item">
+                        <a class="page-link" href="?page=@totalPages@baseQuery">@totalPages</a>
+                    </li>
+                }
             }
+
             <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                <a class="page-link" href="?page=@(currentPage + 1)&search=@search">
+                <a class="page-link" href="?page=@(currentPage + 1)@baseQuery" aria-label="Next">
                     <i class="fas fa-chevron-right"></i>
                 </a>
             </li>
+
         </ul>
-        <p class="text-center text-muted small mt-1">Page @currentPage of @totalPages</p>
+        <p class="text-center text-muted small mt-1">
+            Page @currentPage of @totalPages
+        </p>
     </nav>
 }

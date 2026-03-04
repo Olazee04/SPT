@@ -51,6 +51,7 @@ namespace SPT.Models
         public int DisplayOrder { get; set; }
 
         public bool IsActive { get; set; } = true;
+        public int PassScore { get; set; } = 75;
 
         // =========================
         // NAVIGATION PROPERTIES (Links to other tables)

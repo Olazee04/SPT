@@ -1,0 +1,210 @@
+﻿@model List<SPT.Models.QuizAttempt>
+@{
+    ViewData["Title"] = "Module Quiz Scores";
+    bool isAdmin = User.IsInRole("Admin");
+    var tracks = ViewBag.Tracks as List<SPT.Models.Track>;
+    int total     = Model.Count;
+    int passCount = Model.Count(a => a.Passed);
+    int failCount = total - passCount;
+    double passRate = total > 0 ? Math.Round((double)passCount / total * 100, 1) : 0;
+    double avgScore = total > 0 ? Math.Round(Model.Average(a => (double)a.Score), 1) : 0;
+}
+
+<div class="container-fluid p-4">
+
+    <div class="mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-graduation-cap text-primary me-2"></i>Module Quiz Scores
+        </h2>
+        <p class="text-muted mb-0">
+            Exam scores from module quizzes — required to unlock the next module (pass mark: 75%).
+        </p>
+    </div>
+
+    @* ── Quiz Type Explainer ── *@
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="alert alert-primary border-start border-4 border-primary mb-0">
+                <strong><i class="fas fa-graduation-cap me-2"></i>Module Quiz (This Page)</strong><br/>
+                <small>
+                    Students take this on the Curriculum page after 8+ hours per module.
+                    Pass = 75%+. Scores stored in the <code>QuizAttempts</code> table.
+                    Passing unlocks the next module automatically.
+                </small>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="alert alert-secondary border-start border-4 border-secondary mb-0">
+                <strong><i class="fas fa-clipboard-list me-2"></i>Log Exercise Score (see "Exercise Scores" page)</strong><br/>
+                <small>
+                    You grade these when approving progress logs where the student ticked
+                    "I completed a practice exercise". Stored in <code>ProgressLogs.QuizScore</code>.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    @* ── Stats ── *@
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-primary leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Total Attempts</h6>
+                    <h2 class="fw-bold text-primary mb-0">@total</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-success leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Passed</h6>
+                    <h2 class="fw-bold text-success mb-0">@passCount</h2>
+                    <small class="text-muted">@passRate% pass rate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-danger leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Failed</h6>
+                    <h2 class="fw-bold text-danger mb-0">@failCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-warning leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">Avg Score</h6>
+                    <h2 class="fw-bold text-warning mb-0">@avgScore%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Filter ── *@
+    <div class="custom-card p-3 mb-4">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="text" name="search" value="@ViewBag.Search"
+                   class="form-control" style="width:220px" placeholder="Search student..." />
+            @if (isAdmin && tracks != null)
+            {
+                <select name="trackId" class="form-select" style="width:180px">
+                    <option value="">All Tracks</option>
+                    @foreach (var t in tracks)
+                    {
+                        <option value="@t.Id"
+                                selected="@(ViewBag.SelectedTrack?.ToString() == t.Id.ToString() ? "selected" : null)">
+                            @t.Code — @t.Name
+                        </option>
+                    }
+                </select>
+            }
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-search me-1"></i>Filter
+            </button>
+            <a asp-action="ModuleQuizScores" class="btn btn-outline-secondary">Clear</a>
+        </form>
+    </div>
+
+    @* ── Table ── *@
+    <div class="card shadow-sm border-0 leaderboard-card">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>
+                <i class="fas fa-graduation-cap me-2 text-primary"></i>Module Quiz Attempt Records
+            </span>
+            <span class="badge bg-secondary">@Model.Count records</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Student</th>
+                        <th>Track</th>
+                        <th>Module</th>
+                        <th style="width:200px;">Score</th>
+                        <th class="text-center">Result</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var a in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(a.Student?.ProfilePicture ?? "/images/default-avatar.png")"
+                                             class="rounded-circle me-2 border"
+                                             style="width:32px;height:32px;object-fit:cover;" />
+                                        <span class="fw-bold">@a.Student?.FullName</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-secondary">@a.Student?.Track?.Code</span></td>
+                                <td>
+                                    <div class="fw-semibold small">@(a.Module?.ModuleCode ?? "—")</div>
+                                    <small class="text-muted">@(a.Module?.ModuleName ?? "")</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height:8px;">
+                                            <div class="progress-bar @(a.Passed ? "bg-success" : "bg-danger")"
+                                                 style="width:@a.Score%"></div>
+                                        </div>
+                                        <span class="fw-bold small @(a.Passed ? "text-success" : "text-danger")">
+                                            @a.Score%
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-@(a.Passed ? "success" : "danger") px-3 py-2">
+                                        @(a.Passed ? "✅ Pass" : "❌ Fail")
+                                    </span>
+                                </td>
+                                <td class="text-muted small">@a.AttemptedAt.ToString("MMM dd, yyyy")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fas fa-graduation-cap fa-3x text-muted opacity-25 mb-3 d-block"></i>
+                                <h6 class="text-muted">No module quiz attempts found</h6>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (ViewBag.TotalPages > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <small class="text-muted">Page @ViewBag.CurrentPage of @ViewBag.TotalPages</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(ViewBag.CurrentPage <= 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               href="?page=@(ViewBag.CurrentPage - 1)&search=@ViewBag.Search">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        @for (int p = 1; p <= (int)ViewBag.TotalPages; p++)
+                        {
+                            <li class="page-item @(p == (int)ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="?page=@p&search=@ViewBag.Search">@p</a>
+                            </li>
+                        }
+                        <li class="page-item @(ViewBag.CurrentPage >= ViewBag.TotalPages ? "disabled" : "")">
+                            <a class="page-link"
+                               href="?page=@(ViewBag.CurrentPage + 1)&search=@ViewBag.Search">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>

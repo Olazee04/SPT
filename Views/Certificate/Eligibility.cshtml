@@ -2,53 +2,104 @@
     ViewData["Title"] = "Graduation Eligibility";
 }
 
-<div class="container p-4">
-    <h3 class="mb-4 font-weight-bold">🎓 Graduation Eligibility</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">🎓 Graduation Eligibility</h3>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Back to Certificates
+    </a>
+</div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <table class="table align-middle">
-                <thead>
+<div class="custom-card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4">Student</th>
+                    <th>Track</th>
+                    <th>Modules Progress</th>
+                    <th>Status</th>
+                    <th class="pe-4">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (dynamic item in ViewBag.EligibleList)
+                {
+                    int completed = (int)item.CompletedModules;
+                    int total = (int)item.TotalModules;
+                    int pct = total > 0 ? (int)((double)completed / total * 100) : 0;
+
+                    string barColor = pct >= 100 ? "bg-success"
+                    : pct >= 60 ? "bg-info"
+                    : pct >= 30 ? "bg-warning"
+                    : "bg-danger";
+
                     <tr>
-                        <th>Student</th>
-                        <th>Verified Hours</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-2">
+                                @if (!string.IsNullOrEmpty((string)item.Student.ProfilePicture))
+                                {
+                                    <img src="@item.Student.ProfilePicture" class="rounded-circle" width="36" height="36" style="object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="avatar-circle" style="width:36px;height:36px;font-size:.8rem;">
+                                        @item.Student.FullName.Substring(0, 1)
+                                    </div>
+                                }
+                                <span class="fw-bold lb-name">@item.Student.FullName</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">@item.Student.Track?.Code</span>
+                        </td>
+                        <td style="min-width:200px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:10px; border-radius:8px;">
+                                    <div class="progress-bar @barColor"
+                                         role="progressbar"
+                                         style="width:@pct%"
+                                         aria-valuenow="@pct"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <span class="fw-bold small lb-name" style="min-width:45px;">@completed/@total</span>
+                            </div>
+                            <small class="lb-sub">@pct% complete</small>
+                        </td>
+                        <td>
+                            @if (item.IsReady)
+                            {
+                                <span class="badge bg-success px-3 py-2">
+                                    <i class="fas fa-check-circle me-1"></i> Ready
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning fw-bold px-3 py-2">
+                                    <i class="fas fa-hourglass-half me-1"></i> In Progress
+                                </span>
+                            }
+                        </td>
+                        <td class="pe-4">
+                            @if (item.IsReady)
+                            {
+                                <form asp-action="Issue" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="studentId" value="@item.Student.Id" />
+                                    <button class="btn btn-sm btn-success">
+                                        <i class="fas fa-award me-1"></i> Issue Certificate
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">@(total - completed) modules left</span>
+                            }
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (dynamic item in ViewBag.EligibleList)
-                    {
-                        <tr>
-                            <td class="font-weight-bold">@item.Student.FullName</td>
-                            <td>@item.TotalHours hrs</td>
-                            <td>
-                                @if (item.IsReady)
-                                {
-                                    <span class="badge badge-success">Ready</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-warning">In Progress</span>
-                                }
-                            </td>
-                            <td>
-                                @if (item.IsReady)
-                                {
-                                    <form asp-action="Issue" method="post">
-                                        <input type="hidden" name="studentId" value="@item.Student.Id" />
-                                        <button class="btn btn-sm btn-success">Issue Certificate</button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-sm btn-secondary" disabled>Not Ready</button>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </table>
     </div>
 </div>

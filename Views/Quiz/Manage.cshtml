@@ -1,7 +1,8 @@
 ﻿@model SPT.Models.SyllabusModule
-
 @{
     ViewData["Title"] = "Manage Quiz";
+    int qCount = (ViewBag.Questions as List<SPT.Models.QuizQuestion>)?.Count ?? 0;
+    bool isReallyEnabled = Model.HasQuiz && qCount > 0;
 }
 
 <div class="container-fluid p-4">
@@ -10,10 +11,15 @@
             <h2 class="fw-bold text-primary">
                 <i class="fas fa-question-circle me-2"></i>Quiz Manager
             </h2>
-            <p class="text-muted mb-0">Module: <strong>@Model.ModuleName</strong> (@Model.ModuleCode)</p>
+            <p class="text-muted mb-0">
+                Module: <strong>@Model.ModuleName</strong> (@Model.ModuleCode)
+            </p>
         </div>
-        <div>
-            <a asp-action="AddQuestion" asp-route-moduleId="@Model.Id" class="btn btn-primary">
+        <div class="d-flex gap-2">
+            @* ✅ FIX 1: was asp-action="AddQuestion" — that action does NOT exist.
+            The correct controller action is named "CreateQuestion" *@
+            <a asp-controller="Quiz" asp-action="CreateQuestion" asp-route-moduleId="@Model.Id"
+               class="btn btn-primary">
                 <i class="fas fa-plus me-2"></i>Add New Question
             </a>
             <a asp-controller="Admin" asp-action="ManageQuizzes" class="btn btn-secondary">
@@ -22,42 +28,62 @@
         </div>
     </div>
 
-    <!-- Quiz Settings Card -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Quiz Settings</h5>
+    @if (qCount == 0)
+    {
+        <div class="alert alert-warning border-0 shadow-sm mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>No questions yet.</strong>
+            Add at least one question before you can enable this quiz.
+        </div>
+    }
+
+    @* ── Quiz Settings ── *@
+    <div class="card shadow-sm border-0 leaderboard-card mb-4">
+        <div class="card-header fw-bold">
+            <i class="fas fa-cog me-2"></i>Quiz Settings
         </div>
         <div class="card-body">
-            <form asp-action="UpdateQuizSettings" method="post">
+            <form asp-controller="Quiz" asp-action="UpdateQuizSettings" method="post">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="moduleId" value="@Model.Id" />
-
-                <div class="row">
+                <div class="row align-items-end">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Enable Quiz</label>
                         <div class="form-check form-switch">
-                            <input type="checkbox"
-                                   name="hasQuiz"
+                            @* ✅ FIX 2: disabled when qCount == 0 prevents phantom "Enabled" badge
+                            Also uses separate hidden input so unchecked = false (not missing) *@
+                            <input type="checkbox" name="hasQuizToggle" id="hasQuizSwitch"
                                    class="form-check-input"
-                            @(Model.HasQuiz ? "checked" : "")
-                                   id="hasQuizSwitch" />
+                            @(isReallyEnabled ? "checked" : "")
+                            @(qCount == 0 ? "disabled" : "") />
                             <label class="form-check-label" for="hasQuizSwitch">
-                                Quiz @(Model.HasQuiz ? "Enabled" : "Disabled")
+                                @if (qCount == 0)
+                                {
+                                    <span class="text-muted">Add questions first</span>
+                                }
+                                else
+                                {
+                                    <span>Quiz @(isReallyEnabled ? "Enabled" : "Disabled")</span>
+                                }
                             </label>
                         </div>
+                        @if (qCount == 0)
+                        {
+                            <small class="text-danger">
+                                <i class="fas fa-lock me-1"></i>Cannot enable without questions
+                            </small>
+                        }
                     </div>
-
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Pass Score (%)</label>
-                        <input type="number"
-                               name="passScore"
-                               class="form-control"
-                               value="75"
-                               min="0"
-                               max="100" />
+                        <input type="number" name="passScore" class="form-control"
+                               value="@(Model.PassScore > 0 ? Model.PassScore : 75)"
+                               min="0" max="100" />
+                        <small class="text-muted">Students need this score to unlock the next module</small>
                     </div>
-
                     <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success w-100">
+                        <button type="submit" class="btn btn-success w-100"
+                        @(qCount == 0 ? "disabled" : "")>
                             <i class="fas fa-save me-2"></i>Save Settings
                         </button>
                     </div>
@@ -66,46 +92,38 @@
         </div>
     </div>
 
-    <!-- Questions List -->
-    <div class="card shadow-sm border-0">
+    @* ── Questions List ── *@
+    <div class="card shadow-sm border-0 leaderboard-card">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>Quiz Questions
-            </h5>
-            <span class="badge bg-light text-dark">
-                @ViewBag.Questions?.Count ?? 0 Questions
-            </span>
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Quiz Questions</h5>
+            <span class="badge bg-light text-dark">@qCount Question(s)</span>
         </div>
         <div class="card-body p-0">
-
-            @if (ViewBag.Questions != null && ViewBag.Questions.Count > 0)
+            @if (qCount > 0)
             {
+                var questions = ViewBag.Questions as List<SPT.Models.QuizQuestion>;
                 <div class="list-group list-group-flush">
-                    @for (int i = 0; i < ViewBag.Questions.Count; i++)
+                    @for (int i = 0; i < questions.Count; i++)
                     {
-                        var question = ViewBag.Questions[i];
-
+                        var q = questions[i];
                         <div class="list-group-item">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div class="flex-grow-1">
                                     <h6 class="mb-2">
                                         <span class="badge bg-primary me-2">Q@(i + 1)</span>
-                                        @question.QuestionText
+                                        @q.QuestionText
                                     </h6>
-
                                     <div class="ms-4">
-                                        @if (question.Options != null)
+                                        @if (q.Options != null)
                                         {
-                                            @foreach (var option in question.Options)
+                                            @foreach (var opt in q.Options)
                                             {
                                                 <div class="form-check mb-1">
-                                                    <input class="form-check-input"
-                                                           type="radio"
-                                                           disabled
-                                                    @(option.IsCorrect ? "checked" : "") />
-                                                    <label class="form-check-label @(option.IsCorrect ? "text-success fw-bold" : "")">
-                                                        @option.OptionText
-                                                        @if (option.IsCorrect)
+                                                    <input class="form-check-input" type="radio" disabled
+                                                    @(opt.IsCorrect ? "checked" : "") />
+                                                    <label class="form-check-label @(opt.IsCorrect ? "text-success fw-bold" : "")">
+                                                        @opt.OptionText
+                                                        @if (opt.IsCorrect)
                                                         {
                                                             <i class="fas fa-check-circle text-success ms-1"></i>
                                                         }
@@ -115,19 +133,17 @@
                                         }
                                     </div>
                                 </div>
-
-                                <div class="ms-3">
-                                    <a asp-action="EditQuestion"
-                                       asp-route-id="@question.Id"
-                                       class="btn btn-sm btn-outline-warning me-1">
+                                <div class="ms-3 d-flex gap-1">
+                                    <a asp-controller="Quiz" asp-action="EditQuestion"
+                                       asp-route-id="@q.Id"
+                                       class="btn btn-sm btn-outline-warning">
                                         <i class="fas fa-edit"></i>
                                     </a>
-
-                                    <form asp-action="DeleteQuestion"
-                                          method="post"
-                                          class="d-inline"
+                                    <form asp-controller="Quiz" asp-action="DeleteQuestion"
+                                          method="post" class="d-inline"
                                           onsubmit="return confirm('Delete this question?');">
-                                        <input type="hidden" name="id" value="@question.Id" />
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@q.Id" />
                                         <input type="hidden" name="moduleId" value="@Model.Id" />
                                         <button type="submit" class="btn btn-sm btn-outline-danger">
                                             <i class="fas fa-trash"></i>
@@ -142,12 +158,15 @@
             else
             {
                 <div class="text-center py-5">
-                    <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                    <i class="fas fa-question-circle fa-3x text-muted mb-3 d-block opacity-25"></i>
                     <h5 class="text-muted">No questions added yet</h5>
-                    <p class="text-muted">Click "Add New Question" to create your first quiz question</p>
+                    <p class="text-muted small">Click "Add New Question" above to get started.</p>
+                    <a asp-controller="Quiz" asp-action="CreateQuestion"
+                       asp-route-moduleId="@Model.Id" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-2"></i>Add First Question
+                    </a>
                 </div>
             }
-
         </div>
     </div>
 </div>

@@ -27,8 +27,9 @@ namespace SPT.Controllers
             _env = env;
             _auditService = auditService;
         }
+
         // =========================
-        // MENTOR DASHBOARD (ADMIN VIEW — FILTERED)
+        // MENTOR DASHBOARD
         // =========================
         public async Task<IActionResult> Dashboard()
         {
@@ -49,35 +50,26 @@ namespace SPT.Controllers
                 .ToListAsync();
 
             var modules = await _context.SyllabusModules.ToListAsync();
-
             var model = new AdminDashboardViewModel();
-
             model.TotalStudents = students.Count;
             model.TotalMentors = 1;
 
             var sevenDaysAgo = DateTime.UtcNow.Date.AddDays(-6);
 
             model.PendingLogs = await _context.ProgressLogs
-                .Where(l => !l.IsApproved &&
-                            studentQuery.Select(s => s.Id).Contains(l.StudentId))
+                .Where(l => !l.IsApproved && studentQuery.Select(s => s.Id).Contains(l.StudentId))
                 .CountAsync();
 
             model.OpenTickets = await _context.SupportTickets
-                .Where(t => !t.IsResolved &&
-                            studentQuery.Select(s => s.Id).Contains(t.StudentId))
+                .Where(t => !t.IsResolved && studentQuery.Select(s => s.Id).Contains(t.StudentId))
                 .CountAsync();
 
             var performance = new List<StudentPerformanceDTO>();
-
             foreach (var s in students)
             {
-                var recent = s.ProgressLogs
-                    .Where(l => l.IsApproved && l.Date >= sevenDaysAgo)
-                    .ToList();
-
+                var recent = s.ProgressLogs.Where(l => l.IsApproved && l.Date >= sevenDaysAgo).ToList();
                 var hours = recent.Sum(l => l.Hours);
                 var checkins = recent.Select(l => l.Date.Date).Distinct().Count();
-
                 var totalMods = modules.Count(m => m.TrackId == s.TrackId);
                 var completed = s.ModuleCompletions.Count(mc => mc.IsCompleted);
 
@@ -96,31 +88,19 @@ namespace SPT.Controllers
 
             model.StudentPerformance = performance;
             model.ActiveStudents = performance.Count(p => p.Status == "Active");
-            model.AvgConsistency = performance.Any()
-                ? (decimal)performance.Average(p => p.ConsistencyScore)
-                : 0;
+            model.AvgConsistency = performance.Any() ? (decimal)performance.Average(p => p.ConsistencyScore) : 0;
 
-            // charts
-            model.TrackLabels = performance.GroupBy(p => p.Track)
-                .Select(g => g.Key)
-                .ToArray();
-
-            model.TrackCounts = performance.GroupBy(p => p.Track)
-                .Select(g => g.Count())
-                .ToArray();
-
+            model.TrackLabels = performance.GroupBy(p => p.Track).Select(g => g.Key).ToArray();
+            model.TrackCounts = performance.GroupBy(p => p.Track).Select(g => g.Count()).ToArray();
             model.ActivityDates = new string[7];
             model.ActivityCounts = new int[7];
 
             for (int i = 0; i < 7; i++)
             {
                 var d = sevenDaysAgo.AddDays(i);
-
                 model.ActivityDates[i] = d.ToString("MMM dd");
-
                 model.ActivityCounts[i] = await _context.ProgressLogs
-                    .Where(l => l.Date.Date == d &&
-                                studentQuery.Select(s => s.Id).Contains(l.StudentId))
+                    .Where(l => l.Date.Date == d && studentQuery.Select(s => s.Id).Contains(l.StudentId))
                     .CountAsync();
             }
 
@@ -134,17 +114,13 @@ namespace SPT.Controllers
         {
             var userId = _userManager.GetUserId(User);
             return await _context.Mentors
-     .Include(m => m.User)
-     .FirstOrDefaultAsync(m => m.UserId == userId);
-
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.UserId == userId);
         }
-
-
 
         // =========================
         // MY STUDENTS LIST
         // =========================
-       
         [HttpGet]
         public async Task<IActionResult> Students()
         {
@@ -165,33 +141,20 @@ namespace SPT.Controllers
                 .Include(s => s.ModuleCompletions)
                 .ToListAsync();
 
-         
-
             var trackModuleCounts = await _context.SyllabusModules
                 .Where(m => m.IsActive)
                 .GroupBy(m => m.TrackId)
                 .ToDictionaryAsync(g => g.Key, g => g.Count());
 
-   
-
             var modelList = new List<StudentPerformanceViewModel>();
-
-            var today = DateTime.UtcNow.Date;
-            var last7Days = today.AddDays(-7);
+            var last7Days = DateTime.UtcNow.Date.AddDays(-7);
 
             foreach (var s in students)
             {
-                var recentLogs = s.ProgressLogs
-                    .Where(l => l.Date >= last7Days && l.IsApproved)
-                    .ToList();
-
+                var recentLogs = s.ProgressLogs.Where(l => l.Date >= last7Days && l.IsApproved).ToList();
                 decimal hours7Days = recentLogs.Sum(l => l.Hours);
                 int checkIns7Days = recentLogs.Select(l => l.Date.Date).Distinct().Count();
-
-                int totalMods = trackModuleCounts.ContainsKey(s.TrackId)
-                    ? trackModuleCounts[s.TrackId]
-                    : 1;
-
+                int totalMods = trackModuleCounts.ContainsKey(s.TrackId) ? trackModuleCounts[s.TrackId] : 1;
                 int completedMods = s.ModuleCompletions.Count(mc => mc.IsCompleted);
 
                 int consistency = 0;
@@ -220,30 +183,16 @@ namespace SPT.Controllers
                 });
             }
 
-
-
-            // =========================
-            // DASHBOARD METRICS
-            // =========================
-
             var pendingLogs = await _context.ProgressLogs
                 .Include(l => l.Student)
                 .Include(l => l.Module)
-                .Where(l => !l.IsApproved &&
-                            studentQuery.Select(s => s.Id).Contains(l.StudentId))
+                .Where(l => !l.IsApproved && studentQuery.Select(s => s.Id).Contains(l.StudentId))
                 .OrderByDescending(l => l.Date)
                 .Take(10)
                 .ToListAsync();
 
             int pendingCount = pendingLogs.Count;
-
-            int avgConsistency = modelList.Count == 0
-                ? 0
-                : (int)modelList.Average(x => x.ConsistencyScore);
-
-            // =========================
-            // VIEWBAGS
-            // =========================
+            int avgConsistency = modelList.Count == 0 ? 0 : (int)modelList.Average(x => x.ConsistencyScore);
 
             ViewBag.MyStudentsCount = students.Count;
             ViewBag.PendingLogs = pendingCount;
@@ -254,7 +203,7 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // MENTOR: PROGRESS LOGS (scoped to mentor's students)
+        // MENTOR: PROGRESS LOGS
         // =========================
         [HttpGet]
         public async Task<IActionResult> ProgressLogs(string status = "All", string search = "")
@@ -262,7 +211,6 @@ namespace SPT.Controllers
             var mentor = await GetCurrentMentorAsync();
             if (mentor == null) return View("Error");
 
-            // Build the set of student IDs this mentor can see
             IQueryable<Student> studentScope;
             if (mentor.Specialization == "General" || mentor.TrackId == null)
                 studentScope = _context.Students;
@@ -277,23 +225,19 @@ namespace SPT.Controllers
                 .Where(l => studentIds.Contains(l.StudentId))
                 .AsQueryable();
 
-            if (status == "Pending")
-                query = query.Where(l => !l.IsApproved);
-            else if (status == "Approved")
-                query = query.Where(l => l.IsApproved);
-
-            if (!string.IsNullOrEmpty(search))
-                query = query.Where(l => l.Student.FullName.Contains(search));
+            if (status == "Pending") query = query.Where(l => !l.IsApproved);
+            else if (status == "Approved") query = query.Where(l => l.IsApproved);
+            if (!string.IsNullOrEmpty(search)) query = query.Where(l => l.Student.FullName.Contains(search));
 
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentSearch = search;
 
             var logs = await query.OrderByDescending(l => l.Date).ToListAsync();
-            return View("~/Views/Admin/ProgressLogs.cshtml", logs); // reuse the same view
+            return View("~/Views/Admin/ProgressLogs.cshtml", logs);
         }
 
         // =========================
-        // MENTOR: UPDATE LOG (scoped — replaces broken ApproveLog)
+        // MENTOR: UPDATE LOG
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -309,7 +253,6 @@ namespace SPT.Controllers
 
             if (log == null) return NotFound();
 
-            // Security: ensure mentor owns this student's track or is assigned
             bool canAccess = mentor.Specialization == "General"
                 || log.Student.MentorId == mentor.Id
                 || log.Student.TrackId == mentor.TrackId;
@@ -345,8 +288,7 @@ namespace SPT.Controllers
             if (quizScore.HasValue && log.PracticeDone) log.QuizScore = quizScore;
 
             var mentorResponse = Request.Form["mentorResponse"].ToString();
-            if (!string.IsNullOrWhiteSpace(mentorResponse))
-                log.MentorResponse = mentorResponse;
+            if (!string.IsNullOrWhiteSpace(mentorResponse)) log.MentorResponse = mentorResponse;
 
             log.IsApproved = true;
             log.UpdatedAt = DateTime.UtcNow;
@@ -386,12 +328,7 @@ namespace SPT.Controllers
             var log = await _context.ProgressLogs.Include(l => l.Student).FirstOrDefaultAsync(l => l.Id == id);
 
             if (log == null) return NotFound();
-
-            // 🔒 SECURITY CHECK: Ensure this student belongs to this mentor
-            if (log.Student.MentorId != mentor?.Id)
-            {
-                return Forbid();
-            }
+            if (log.Student.MentorId != mentor?.Id) return Forbid();
 
             if (action == "Reject")
             {
@@ -407,20 +344,27 @@ namespace SPT.Controllers
 
             await _context.SaveChangesAsync();
             await _auditService.LogAsync(
-    "LOG_APPROVED",
-    $"Approved log #{log.Id} for {log.Student.FullName}",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
+                "LOG_APPROVED",
+                $"Approved log #{log.Id} for {log.Student.FullName}",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
 
             return RedirectToAction(nameof(Dashboard));
         }
 
         // =========================
-        // QUIZ SCORES — Mentor sees only their track's students
+        // QUIZ SCORES — FIXED
+        // Two bugs fixed:
+        //   1. Added `int page = 1` to method signature
+        //   2. Added `int pageSize = 15` as first line inside method body
+        //   3. Count total BEFORE Skip/Take
+        //   4. Apply Skip/Take to the query
         // =========================
         [HttpGet]
-        public async Task<IActionResult> QuizScores(string search = "")
+        public async Task<IActionResult> QuizScores(string search = "", int page = 1)
         {
+            int pageSize = 15;
+
             var mentor = await GetCurrentMentorAsync();
             if (mentor == null) return View("Error");
 
@@ -442,11 +386,64 @@ namespace SPT.Controllers
             if (!string.IsNullOrEmpty(search))
                 query = query.Where(l => l.Student.FullName.Contains(search));
 
+            int total = await query.CountAsync();
+
             ViewBag.Search = search;
             ViewBag.MentorName = mentor.FullName;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
 
-            var logs = await query.OrderByDescending(l => l.Date).ToListAsync();
+            var logs = await query
+                .OrderByDescending(l => l.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
             return View(logs);
+        }
+
+        // =========================
+        // MODULE QUIZ SCORES — Mentor (QuizAttempts table)
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> ModuleQuizScores(string search = "", int page = 1)
+        {
+            int pageSize = 15;
+
+            var mentor = await GetCurrentMentorAsync();
+            if (mentor == null) return View("Error");
+
+            IQueryable<Student> studentScope;
+            if (mentor.Specialization == "General" || mentor.TrackId == null)
+                studentScope = _context.Students;
+            else
+                studentScope = _context.Students
+                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
+
+            var studentIds = await studentScope.Select(s => s.Id).ToListAsync();
+
+            var query = _context.QuizAttempts
+                .Include(a => a.Student).ThenInclude(s => s.Track)
+                .Include(a => a.Module)
+                .Where(a => studentIds.Contains(a.StudentId))
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(a => a.Student.FullName.Contains(search));
+
+            int total = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(a => a.AttemptedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            ViewBag.Search = search;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            return View(data);
         }
 
         // =========================
@@ -458,7 +455,6 @@ namespace SPT.Controllers
             if (mentor == null) return RedirectToAction("Dashboard");
             return View(mentor);
         }
-
 
         public async Task<IActionResult> Messages()
         {
@@ -493,13 +489,12 @@ namespace SPT.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             var mentor = await _context.Mentors
-    .Include(m => m.User)
-    .Include(m => m.Track)
-    .FirstOrDefaultAsync(m => m.UserId == user.Id);
+                .Include(m => m.User)
+                .Include(m => m.Track)
+                .FirstOrDefaultAsync(m => m.UserId == user.Id);
 
             if (mentor == null) return NotFound();
 
-            // 1. Picture Logic
             if (profilePicture != null && profilePicture.Length > 0)
             {
                 var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
@@ -511,17 +506,12 @@ namespace SPT.Controllers
                 }
                 mentor.ProfilePicture = $"/uploads/profiles/{fileName}";
                 _context.Update(mentor);
-                await _auditService.LogAsync(
-    "MENTOR_PROFILE_UPDATED",
-    $"Mentor updated profile",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
-
+                await _auditService.LogAsync("MENTOR_PROFILE_UPDATED", $"Mentor updated profile",
+                    User.Identity.Name, _userManager.GetUserId(User));
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Profile picture updated!";
             }
 
-            // 2. Password Logic
             if (!string.IsNullOrEmpty(newPassword))
             {
                 if (string.IsNullOrEmpty(currentPassword))
@@ -537,14 +527,11 @@ namespace SPT.Controllers
                 }
                 TempData["Success"] = "Password changed successfully!";
             }
-            await _auditService.LogAsync(
-  "PASSWORD_CHANGED",
-  "User changed password",
-  User.Identity.Name,
-  _userManager.GetUserId(User));
+
+            await _auditService.LogAsync("PASSWORD_CHANGED", "User changed password",
+                User.Identity.Name, _userManager.GetUserId(User));
 
             return RedirectToAction(nameof(Profile));
-          
         }
     }
 }

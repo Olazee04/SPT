@@ -1,6 +1,11 @@
 ﻿@model List<SPT.Models.ProgressLog>
 @{
     ViewData["Title"] = "Quiz Scores";
+    int total = Model.Count;
+    int passCount = Model.Count(l => l.QuizScore >= 70);
+    int failCount = total - passCount;
+    double passRate = total > 0 ? Math.Round((double)passCount / total * 100, 1) : 0;
+    double avgScore = total > 0 ? Math.Round(Model.Average(l => (double)l.QuizScore), 1) : 0;
 }
 
 <div class="container-fluid p-4">
@@ -11,6 +16,73 @@
         </div>
     </div>
 
+    @* ── STAT CARDS ── *@
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-primary leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Attempts</h6>
+                    <h2 class="fw-bold text-primary mb-0">@total</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-success leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Passed</h6>
+                    <h2 class="fw-bold text-success mb-0">@passCount</h2>
+                    <small class="text-muted">@passRate% pass rate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-danger leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Failed</h6>
+                    <h2 class="fw-bold text-danger mb-0">@failCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-warning leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Avg Score</h6>
+                    <h2 class="fw-bold text-warning mb-0">@avgScore%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── MINI CHART ── *@
+    @if (total > 0)
+    {
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 leaderboard-card">
+                    <div class="card-header fw-bold">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>Pass vs Fail
+                    </div>
+                    <div class="card-body d-flex justify-content-center">
+                        <div style="height:200px;width:200px;">
+                            <canvas id="mentorPassFailChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0 leaderboard-card">
+                    <div class="card-header fw-bold">
+                        <i class="fas fa-chart-bar me-2 text-primary"></i>Score Distribution
+                    </div>
+                    <div class="card-body">
+                        <canvas id="mentorScoreChart" style="max-height:200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ── ORIGINAL FILTER FORM — UNCHANGED ── *@
     <div class="custom-card p-3 mb-4">
         <form method="get" class="d-flex gap-2">
             <input type="text" name="search" value="@ViewBag.Search"
@@ -20,10 +92,11 @@
         </form>
     </div>
 
-    <div class="card shadow-sm border-0">
+    @* ── ORIGINAL TABLE — thead bg-light removed ── *@
+    <div class="card shadow-sm border-0 leaderboard-card">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light text-muted small text-uppercase">
+                <thead>
                     <tr>
                         <th class="ps-4">Student</th>
                         <th>Track</th>
@@ -40,7 +113,8 @@
                         {
                             <tr>
                                 <td class="ps-4 fw-bold">@log.Student?.FullName</td>
-                                <td><span class="badge bg-light border fw-bold">@log.Student?.Track?.Code</span></td>
+                                @* FIX: bg-light border → bg-secondary *@
+                                <td><span class="badge bg-secondary opacity-75 fw-bold">@log.Student?.Track?.Code</span></td>
                                 <td class="small">@(log.Module?.ModuleCode ?? "—")</td>
                                 <td class="small text-muted">@log.Date.ToString("MMM dd, yyyy")</td>
                                 <td class="text-center fw-bold">@log.QuizScore%</td>
@@ -73,5 +147,88 @@
                 </tbody>
             </table>
         </div>
+
+        @* PAGINATION *@
+        @if (ViewBag.TotalPages > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <small class="text-muted">Page @ViewBag.CurrentPage of @ViewBag.TotalPages</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(ViewBag.CurrentPage <= 1 ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(ViewBag.CurrentPage - 1)&search=@ViewBag.Search">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        @for (int p = 1; p <= (int)ViewBag.TotalPages; p++)
+                        {
+                            <li class="page-item @(p == (int)ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="?page=@p&search=@ViewBag.Search">@p</a>
+                            </li>
+                        }
+                        <li class="page-item @(ViewBag.CurrentPage >= ViewBag.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(ViewBag.CurrentPage + 1)&search=@ViewBag.Search">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        var labelColor = isDark ? '#94a3b8' : '#6c757d';
+        var gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+
+        new Chart(document.getElementById('mentorPassFailChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Pass', 'Fail'],
+                datasets: [{
+                    data: [@passCount, @failCount],
+                    backgroundColor: ['#198754', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: labelColor } } }
+            }
+        });
+
+        @{
+            int mb1 = Model.Count(l => l.QuizScore < 40);
+            int mb2 = Model.Count(l => l.QuizScore >= 40 && l.QuizScore < 60);
+            int mb3 = Model.Count(l => l.QuizScore >= 60 && l.QuizScore < 70);
+            int mb4 = Model.Count(l => l.QuizScore >= 70 && l.QuizScore < 85);
+            int mb5 = Model.Count(l => l.QuizScore >= 85);
+        }
+        new Chart(document.getElementById('mentorScoreChart'), {
+            type: 'bar',
+            data: {
+                labels: ['0–39%', '40–59%', '60–69%', '70–84%', '85–100%'],
+                datasets: [{
+                    label: 'Students',
+                    data: [@mb1, @mb2, @mb3, @mb4, @mb5],
+                    backgroundColor: ['#dc3545','#fd7e14','#ffc107','#20c997','#198754'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: labelColor }, grid: { color: gridColor } },
+                    x: { ticks: { color: labelColor }, grid: { color: 'transparent' } }
+                }
+            }
+        });
+    </script>
+}

@@ -11,6 +11,11 @@
     --bg-secondary: #f8f9fa;
     --card-bg: #ffffff;
     --border-color: #e5e7eb;
+    --card-bg-dark: #f0f2f5;
+    --card-text-light: #212529;
+    --card-muted-text: #6c757d;
+    --badge-bg: #0d6efd;
+    --leaderboard-row-border: rgba(0,0,0,0.06);
 }
 
 /* DARK MODE */
@@ -21,26 +26,11 @@
     --bg-secondary: #111827;
     --card-bg: #1f2933;
     --border-color: #374151;
-}
-
-/* ===========================
-   THEME-AWARE VARIABLES
-   =========================== */
-
-/* LIGHT MODE (FIXED TYPO) */
-:root[data-bs-theme="light"] {
-    --card-bg-dark: #1f2328;
-    --card-text-light: #ffffff;
-    --card-muted-text: #ced4da;
-    --badge-bg: #0d6efd;
-}
-
-/* DARK MODE */
-:root[data-bs-theme="dark"] {
     --card-bg-dark: #1c1f23;
     --card-text-light: #f8f9fa;
     --card-muted-text: #adb5bd;
     --badge-bg: #4dabf7;
+    --leaderboard-row-border: rgba(255,255,255,0.06);
 }
 
 html, body {
@@ -67,7 +57,7 @@ html, body {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
-    color: var(--text-primary);
+    color: #fff;
     border-right: 1px solid rgba(255,255,255,0.1);
     display: flex;
     flex-direction: column;
@@ -76,7 +66,6 @@ html, body {
     height: 100vh;
     overflow-y: auto;
 }
-
 
 .sidebar-heading {
     padding: 1.5rem;
@@ -97,7 +86,11 @@ html, body {
     padding: 1.5rem 1rem 0.5rem 1.5rem;
 }
 
-.list-group-item {
+/* ===========================
+   SIDEBAR LIST ITEMS ONLY
+   FIX: was applied globally — now scoped to #sidebar-wrapper only
+   =========================== */
+#sidebar-wrapper .list-group-item {
     background-color: transparent !important;
     color: rgba(255,255,255,0.8) !important;
     border: none !important;
@@ -108,29 +101,62 @@ html, body {
     align-items: center;
 }
 
-    .list-group-item:hover {
+    #sidebar-wrapper .list-group-item:hover {
         background-color: rgba(255,255,255,0.1) !important;
         color: #fff !important;
-        padding-left: 30px; /* Slide effect */
+        padding-left: 30px;
         border-left: 4px solid var(--primary-color) !important;
     }
-    /* Active State */
 
-    .list-group-item.active-link {
+    #sidebar-wrapper .list-group-item.active-link {
         background-color: var(--primary-color) !important;
         color: #fff !important;
         font-weight: 600;
         box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        border-radius: 0 25px 25px 0; /* Modern curved tab look */
+        border-radius: 0 25px 25px 0;
         margin-right: 10px;
     }
 
-    .list-group-item i {
+    #sidebar-wrapper .list-group-item i {
         width: 25px;
         text-align: center;
         margin-right: 10px;
     }
-/* Sidebar Footer */
+
+/* ===========================
+   PAGE CONTENT LIST ITEMS
+   FIX: leaderboard, modals, and other page list-groups
+   use theme variables so they work in both modes
+   =========================== */
+#page-content-wrapper .list-group-item {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+    #page-content-wrapper .list-group-item:hover {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+/* Modal list items (Study Materials) */
+.modal-content .list-group-item {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+    .modal-content .list-group-item:hover {
+        background-color: var(--bg-secondary) !important;
+    }
+
+    .modal-content .list-group-item h6 {
+        color: var(--text-primary) !important;
+    }
+
+    .modal-content .list-group-item small {
+        color: var(--text-secondary) !important;
+    }
 
 .sidebar-footer {
     margin-top: auto;
@@ -164,6 +190,8 @@ html, body {
     font-weight: 700;
     color: var(--text-primary);
     border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
 }
 
 /* ===========================
@@ -175,26 +203,31 @@ html, body {
     color: var(--text-primary);
     border-color: var(--border-color);
 }
-#page-content-wrapper .bg-white,
+
 #page-content-wrapper .bg-light {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-bs-theme="dark"] #page-content-wrapper .bg-white {
     background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
 }
 
 #page-content-wrapper .bg-dark {
     background-color: var(--card-bg-dark) !important;
+    color: var(--card-text-light) !important;
 }
 
-
-/* Profile Image Area */
 .profile-img-container {
     width: 150px;
     height: 150px;
     border-radius: 50%;
     margin: 0 auto 20px;
     overflow: hidden;
-    border: 5px solid #fff;
+    border: 5px solid var(--border-color);
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-    background-color: #f0f0f0;
+    background-color: var(--bg-secondary);
 }
 
     .profile-img-container img {
@@ -203,17 +236,16 @@ html, body {
         object-fit: cover;
     }
 
-/* Custom Form Rows in Profile */
 .form-row-custom {
     display: flex;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     padding: 12px 0;
 }
 
 .form-label-custom {
     width: 140px;
     font-weight: 600;
-    color: #6c757d;
+    color: var(--text-secondary);
     font-size: 0.9rem;
 }
 
@@ -223,7 +255,6 @@ html, body {
     color: var(--text-primary);
 }
 
-/* Big Action Buttons */
 .btn-action-lg {
     background-color: var(--primary-color);
     color: white;
@@ -245,6 +276,8 @@ html, body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
+    background-color: var(--primary-color);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -255,19 +288,19 @@ html, body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #fff;
-    border: 1px solid #eee;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #555;
+    color: var(--text-primary);
     text-decoration: none;
     transition: 0.2s;
 }
 
     .icon-btn:hover {
-        background: #f0f0f0;
-        color: #000;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
     }
 
 /* ===========================
@@ -275,14 +308,14 @@ html, body {
    =========================== */
 
 .leaderboard-card {
-    background-color: var(--card-bg-dark);
-    color: var(--card-text-light);
+    background-color: var(--card-bg-dark) !important;
+    color: var(--card-text-light) !important;
 }
 
     .leaderboard-card .list-group-item {
         background-color: transparent !important;
         color: var(--card-text-light) !important;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid var(--leaderboard-row-border);
         font-weight: 600;
     }
 
@@ -297,18 +330,45 @@ html, body {
         font-weight: 700;
     }
 
+    .leaderboard-card td,
+    .leaderboard-card th {
+        color: var(--card-text-light) !important;
+        border-color: var(--leaderboard-row-border) !important;
+    }
+
+    .leaderboard-card .badge.badge-light,
+    .leaderboard-card .badge.bg-light {
+        background-color: rgba(255,255,255,0.15) !important;
+        color: var(--card-text-light) !important;
+    }
+
 /* ===========================
-   GLOBAL THEME TEXT FIXES
+   LEADERBOARD NAME & COHORT
+   FIX: visible in both light and dark mode
+   =========================== */
 
-
-/* Main content wrapper only */
-#page-content-wrapper,
-#page-content-wrapper *:not(.sidebar-wrapper):not(.top-navbar) {
-    /* Force theme-aware text */
-    color: var(--text-primary);
+.lb-name {
+    color: var(--text-primary) !important;
+    font-weight: 500;
 }
 
-    /* Fix Bootstrap text helpers */
+.lb-sub {
+    font-size: .72rem;
+    color: var(--text-secondary) !important;
+}
+
+/* ===========================
+   GLOBAL THEME TEXT FIXES
+   =========================== */
+
+#page-content-wrapper {
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    flex: 1;
+    min-width: 0;
+}
+
+    #page-content-wrapper .text-gray-800,
     #page-content-wrapper .text-dark {
         color: var(--text-primary) !important;
     }
@@ -317,34 +377,115 @@ html, body {
         color: var(--text-secondary) !important;
     }
 
-    #page-content-wrapper .text-white {
-        color: var(--card-text-light) !important;
-    }
-  
+.bg-primary .text-white,
+.bg-success .text-white,
+.bg-danger .text-white,
+.bg-warning .text-white,
+.card-header .text-white,
+.modal-header .text-white {
+    color: #ffffff !important;
+}
 
-    #page-content-wrapper .table {
-        color: var(--text-primary);
-        background-color: transparent;
-    }
+#page-content-wrapper .table {
+    color: var(--text-primary);
+    background-color: transparent;
+}
 
-    #page-content-wrapper .table-striped > tbody > tr:nth-of-type(odd) {
-        background-color: rgba(0,0,0,0.03);
-    }
+#page-content-wrapper .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(0,0,0,0.03);
+}
 
 [data-bs-theme="dark"] #page-content-wrapper .table-striped > tbody > tr:nth-of-type(odd) {
-    background-color: rgba(255,255,255,0.05);
+    background-color: rgba(255,255,255,0.04);
 }
 
-#page-content-wrapper thead {
-    background-color: var(--card-bg);
-    color: var(--text-primary);
+#page-content-wrapper thead th {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
 }
 
-#page-content-wrapper .card {
-    background-color: var(--card-bg);
+#page-content-wrapper .table td,
+#page-content-wrapper .table th {
+    border-color: var(--border-color);
+}
+
+#page-content-wrapper .form-control,
+#page-content-wrapper .form-select {
+    background-color: var(--bg-secondary);
     color: var(--text-primary);
     border-color: var(--border-color);
 }
+
+    #page-content-wrapper .form-control:focus,
+    #page-content-wrapper .form-select:focus {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(67,97,238,0.25);
+    }
+
+    #page-content-wrapper .form-control[readonly],
+    #page-content-wrapper .form-control.bg-light {
+        background-color: var(--bg-secondary) !important;
+        color: var(--text-secondary) !important;
+    }
+
+/* ===========================
+   MODAL THEME
+   =========================== */
+
+.modal-content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.modal-header {
+    border-color: var(--border-color);
+}
+
+.modal-body .bg-light {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Study Materials modal resource title */
+.modal-body h6 {
+    color: var(--text-primary) !important;
+}
+
+.modal-body small.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+#page-content-wrapper .border-bottom {
+    border-color: var(--border-color) !important;
+}
+
+#page-content-wrapper .progress {
+    background-color: var(--bg-secondary);
+}
+
+#page-content-wrapper .input-group-text {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+/* ===========================
+   MODULE LOCKED (Curriculum)
+   =========================== */
+
+.module-locked {
+    opacity: 0.65;
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ===========================
+   ANIMATIONS
+   =========================== */
 
 .hero-animate {
     animation: fadeUp 1s ease forwards;
@@ -361,9 +502,6 @@ html, body {
         transform: translateY(0);
     }
 }
-/* =======================
-   HOMEPAGE HERO
-======================= */
 
 .hero-section {
     padding: 100px 20px;
@@ -378,19 +516,18 @@ html, body {
     .hero-section h1 {
         font-size: 3rem;
         font-weight: 800;
+        color: #fff;
     }
 
     .hero-section p {
         font-size: 1.2rem;
         opacity: 0.95;
+        color: #fff;
     }
-
-/* =======================
-   HOMEPAGE CARDS
-======================= */
 
 .home-card {
     background: var(--card-bg);
+    color: var(--text-primary);
     border-radius: 18px;
     padding: 30px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
@@ -402,10 +539,6 @@ html, body {
         transform: translateY(-6px);
         box-shadow: 0 20px 40px rgba(0,0,0,0.12);
     }
-
-/* =======================
-   IMAGE GALLERY
-======================= */
 
 .gallery-img {
     width: 100%;
@@ -420,9 +553,15 @@ html, body {
         transform: scale(1.05);
     }
 
-/* =======================
-   FADE ANIMATION
-======================= */
+.transition-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+    .transition-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+    }
 
 @keyframes fadeIn {
     from {
@@ -435,3 +574,115 @@ html, body {
         transform: translateY(0);
     }
 }
+
+/* ===========================
+   NOTIFICATION DROPDOWN
+   =========================== */
+
+.notif-dropdown {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+.notif-footer {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+.notif-item {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+    .notif-item:hover {
+        background-color: var(--bg-secondary) !important;
+    }
+
+.notif-read {
+    opacity: 0.7;
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-secondary) !important;
+}
+
+.notif-unread {
+    background-color: rgba(67, 97, 238, 0.07) !important;
+    border-left: 4px solid var(--primary-color) !important;
+    font-weight: 600;
+}
+
+.notif-message {
+    color: var(--text-primary) !important;
+}
+
+/* ===========================
+   DROPDOWN MENU
+   =========================== */
+
+.dropdown-menu {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+}
+
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+/* ===========================
+   PAGINATION
+   =========================== */
+
+.page-link {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+    .page-link:hover {
+        background-color: var(--bg-secondary);
+        border-color: var(--border-color);
+        color: var(--primary-color);
+    }
+
+.page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+/* ===========================
+   SUPPORT TICKETS
+   =========================== */
+
+.ticket-resolved {
+    background-color: var(--bg-secondary) !important;
+    opacity: 0.85;
+}
+
+.support-tabs .nav-link {
+    color: var(--text-secondary);
+}
+
+    .support-tabs .nav-link.active {
+        color: var(--primary-color);
+        background-color: var(--card-bg);
+        border-color: var(--border-color) var(--border-color) var(--card-bg);
+    }
+
+    .support-tabs .nav-link:hover:not(.active) {
+        color: var(--text-primary);
+        background-color: var(--bg-secondary);
+    }

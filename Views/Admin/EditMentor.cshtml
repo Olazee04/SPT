@@ -6,81 +6,83 @@
 <div class="container mt-4">
     <div class="card shadow">
         <div class="card-header bg-warning">
-            <h3>Edit Mentor</h3>
+            <h3><i class="fas fa-user-edit me-2"></i> Edit Mentor</h3>
         </div>
-
         <div class="card-body">
             <form asp-action="EditMentor" method="post" enctype="multipart/form-data">
-
                 <input type="hidden" asp-for="Id" />
 
-                <h5 class="text-primary border-bottom pb-2 mb-3">Login Details</h5>
-
+                <h5 class="text-primary border-bottom pb-2 mb-3">Login Details (Read-Only)</h5>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label>Email</label>
-                        <input value="@Model.User?.Email" class="form-control" readonly />
+                        <label class="form-label fw-bold">Username</label>
+                        <input value="@Model.User?.UserName" class="form-control bg-secondary text-white" readonly />
+                        <small class="text-muted">Username cannot be changed.</small>
                     </div>
-
                     <div class="col-md-6 mb-3">
-                        <label>Date Joined</label>
-                        <input value="@Model.DateJoined.ToString("yyyy-MM-dd")" class="form-control" readonly />
+                        <label class="form-label fw-bold">Email</label>
+                        <input value="@Model.User?.Email" class="form-control bg-secondary text-white" readonly />
+                        <small class="text-muted">Contact system admin to change email.</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Date Joined</label>
+                        <input value="@Model.DateJoined.ToString("yyyy-MM-dd")" class="form-control bg-secondary text-white" readonly />
                     </div>
                 </div>
 
                 <h5 class="text-primary border-bottom pb-2 mb-3 mt-3">Profile Details</h5>
-
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label>Full Name</label>
+                        <label class="form-label fw-bold">Full Name</label>
                         <input asp-for="FullName" class="form-control" />
                     </div>
-
                     <div class="col-md-6 mb-3">
-                        <label>Profile Picture</label>
-                        <input type="file" name="profilePicture" class="form-control" />
+                        <label class="form-label fw-bold">Profile Picture</label>
+                        @if (!string.IsNullOrEmpty(Model.ProfilePicture))
+                        {
+                            <div class="mb-2">
+                                <img src="@Model.ProfilePicture" class="rounded-circle" style="width:60px;height:60px;object-fit:cover;" />
+                                <small class="text-muted ms-2">Current picture</small>
+                            </div>
+                        }
+                        <input type="file" name="profilePicture" class="form-control" accept="image/*" />
                     </div>
-
                     <div class="col-md-6 mb-3">
-                        <label>Phone</label>
+                        <label class="form-label fw-bold">Phone</label>
                         <input asp-for="Phone" class="form-control" />
                     </div>
-
                     <div class="col-md-6 mb-3">
-                        <label>Address</label>
+                        <label class="form-label fw-bold">Address</label>
                         <input asp-for="Address" class="form-control" />
                     </div>
-
                     <div class="col-md-6 mb-3">
-                        <label>Specialty Track</label>
+                        <label class="form-label fw-bold">Specialty Track</label>
                         <select asp-for="TrackId" asp-items="ViewBag.Tracks" class="form-select"></select>
                     </div>
                 </div>
 
                 <h5 class="text-primary border-bottom pb-2 mb-3 mt-3">Emergency Details</h5>
-
                 <div class="row">
-                    <div class="col-md-4">
-                        <label>Next Of Kin</label>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Next of Kin</label>
                         <input asp-for="NextOfKin" class="form-control" />
                     </div>
-
-                    <div class="col-md-4">
-                        <label>Phone</label>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Phone</label>
                         <input asp-for="NextOfKinPhone" class="form-control" />
                     </div>
-
-                    <div class="col-md-4">
-                        <label>Address</label>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Address</label>
                         <input asp-for="NextOfKinAddress" class="form-control" />
                     </div>
                 </div>
 
                 <div class="mt-4 text-end">
-                    <button class="btn btn-primary">Save Changes</button>
-                    <a asp-action="Mentors" class="btn btn-secondary">Cancel</a>
+                    <a asp-action="Mentors" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Save Changes
+                    </button>
                 </div>
-
             </form>
         </div>
     </div>

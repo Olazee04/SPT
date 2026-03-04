@@ -1,84 +1,323 @@
 ﻿@model List<SPT.Models.ViewModels.AttendanceSummaryViewModel>
 @{
-    DateTime fromDate = ViewBag.From ?? DateTime.UtcNow.AddDays(-6);
-    DateTime toDate = ViewBag.To ?? DateTime.UtcNow;
-}
-@{
     ViewData["Title"] = "Attendance Records";
+    string period = ViewBag.Period ?? "week";
+    DateTime from = ViewBag.From ?? DateTime.UtcNow.Date.AddDays(-6);
+    DateTime to = ViewBag.To ?? DateTime.UtcNow.Date;
+    double rate = ViewBag.AttendanceRate ?? 0.0;
+    int tp = (int)(ViewBag.TotalPresent ?? 0);
+    int ta = (int)(ViewBag.TotalAbsent ?? 0);
+    int tof = (int)(ViewBag.TotalOffice ?? 0);
+    int trm = (int)(ViewBag.TotalRemote ?? 0);
+    decimal th = (decimal)(ViewBag.TotalHours ?? 0m);
+    int sc = (int)(ViewBag.StudentCount ?? 0);
+    int? cohortId = ViewBag.SelectedCohortId as int?;
+
+    var chartLabels = ViewBag.ChartLabels as List<string> ?? new List<string>();
+    var chartPresent = ViewBag.ChartPresent as List<int> ?? new List<int>();
+    var chartAbsent = ViewBag.ChartAbsent as List<int> ?? new List<int>();
+
+    string PeriodLabel(string p) => p switch
+    {
+        "today" => "Today",
+        "week" => "This Week",
+        "month" => "This Month",
+        "alltime" => "All Time",
+        _ => "Custom Range"
+    };
 }
 
-<div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="font-weight-bold text-gray-800">Attendance History</h2>
-        
+<style>
+    .period-btn {
+        padding: .35rem 1rem;
+        border-radius: 20px;
+        font-size: .82rem;
+        font-weight: 600;
+        border: 1.5px solid var(--bs-border-color);
+        background: transparent;
+        color: var(--bs-body-color);
+        text-decoration: none;
+        transition: all .15s;
+        display: inline-block;
+    }
+
+        .period-btn.active, .period-btn:hover {
+            background: var(--bs-primary);
+            border-color: var(--bs-primary);
+            color: #fff !important;
+        }
+
+    .stat-card {
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        border: 1px solid var(--bs-border-color);
+        background: var(--bs-body-bg);
+    }
+
+        .stat-card .label {
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--bs-secondary-color);
+            margin-bottom: .2rem;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-card .sub {
+            font-size: .72rem;
+            color: var(--bs-secondary-color);
+            margin-top: .2rem;
+        }
+
+    .rate-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--bs-secondary-bg);
+    }
+
+    .rate-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width .4s;
+    }
+
+    .att-table th {
+        font-size: .75rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-weight: 700;
+    }
+
+    .att-table td {
+        font-size: .85rem;
+        vertical-align: middle;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">📋 Attendance Records</h4>
+        <small class="text-muted">
+            @PeriodLabel(period): @from.ToString("MMM dd") – @to.ToString("MMM dd, yyyy")
+            &nbsp;·&nbsp; @sc student(s)
+        </small>
     </div>
+</div>
 
-    <div class="card shadow-sm mb-4 border-0 leaderboard-card">
-        <div class="card-body bg-light">
-            <form method="get" class="form-inline">
-                <label class="mr-2">Date:</label>
-                <input type="date"
-                       name="startDate"
-                       class="form-control"
-                       value="@fromDate.ToString("yyyy-MM-dd")" />
+@* Period Tabs *@
+<div class="d-flex gap-2 flex-wrap mb-4">
+    @{
+        var periodOptions = new[] {
+    ("Today", "today"), ("This Week", "week"),
+    ("This Month", "month"), ("All Time", "alltime"), ("Custom", "custom")
+    };
+    }
+    @foreach (var (label, val) in periodOptions)
+    {
+        string cohortParam = cohortId.HasValue ? $"&cohortId={cohortId}" : "";
+        <a class="period-btn @(period == val ? "active" : "")"
+           href="?period=@val@cohortParam">@label</a>
+    }
+</div>
 
-                <input type="date"
-                       name="endDate"
-                       class="form-control"
-                       value="@toDate.ToString("yyyy-MM-dd")" />
+@* Custom Filter Form *@
+<div class="custom-card p-3 mb-4">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <input type="hidden" name="period" value="custom" />
+        <div>
+            <label class="form-label small fw-bold mb-1">From</label>
+            <input type="date" name="startDate" class="form-control form-control-sm"
+                   value="@from.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label small fw-bold mb-1">To</label>
+            <input type="date" name="endDate" class="form-control form-control-sm"
+                   value="@to.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label small fw-bold mb-1">Cohort</label>
+            <select name="cohortId" class="form-select form-select-sm"
+                    asp-items="ViewBag.Cohorts" style="min-width:150px;">
+                <option value="">All Cohorts</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="fas fa-filter me-1"></i> Filter
+        </button>
+        <a href="?period=@period" class="btn btn-outline-secondary btn-sm">Reset</a>
+    </form>
+</div>
 
-                <label class="mr-2">Cohort:</label>
-                <select name="cohortId"
-                        class="form-control mr-3"
-                        asp-items="ViewBag.Cohorts">
-                    <option value="">All Cohorts</option>
-                </select>
-
-                <button type="submit" class="btn btn-dark">Filter</button>
-            </form>
+@* Summary Stats *@
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+        <div class="stat-card border-start border-4 border-success">
+            <div class="label">Present</div>
+            <div class="value text-success">@tp</div>
+            <div class="sub">student-days</div>
         </div>
     </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card border-start border-4 border-danger">
+            <div class="label">Absent</div>
+            <div class="value text-danger">@ta</div>
+            <div class="sub">student-days</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card border-start border-4 border-primary">
+            <div class="label">Office</div>
+            <div class="value text-primary">@tof</div>
+            <div class="sub">days on-site</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card border-start border-4 border-info">
+            <div class="label">Remote</div>
+            <div class="value text-info">@trm</div>
+            <div class="sub">days remote</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card border-start border-4 border-warning">
+            <div class="label">Total Hours</div>
+            <div class="value text-warning">@th</div>
+            <div class="sub">approved hrs</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card border-start border-4 border-secondary">
+            <div class="label">Att. Rate</div>
+            <div class="value @(rate >= 75 ? "text-success" : rate >= 50 ? "text-warning" : "text-danger")">@rate%</div>
+            <div class="rate-bar mt-1">
+                <div class="rate-fill @(rate >= 75 ? "bg-success" : rate >= 50 ? "bg-warning" : "bg-danger")"
+                     style="width:@(rate)%"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <div class="card shadow-sm border-0 leaderboard-card">
-        <div class="card-body p-0">
-            <table class="table table-hover">
-                <thead class="bg-light">
+@* Daily Chart *@
+@if (chartLabels.Any())
+{
+    <div class="custom-card p-4 mb-4">
+        <h6 class="fw-bold mb-3">
+            <i class="fas fa-chart-bar text-primary me-2"></i>Daily Presence vs Absence
+        </h6>
+        <div style="height:220px; position:relative;">
+            <canvas id="attChart"></canvas>
+        </div>
+    </div>
+}
+
+@* Student Breakdown Table *@
+@if (Model.Any())
+{
+    <div class="custom-card p-0 overflow-hidden">
+        <div class="px-4 py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0">Student Breakdown</h6>
+            <input type="text" class="form-control form-control-sm w-25"
+                   placeholder="Search student..." id="attSearch" />
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 att-table" id="attTable">
+                <thead>
                     <tr>
-                        <th>Student</th>
-                        <th>Cohort</th>
+                        <th class="ps-4">Student</th>
+                        <th>Track / Cohort</th>
                         <th class="text-center">Present</th>
                         <th class="text-center">Absent</th>
                         <th class="text-center">Office</th>
                         <th class="text-center">Remote</th>
+                        <th class="text-center">Hrs</th>
+                        <th style="width:140px;">Rate</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
+                        string barCls = item.AttendanceRate >= 75 ? "bg-success"
+                        : item.AttendanceRate >= 50 ? "bg-warning"
+                        : "bg-danger";
                         <tr>
-                            <td class="fw-bold">@item.StudentName</td>
-                            <td>@item.CohortName</td>
-
-                            <td class="text-center">
-                                <span class="badge bg-success">@item.PresentDays</span>
+                            <td class="ps-4 fw-bold">@item.StudentName</td>
+                            <td>
+                                <span class="badge bg-primary me-1">@item.TrackCode</span>
+                                <small class="text-muted">@item.CohortName</small>
                             </td>
-
-                            <td class="text-center">
-                                <span class="badge bg-danger">@item.AbsentDays</span>
-                            </td>
-
-                            <td class="text-center">
-                                <span class="badge bg-primary">@item.OfficeDays</span>
-                            </td>
-
-                            <td class="text-center">
-                                <span class="badge bg-info fw-bold">@item.RemoteDays</span>
+                            <td class="text-center"><span class="badge bg-success">@item.PresentDays</span></td>
+                            <td class="text-center"><span class="badge bg-danger">@item.AbsentDays</span></td>
+                            <td class="text-center"><span class="badge bg-primary">@item.OfficeDays</span></td>
+                            <td class="text-center"><span class="badge bg-info">@item.RemoteDays</span></td>
+                            <td class="text-center fw-bold">@item.TotalHours</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height:6px;">
+                                        <div class="progress-bar @barCls"
+                                             style="width:@(item.AttendanceRate)%"></div>
+                                    </div>
+                                    <small class="fw-bold text-nowrap">@item.AttendanceRate%</small>
+                                </div>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
-
         </div>
     </div>
-</div>
+}
+else
+{
+    <div class="custom-card p-5 text-center">
+        <i class="fas fa-calendar-times fa-3x text-muted opacity-25 mb-3 d-block"></i>
+        <h5 class="text-muted">No attendance records found</h5>
+        <p class="text-muted small">Try adjusting the period or cohort filter.</p>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartLabels));
+        var present = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartPresent));
+        var absent = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartAbsent));
+
+        if (labels.length > 0) {
+            var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            var lc = isDark ? '#94a3b8' : '#6c757d';
+            var gc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+            new Chart(document.getElementById('attChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Present', data: present, backgroundColor: 'rgba(25,135,84,.7)', borderRadius: 4 },
+                        { label: 'Absent', data: absent, backgroundColor: 'rgba(220,53,69,.5)', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: lc } } },
+                    scales: {
+                        x: { stacked: true, ticks: { color: lc }, grid: { color: gc } },
+                        y: { stacked: true, beginAtZero: true, ticks: { color: lc, stepSize: 1 }, grid: { color: gc } }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('attSearch')?.addEventListener('input', function () {
+            var q = this.value.toLowerCase();
+            document.querySelectorAll('#attTable tbody tr').forEach(function (r) {
+                var name = r.querySelector('td.fw-bold')?.textContent?.toLowerCase() ?? '';
+                r.style.display = name.includes(q) ? '' : 'none';
+            });
+        });
+    </script>
+}

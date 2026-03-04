@@ -1,0 +1,276 @@
+﻿@model List<SPT.Models.QuizAttempt>
+@{
+    ViewData["Title"] = "All Quiz Results";
+
+    int totalAttempts = Model.Count;
+    int passCount = Model.Count(a => a.Score >= 70);
+    int failCount = totalAttempts - passCount;
+    double passRate = totalAttempts > 0 ? Math.Round((double)passCount / totalAttempts * 100, 1) : 0;
+    double avgScore = totalAttempts > 0 ? Math.Round(Model.Average(a => a.Score), 1) : 0;
+}
+
+<div class="container-fluid p-4">
+
+    @* ── PAGE HEADER ── *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold"><i class="fas fa-poll text-primary me-2"></i>Quiz Results</h2>
+            <p class="text-muted mb-0">All student module quiz attempts across the program.</p>
+        </div>
+    </div>
+
+    @* ── STAT CARDS ── *@
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-primary leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Total Attempts</h6>
+                    <h2 class="fw-bold text-primary mb-0">@totalAttempts</h2>
+                    <small class="text-muted">Across all modules</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-success leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Passed</h6>
+                    <h2 class="fw-bold text-success mb-0">@passCount</h2>
+                    <small class="text-muted">Score ≥ 70%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-danger leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Failed</h6>
+                    <h2 class="fw-bold text-danger mb-0">@failCount</h2>
+                    <small class="text-muted">Score &lt; 70%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-warning leaderboard-card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1">Pass Rate / Avg Score</h6>
+                    <h2 class="fw-bold text-warning mb-0">@passRate%</h2>
+                    <small class="text-muted">Avg score: @avgScore%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── CHARTS ROW ── *@
+    @if (totalAttempts > 0)
+    {
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 leaderboard-card">
+                    <div class="card-header fw-bold">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>Pass vs Fail Distribution
+                    </div>
+                    <div class="card-body d-flex justify-content-center">
+                        <div style="height:240px;width:240px;">
+                            <canvas id="passFailChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 leaderboard-card">
+                    <div class="card-header fw-bold">
+                        <i class="fas fa-chart-bar me-2 text-primary"></i>Score Distribution
+                    </div>
+                    <div class="card-body">
+                        <canvas id="scoreDistChart" style="max-height:240px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ── FILTER BAR ── *@
+    <div class="custom-card p-3 mb-4">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="text" name="search" value="@ViewBag.Search"
+                   class="form-control" style="width:200px" placeholder="Search student..." />
+            <select name="result" class="form-select" style="width:150px">
+                <option value="">All Results</option>
+                <option value="pass" selected="@(ViewBag.ResultFilter == "pass")">Pass Only</option>
+                <option value="fail" selected="@(ViewBag.ResultFilter == "fail")">Fail Only</option>
+            </select>
+            <select name="moduleId" class="form-select" style="width:200px">
+                <option value="">All Modules</option>
+                @if (ViewBag.Modules != null)
+                {
+                    foreach (var m in ViewBag.Modules)
+                    {
+                        <option value="@m.Id" selected="@(ViewBag.SelectedModule?.ToString() == m.Id.ToString())">
+                            @m.ModuleCode – @m.ModuleName
+                        </option>
+                    }
+                }
+            </select>
+            <button class="btn btn-primary" type="submit"><i class="fas fa-search me-1"></i>Filter</button>
+            <a asp-action="QuizResults" class="btn btn-outline-secondary">Clear</a>
+        </form>
+    </div>
+
+    @* ── RESULTS TABLE ── *@
+    <div class="card shadow-sm border-0 leaderboard-card">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-list me-2 text-primary"></i>Attempt Records</span>
+            <span class="badge bg-secondary">@Model.Count records</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Student</th>
+                        <th>Track</th>
+                        <th>Module</th>
+                        <th style="width:200px;">Score</th>
+                        <th class="text-center">Result</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var a in Model)
+                        {
+                            bool passed = a.Score >= 70;
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(a.Student?.ProfilePicture ?? "/images/default-avatar.png")"
+                                             class="rounded-circle me-2 border"
+                                             style="width:32px;height:32px;object-fit:cover;" />
+                                        <span class="fw-bold">@a.Student?.FullName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">@a.Student?.Track?.Code</span>
+                                </td>
+                                <td class="small fw-semibold">@(a.Module?.ModuleCode ?? "—")</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height:8px;">
+                                            <div class="progress-bar bg-@(passed ? "success" : "danger")"
+                                                 style="width:@a.Score%"></div>
+                                        </div>
+                                        <span class="fw-bold small @(passed ? "text-success" : "text-danger")">@a.Score%</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-@(passed ? "success" : "danger") px-3 py-2">
+                                        @(passed ? "✅ Pass" : "❌ Fail")
+                                    </span>
+                                </td>
+                                <td class="text-muted small">@a.AttemptedAt.ToString("MMM dd, yyyy")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-poll fa-3x mb-3 opacity-25 d-block"></i>
+                                No quiz results found.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* PAGINATION *@
+        @if (ViewBag.TotalPages > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Page @ViewBag.CurrentPage of @ViewBag.TotalPages
+                    (@ViewBag.TotalRecords total records)
+                </small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(ViewBag.CurrentPage <= 1 ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(ViewBag.CurrentPage - 1)&search=@ViewBag.Search&result=@ViewBag.ResultFilter&moduleId=@ViewBag.SelectedModule">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        @for (int p = 1; p <= (int)ViewBag.TotalPages; p++)
+                        {
+                            <li class="page-item @(p == (int)ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="?page=@p&search=@ViewBag.Search&result=@ViewBag.ResultFilter&moduleId=@ViewBag.SelectedModule">@p</a>
+                            </li>
+                        }
+                        <li class="page-item @(ViewBag.CurrentPage >= ViewBag.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(ViewBag.CurrentPage + 1)&search=@ViewBag.Search&result=@ViewBag.ResultFilter&moduleId=@ViewBag.SelectedModule">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        var labelColor = isDark ? '#94a3b8' : '#6c757d';
+        var gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+
+        // Pass / Fail doughnut
+        new Chart(document.getElementById('passFailChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Pass', 'Fail'],
+                datasets: [{
+                    data: [@passCount, @failCount],
+                    backgroundColor: ['#198754', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: labelColor } }
+                }
+            }
+        });
+
+        // Score distribution bar chart  (buckets: 0-39, 40-59, 60-69, 70-84, 85-100)
+        @{
+            int b1 = Model.Count(a => a.Score < 40);
+            int b2 = Model.Count(a => a.Score >= 40 && a.Score < 60);
+            int b3 = Model.Count(a => a.Score >= 60 && a.Score < 70);
+            int b4 = Model.Count(a => a.Score >= 70 && a.Score < 85);
+            int b5 = Model.Count(a => a.Score >= 85);
+        }
+        new Chart(document.getElementById('scoreDistChart'), {
+            type: 'bar',
+            data: {
+                labels: ['0–39%', '40–59%', '60–69%', '70–84%', '85–100%'],
+                datasets: [{
+                    label: 'Students',
+                    data: [@b1, @b2, @b3, @b4, @b5],
+                    backgroundColor: ['#dc3545','#fd7e14','#ffc107','#20c997','#198754'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: labelColor }, grid: { color: gridColor } },
+                    x: { ticks: { color: labelColor }, grid: { color: 'transparent' } }
+                }
+            }
+        });
+    </script>
+}

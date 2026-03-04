@@ -739,15 +739,17 @@ _userManager.GetUserId(User));
 
             return View(mentors);
         }
+
         [HttpGet]
         public async Task<IActionResult> EditMentor(int id)
         {
-            var mentor = await _context.Mentors.FindAsync(id);
+            var mentor = await _context.Mentors
+                .Include(m => m.User)   // ← THIS was missing — causes email to be null
+                .FirstOrDefaultAsync(m => m.Id == id);
             if (mentor == null) return NotFound();
 
             ViewBag.Tracks = new SelectList(_context.Tracks, "Id", "Name", mentor.TrackId);
-            return View("CreateMentor", mentor);
-            
+            return View("EditMentor", mentor);  // ← use dedicated view, not CreateMentor
         }
 
         [HttpPost]
@@ -847,65 +849,75 @@ _userManager.GetUserId(User));
         // ANNOUNCEMENTS
         // =========================
         [HttpGet]
-        [Authorize(Roles = "Admin, Mentor")] // Usually only admins broadcast, but change to "Admin,Mentor" if needed
+        [Authorize(Roles = "Admin,Mentor")]
         public IActionResult CreateAnnouncement()
         {
-            return View();
+            return View(new Announcement());
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin, Mentor")]
+        [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> CreateAnnouncement(Announcement model)
         {
+            ModelState.Remove("TargetPage");
+            model.TargetPage = "Dashboard";
+
             if (ModelState.IsValid)
             {
-                model.PostedBy = User.Identity?.Name ?? "Admin";
+                model.PostedBy = User.Identity?.Name ?? "System";
                 model.CreatedAt = DateTime.UtcNow;
                 _context.Announcements.Add(model);
+
                 await _auditService.LogAsync(
-    "ANNOUNCEMENT_CREATED",
-    $"Announcement: {model.Title}",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
+                    "ANNOUNCEMENT_CREATED",
+                    $"Announcement: {model.Title}",
+                    User.Identity.Name,
+                    _userManager.GetUserId(User));
 
                 await _context.SaveChangesAsync();
 
-                // 🔔 Trigger Notifications Logic
-                var users = new List<ApplicationUser>();
-                if (model.Audience == "Students" || model.Audience == "All")
-                    users.AddRange(await _userManager.GetUsersInRoleAsync("Student"));
-                if (model.Audience == "Mentors" || model.Audience == "All")
-                    users.AddRange(await _userManager.GetUsersInRoleAsync("Mentor"));
+                // Build recipient list based on audience
+                var recipientUsers = new List<ApplicationUser>();
 
-                foreach (var user in users.DistinctBy(u => u.Id))
+                if (model.Audience == "Students" || model.Audience == "All")
+                    recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Student"));
+
+                if (model.Audience == "Mentors" || model.Audience == "All")
+                    recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Mentor"));
+
+                // Admins ALWAYS receive every announcement
+                recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Admin"));
+
+                // Determine redirect: Mentor goes to Mentor dashboard, Admin to Admin dashboard
+                string redirectUrl = User.IsInRole("Admin") ? "/Admin/Dashboard" : "/Mentor/Dashboard";
+
+                foreach (var user in recipientUsers.DistinctBy(u => u.Id))
                 {
                     _context.Notifications.Add(new Notification
                     {
                         UserId = user.Id,
-                        Title = "New Announcement", // 👈 THIS WAS MISSING
-                        Message = $"📢 {model.Title}: {model.Message}",
+                        Title = "📢 " + model.Title,
+                        Message = model.Message,
                         Type = "Info",
                         IsRead = false,
-                        TargetPage = "SomePage",
-                        Url = model.TargetPage switch
-                        {
-                            "Dashboard" => "/Student/Dashboard",
-                            "Curriculum" => "/Student/Curriculum",
-                            "Support" => "/Support/Index",
-                            _ => "/Student/Dashboard"
-                        },
+                        TargetPage = "Dashboard",
+                        Url = redirectUrl,
                         CreatedAt = DateTime.UtcNow
                     });
                 }
-                await _context.SaveChangesAsync();
 
-                TempData["Success"] = "📢 Announcement sent!";
-                return RedirectToAction("Dashboard");
+                await _context.SaveChangesAsync();
+                TempData["Success"] = $"📢 Announcement sent to {model.Audience} (+ Admins)!";
+
+                return User.IsInRole("Admin")
+                    ? RedirectToAction("Dashboard", "Admin")
+                    : RedirectToAction("Dashboard", "Mentor");
             }
+
             return View(model);
         }
-
         // =========================
         // MASTER PROGRESS LOGS (History & Review)
         // =========================
@@ -918,12 +930,11 @@ _userManager.GetUserId(User));
                 .Include(l => l.Module)
                 .AsQueryable();
 
-            // 1. 🔍 FILTER: By Specific Student (clicked from Dashboard)
-            if (studentId.HasValue)
+              if (studentId.HasValue)
             {
                 query = query.Where(l => l.StudentId == studentId.Value);
 
-                // Fetch student name for the view title
+                
                 var studentName = await _context.Students
                     .Where(s => s.Id == studentId)
                     .Select(s => s.FullName)
@@ -986,22 +997,55 @@ _userManager.GetUserId(User));
         // =========================
         // HELPERS
         // =========================
-        private async Task PopulateDropdowns()
+        private async Task PopulateDropdowns(int? selectedTrackId = null)
         {
             var tracks = await _context.Tracks.Where(t => t.IsActive).ToListAsync();
-            ViewBag.TrackList = tracks; // Full list for JS
+            ViewBag.TrackList = tracks;
             ViewBag.Tracks = new SelectList(tracks, "Id", "Name");
             ViewBag.Cohorts = new SelectList(await _context.Cohorts.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
-            ViewBag.Mentors = new SelectList(await _context.Mentors.ToListAsync(), "Id", "FullName");
+
+            // ── Mentor dropdown: filtered + labelled ──
+            var mentors = await _context.Mentors
+                .Include(m => m.Track)
+                .ToListAsync();
+
+            // Show: General mentors always + mentors assigned to the selected track
+            var filteredMentors = mentors
+                .Where(m =>
+                    m.Specialization == "General" ||
+                    m.TrackId == null ||
+                    (selectedTrackId.HasValue && m.TrackId == selectedTrackId))
+                .Select(m => new
+                {
+                    Id = m.Id,
+                    // Label: "FullName [General]" or "FullName [FSC]"
+                    DisplayName = m.Specialization == "General" || m.TrackId == null
+                        ? $"{m.FullName} [General]"
+                        : $"{m.FullName} [{m.Track?.Code ?? m.Specialization}]"
+                })
+                .ToList();
+
+            ViewBag.Mentors = new SelectList(filteredMentors, "Id", "DisplayName");
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetNextStudentId()
+        public async Task<IActionResult> GetMentorsForTrack(int trackId)
         {
-            int nextId = await _context.Students.AnyAsync()
-                ? await _context.Students.MaxAsync(s => s.Id) + 1
-                : 1;
-            return Json(nextId);
+            var mentors = await _context.Mentors
+                .Include(m => m.Track)
+                .Where(m => m.Specialization == "General" || m.TrackId == null || m.TrackId == trackId)
+                .ToListAsync();
+
+            var result = mentors.Select(m => new
+            {
+                id = m.Id,
+                name = (m.Specialization == "General" || m.TrackId == null)
+                           ? $"{m.FullName} [General]"
+                           : $"{m.FullName} [{(m.Track != null ? m.Track.Code : m.Specialization)}]"
+                //                             
+            }).ToList();
+
+            return Json(result);
         }
 
         // =========================
@@ -1093,36 +1137,57 @@ _userManager.GetUserId(User));
             return View(resources);
         }
 
-        [HttpGet]
-        [Authorize(Roles = "Admin,Mentor")]
-        public async Task<IActionResult> CreateResource()
-        {
-            ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
-            return View();
-        }
-
         [HttpPost]
         [Authorize(Roles = "Admin,Mentor")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateResource(Resource model)
+        public async Task<IActionResult> CreateResource(Resource model, int? trackId)
         {
+            
+            ModelState.Remove("Track");
+            ModelState.Remove("Module");
+            ModelState.Remove("TrackId");   // we handle it manually below
+
+            model.TrackId = trackId;
+
             if (ModelState.IsValid)
             {
                 model.CreatedAt = DateTime.UtcNow;
                 _context.Resources.Add(model);
+
                 await _auditService.LogAsync(
-    "RESOURCE_CREATED",
-    $"Resource added: {model.Title}",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
+                    "RESOURCE_CREATED",
+                    $"Resource added: {model.Title}",
+                    User.Identity.Name,
+                    _userManager.GetUserId(User));
 
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Resource added successfully!";
                 return RedirectToAction(nameof(ManageLibrary));
             }
-            ViewBag.Tracks = new SelectList(await _context.Tracks.ToListAsync(), "Id", "Name");
+
+            // Debug: show what failed
+            var errors = ModelState
+                .Where(x => x.Value.Errors.Count > 0)
+                .Select(x => $"{x.Key}: {string.Join(", ", x.Value.Errors.Select(e => e.ErrorMessage))}")
+                .ToList();
+            TempData["Error"] = "Validation failed: " + string.Join(" | ", errors);
+
+            var tracks = await _context.Tracks.ToListAsync();
+            ViewBag.Tracks = new SelectList(tracks, "Id", "Name");
+            ViewBag.TrackList = tracks;
             return View(model);
         }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> CreateResource()
+        {
+            var tracks = await _context.Tracks.ToListAsync();
+            ViewBag.Tracks = new SelectList(tracks, "Id", "Name");
+            ViewBag.TrackList = tracks;  // ADD THIS — needed for the manual foreach in the view
+            return View();
+        }
+
 
         [HttpPost]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1150,29 +1215,69 @@ _userManager.GetUserId(User));
         [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> ManageQuizzes(int? trackId)
         {
-            // 1. Start Query for Modules
-            var query = _context.SyllabusModules
-                .Include(m => m.Track)
-                .AsQueryable();
+            bool isAdmin = User.IsInRole("Admin");
+            int? mentorTrackId = null;
+            bool isGeneralMentor = false;
 
-            // 2. Filter by Track if selected
-            if (trackId.HasValue)
+            if (!isAdmin)
             {
-                query = query.Where(m => m.TrackId == trackId.Value);
+                var userId = _userManager.GetUserId(User);
+                var mentor = await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == userId);
+                if (mentor != null)
+                {
+                    mentorTrackId = mentor.TrackId;
+                    isGeneralMentor = mentor.Specialization == "General" || mentor.TrackId == null;
+                }
+
+                // Track-specific mentor: force filter to their track
+                if (!isGeneralMentor && mentorTrackId.HasValue && !trackId.HasValue)
+                    trackId = mentorTrackId;
             }
 
-            // 3. Execute Query
+            // ── Available tracks for dropdown ──
+            List<Track> availableTracks;
+            if (isAdmin || isGeneralMentor)
+                availableTracks = await _context.Tracks.ToListAsync();
+            else
+                availableTracks = await _context.Tracks
+                    .Where(t => t.Id == mentorTrackId)
+                    .ToListAsync();
+
+            // ── Module query ──
+            var query = _context.SyllabusModules
+                .Include(m => m.Track)
+                .Include(m => m.Questions)   // ✅ FIX: Must include so qCount works in view
+                .AsQueryable();
+
+            if (trackId.HasValue)
+                query = query.Where(m => m.TrackId == trackId.Value);
+            else if (!isAdmin && !isGeneralMentor && mentorTrackId.HasValue)
+                query = query.Where(m => m.TrackId == mentorTrackId.Value);
+
             var modules = await query
-                .AsNoTracking()
                 .OrderBy(m => m.Track.Name)
                 .ThenBy(m => m.DisplayOrder)
                 .ToListAsync();
 
-            // 4. Populate Dropdown for filtering
-            ViewBag.Tracks = await _context.Tracks.ToListAsync();
-            ViewBag.SelectedTrackId = trackId;
+            // ✅ FIX: Auto-correct phantom "Enabled" — HasQuiz=true but 0 questions
+            bool correctionNeeded = false;
+            foreach (var mod in modules)
+            {
+                if (mod.HasQuiz && (mod.Questions == null || !mod.Questions.Any()))
+                {
+                    mod.HasQuiz = false;
+                    correctionNeeded = true;
+                }
+            }
+            if (correctionNeeded)
+                await _context.SaveChangesAsync();
 
-            return View(modules); // 👈 We are sending "List<SyllabusModule>"
+            ViewBag.Tracks = availableTracks;
+            ViewBag.SelectedTrackId = trackId;
+            ViewBag.IsAdmin = isAdmin;
+            ViewBag.MentorTrackId = mentorTrackId;
+
+            return View(modules);
         }
 
         // =========================
@@ -1180,7 +1285,7 @@ _userManager.GetUserId(User));
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> QuizScores(string search = "", int? trackId = null)
+        public async Task<IActionResult> QuizScores(string search = "", int? trackId = null, int page = 1, int pageSize = 30)
         {
             var query = _context.ProgressLogs
                 .Include(l => l.Student).ThenInclude(s => s.Track)
@@ -1194,13 +1299,93 @@ _userManager.GetUserId(User));
             if (trackId.HasValue)
                 query = query.Where(l => l.Student.TrackId == trackId.Value);
 
+            int totalCount = await query.CountAsync();
+
+            var logs = await query
+                .OrderByDescending(l => l.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
             ViewBag.Tracks = await _context.Tracks.ToListAsync();
             ViewBag.SelectedTrack = trackId;
             ViewBag.Search = search;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-            var logs = await query.OrderByDescending(l => l.Date).ToListAsync();
             return View(logs);
         }
+
+        // =========================
+        // MODULE QUIZ SCORES — Admin (QuizAttempts table)
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ModuleQuizScores(
+            string search = "", int? trackId = null, int page = 1, int pageSize = 20)
+        {
+            var query = _context.QuizAttempts
+                .Include(a => a.Student).ThenInclude(s => s.Track)
+                .Include(a => a.Module)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(a => a.Student.FullName.Contains(search));
+
+            if (trackId.HasValue)
+                query = query.Where(a => a.Student.TrackId == trackId.Value);
+
+            int total = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(a => a.AttemptedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            ViewBag.Tracks = await _context.Tracks.ToListAsync();
+            ViewBag.SelectedTrack = trackId;   // int? — no cast error
+            ViewBag.Search = search;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            return View(data);
+        }
+
+
+        public IActionResult QuizResults(string search = "", string result = "",
+            int? moduleId = null, int page = 1, int pageSize = 20)
+        {
+            var query = _context.QuizAttempts
+                .Include(a => a.Student).ThenInclude(s => s.Track)
+                .Include(a => a.Module)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(a => a.Student.FullName.Contains(search));
+            if (result == "pass") query = query.Where(a => a.Score >= 70);
+            else if (result == "fail") query = query.Where(a => a.Score < 70);
+            if (moduleId.HasValue && moduleId > 0)
+                query = query.Where(a => a.ModuleId == moduleId.Value);
+
+            int total = query.Count();
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalRecords = total;
+            ViewBag.Search = search;
+            ViewBag.ResultFilter = result;
+            ViewBag.SelectedModule = moduleId;   // now int? — no cast error
+            ViewBag.Modules = _context.SyllabusModules
+                .Select(m => new { m.Id, m.ModuleCode, m.ModuleName }).ToList();
+
+            var data = query.OrderByDescending(a => a.AttemptedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return View("~/Views/Quiz/AllResults.cshtml", data);
+        }
+
         // =========================
         // BULK IMPORT STUDENTS
         // =========================
@@ -1333,17 +1518,77 @@ _userManager.GetUserId(User));
             return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", "StudentImportTemplate.csv");
         }
 
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ExportStudents()
+        {
+            var students = await _context.Students
+                .Include(s => s.Track)
+                .Include(s => s.Cohort)
+                .Include(s => s.Mentor)
+                .ToListAsync();
+
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("FullName,Email,Track,Cohort,Mentor,DateJoined,Status");
+
+            foreach (var s in students)
+            {
+                csv.AppendLine($"{s.FullName},{s.Email},{s.Track?.Code ?? "N/A"},{s.Cohort?.Name ?? "N/A"},{s.Mentor?.FullName ?? "Unassigned"},{s.DateJoined:yyyy-MM-dd},{s.EnrollmentStatus}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            return File(bytes, "text/csv", $"Students_Export_{DateTime.UtcNow:yyyyMMdd}.csv");
+        }
 
         // =========================
         // SYSTEM AUDIT LOGS
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> AuditLogs()
+        public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string tab = "All")
         {
-            var logs = await _context.AuditLogs
+            var query = _context.AuditLogs.AsQueryable();
+
+            // Filter by tab category
+            query = tab switch
+            {
+                "Student" => query.Where(a =>
+                    a.Action.Contains("STUDENT") ||
+                    a.Action.Contains("IMPORT") ||
+                    a.Action.Contains("LOG_APPROVED") ||
+                    a.Action.Contains("LOG_REJECTED")),
+
+                "Mentor" => query.Where(a =>
+                    a.Action.Contains("MENTOR") ||
+                    a.Action.Contains("LOG_APPROVED_MENTOR")),
+
+                "Auth" => query.Where(a =>
+                    a.Action.Contains("LOGIN") ||
+                    a.Action.Contains("LOGOUT") ||
+                    a.Action.Contains("PASSWORD") ||
+                    a.Action.Contains("REQUEST")),
+
+                "System" => query.Where(a =>
+                    a.Action.Contains("RESOURCE") ||
+                    a.Action.Contains("ANNOUNCEMENT") ||
+                    a.Action.Contains("CERTIFICATE") ||
+                    a.Action.Contains("CREATE_MENTOR") ||
+                    a.Action.Contains("DELETE_MENTOR")),
+
+                _ => query  // "All" — no filter
+            };
+
+            int totalCount = await query.CountAsync();
+
+            var logs = await query
                 .OrderByDescending(a => a.Timestamp)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            ViewBag.ActiveTab = tab;
 
             return View(logs);
         }

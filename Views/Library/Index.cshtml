@@ -12,7 +12,7 @@
     @if (Model == null || !Model.Any())
     {
         <div class="alert alert-warning text-center p-5">
-            <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
+            <i class="fas fa-folder-open fa-3x mb-3 opacity-50 d-block"></i>
             <h5>Library Empty</h5>
             <p>Your mentors haven't uploaded any resources for this track yet.</p>
         </div>
@@ -25,7 +25,7 @@
                 <div class="col-md-4">
                     <div class="custom-card h-100 d-flex flex-column border-0 shadow-sm transition-hover">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="icon-btn bg-light text-primary" style="width:50px; height:50px; font-size:1.2rem;">
+                            <div class="icon-btn" style="width:50px; height:50px; font-size:1.2rem;">
                                 @if (item.Type == "Video")
                                 {
                                     <i class="fab fa-youtube text-danger"></i>
@@ -39,7 +39,8 @@
                                     <i class="fas fa-link text-info"></i>
                                 }
                             </div>
-                            <span class="badge bg-light border">@item.CreatedAt.ToString("MMM dd")</span>
+                            @* FIX: added explicit text color so date is visible in both modes *@
+                            <span class="badge bg-secondary fw-normal small">@item.CreatedAt.ToString("MMM dd")</span>
                         </div>
 
                         <h5 class="fw-bold mb-2">@item.Title</h5>
@@ -57,12 +58,3 @@
     }
 </div>
 
-<style>
-    /* Add hover effect for cards */
-    .transition-hover {
-        transition: transform 0.2s ease-in-out;
-    }
-    .transition-hover:hover {
-        transform: translateY(-5px);
-    }
-</style>

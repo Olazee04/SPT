@@ -1,87 +1,395 @@
-﻿<div class="container-fluid mt-4">
-    <h2 class="fw-bold mb-4">
-        🏆 Leaderboards
-    </h2>
+﻿@model SPT.Models.ViewModels.LeaderboardDashboardViewModel
+@{
+    ViewData["Title"] = "Leaderboards";
+    string[] rankIcons = { "🥇", "🥈", "🥉" };
+    string[] rankClasses = { "rank-1", "rank-2", "rank-3" };
+}
 
-    <div class="row g-4">
+<style>
+    .lb-header {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid var(--bs-border-color);
+        padding-bottom: .5rem;
+    }
 
-        <!-- COMPLETED MODULES -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 leaderboard-card">
-                <div class="card-header bg-primary fw-bold">
-                    📘 Completed Modules
-                </div>
-                <ul class="list-group list-group-flush">
-                    @foreach (var s in Model.CompletedModules)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>
-                                @s.FullName
-                                <small class="text-muted">(@s.Cohort)</small>
-                            </span>
-                            <span class="badge bg-primary rounded-pill">@s.Score</span>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </div>
+        .lb-header .icon {
+            font-size: 1.4rem;
+        }
 
-        <!-- ACTIVE THIS WEEK -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 leaderboard-card">
-                <div class="card-header bg-success fw-bold">
-                    ⚡ Active This Week
-                </div>
-                <ul class="list-group list-group-flush">
-                    @foreach (var s in Model.ActiveThisWeek)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>@s.FullName</span>
-                            <span class="badge bg-success rounded-pill">@s.Score</span>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </div>
+        .lb-header h5 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 1rem;
+        }
 
-        <!-- CONSISTENCY -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 leaderboard-card">
-                <div class="card-header bg-warning fw-bold">
-                    🔁 Consistency (Last 30 Days)
-                </div>
-                <ul class="list-group list-group-flush">
-                    @foreach (var s in Model.Consistency)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>@s.FullName</span>
-                            <span class="badge bg-warning fw-bold rounded-pill">
-                                @s.Score%
-                            </span>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </div>
+        .lb-header small {
+            font-size: .72rem;
+            color: var(--bs-secondary-color);
+        }
 
-        
-        <!-- TODAY -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 leaderboard-card">
-                <div class="card-header bg-info fw-bold">
-                    📅 Active Today
-                </div>
-                <ul class="list-group list-group-flush">
-                    @foreach (var s in Model.ActiveToday)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>@s.FullName</span>
-                            <span class="badge bg-info rounded-pill">@s.Score</span>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </div>
+    .podium {
+        display: flex;
+        gap: .6rem;
+        flex-wrap: wrap;
+    }
 
+    .podium-card {
+        flex: 1;
+        min-width: 100px;
+        border-radius: 12px;
+        padding: .9rem .75rem;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--bs-border-color);
+        background: var(--bs-body-bg);
+        transition: transform .15s;
+    }
+
+        .podium-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .podium-card .rank-badge {
+            position: absolute;
+            top: .5rem;
+            right: .6rem;
+            font-size: 1.2rem;
+        }
+
+        .podium-card .p-name {
+            font-weight: 700;
+            font-size: .88rem;
+            margin-bottom: .1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .podium-card .p-track {
+            font-size: .7rem;
+            color: var(--bs-secondary-color);
+        }
+
+        .podium-card .p-score {
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .podium-card .p-unit {
+            font-size: .68rem;
+            color: var(--bs-secondary-color);
+        }
+
+        .podium-card.rank-1 {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg,rgba(245,158,11,.08),transparent);
+        }
+
+        .podium-card.rank-2 {
+            border-color: #94a3b8;
+            background: linear-gradient(135deg,rgba(148,163,184,.08),transparent);
+        }
+
+        .podium-card.rank-3 {
+            border-color: #b45309;
+            background: linear-gradient(135deg,rgba(180,83,9,.06),transparent);
+        }
+
+    .track-block {
+        margin-bottom: .4rem;
+    }
+
+    .track-block-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: .45rem .75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .82rem;
+        cursor: pointer;
+        border: 1px solid var(--bs-border-color);
+        background: var(--bs-tertiary-bg);
+        user-select: none;
+    }
+
+    .track-rows {
+        padding: 0 .25rem;
+    }
+
+    .track-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: .4rem .5rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        font-size: .82rem;
+    }
+
+        .track-row:last-child {
+            border-bottom: none;
+        }
+
+        .track-row .pos {
+            width: 22px;
+            font-weight: 700;
+            color: var(--bs-secondary-color);
+        }
+
+        .track-row .nm {
+            font-weight: 600;
+            flex: 1;
+            padding: 0 .4rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-row .sc {
+            font-weight: 700;
+            font-size: .88rem;
+            white-space: nowrap;
+        }
+
+    .today-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+    }
+
+    .today-pill {
+        padding: .3rem .7rem;
+        border-radius: 20px;
+        font-size: .78rem;
+        font-weight: 600;
+        background: var(--bs-success-bg-subtle);
+        color: var(--bs-success);
+        border: 1px solid var(--bs-success-border-subtle);
+    }
+
+    .section-label {
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--bs-secondary-color);
+        margin-bottom: .5rem;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">🏆 Leaderboards</h4>
+        <small class="text-muted">Live rankings · Week resets every Monday</small>
     </div>
+</div>
+
+<div class="row g-4">
+
+    @* ═══ COMPLETED MODULES ═══ *@
+    <div class="col-12">
+        <div class="lb-header">
+            <span class="icon">📘</span>
+            <div><h5>Most Modules Completed</h5><small>Top 3 overall + top 3 per track</small></div>
+        </div>
+
+        <p class="section-label">Overall Top 3</p>
+        <div class="podium mb-3">
+            @for (int i = 0; i < Math.Min(3, Model.CompletedModules.Count); i++)
+            {
+                var row = Model.CompletedModules[i];
+                <div class="podium-card @rankClasses[i]">
+                    <span class="rank-badge">@rankIcons[i]</span>
+                    <div class="p-name">@row.FullName</div>
+                    <div class="p-track">@row.Cohort</div>
+                    <div class="p-score text-primary">@row.Score</div>
+                    <div class="p-unit">modules</div>
+                </div>
+            }
+            @if (!Model.CompletedModules.Any())
+            {
+                <p class="text-muted small">No data yet.</p>
+            }
+        </div>
+
+        @if (Model.CompletedByTrack.Any())
+        {
+            <p class="section-label">By Track</p>
+            @foreach (var track in Model.CompletedByTrack)
+            {
+                <div class="track-block">
+                    <div class="track-block-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                        <span>@track.TrackCode</span>
+                        <i class="fas fa-chevron-down small"></i>
+                    </div>
+                    <div class="track-rows">
+                        @for (int i = 0; i < track.Rows.Count; i++)
+                        {
+                            <div class="track-row">
+                                <span class="pos">@rankIcons[i]</span>
+                                <span class="nm">@track.Rows[i].FullName</span>
+                                <span class="sc text-primary">@track.Rows[i].Score mods</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ═══ ACTIVE THIS WEEK ═══ *@
+    <div class="col-md-6">
+        <div class="lb-header">
+            <span class="icon">⚡</span>
+            <div><h5>Most Active This Week</h5><small>By logs submitted (Mon – Sun)</small></div>
+        </div>
+
+        <p class="section-label">Overall Top 3</p>
+        <div class="podium mb-3">
+            @for (int i = 0; i < Math.Min(3, Model.ActiveThisWeek.Count); i++)
+            {
+                var row = Model.ActiveThisWeek[i];
+                <div class="podium-card @rankClasses[i]">
+                    <span class="rank-badge">@rankIcons[i]</span>
+                    <div class="p-name">@row.FullName</div>
+                    <div class="p-track">@row.Cohort</div>
+                    <div class="p-score text-success">@row.Score</div>
+                    <div class="p-unit">logs</div>
+                </div>
+            }
+            @if (!Model.ActiveThisWeek.Any())
+            {
+                <p class="text-muted small">No logs this week.</p>
+            }
+        </div>
+
+        @if (Model.ActiveWeekByTrack.Any())
+        {
+            <p class="section-label">By Track</p>
+            @foreach (var track in Model.ActiveWeekByTrack)
+            {
+                <div class="track-block">
+                    <div class="track-block-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                        <span>@track.TrackCode</span>
+                        <i class="fas fa-chevron-down small"></i>
+                    </div>
+                    <div class="track-rows">
+                        @for (int i = 0; i < track.Rows.Count; i++)
+                        {
+                            <div class="track-row">
+                                <span class="pos">@rankIcons[i]</span>
+                                <span class="nm">@track.Rows[i].FullName</span>
+                                <span class="sc text-success">@track.Rows[i].Score logs</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ═══ ACTIVE THIS MONTH ═══ *@
+    <div class="col-md-6">
+        <div class="lb-header">
+            <span class="icon">📆</span>
+            <div><h5>Most Active This Month</h5><small>By total approved hours</small></div>
+        </div>
+
+        <p class="section-label">Overall Top 3</p>
+        <div class="podium mb-3">
+            @for (int i = 0; i < Math.Min(3, Model.ActiveThisMonth.Count); i++)
+            {
+                var row = Model.ActiveThisMonth[i];
+                <div class="podium-card @rankClasses[i]">
+                    <span class="rank-badge">@rankIcons[i]</span>
+                    <div class="p-name">@row.FullName</div>
+                    <div class="p-track">@row.Cohort</div>
+                    <div class="p-score text-warning">@row.Score</div>
+                    <div class="p-unit">hrs this month</div>
+                </div>
+            }
+            @if (!Model.ActiveThisMonth.Any())
+            {
+                <p class="text-muted small">No logs this month.</p>
+            }
+        </div>
+
+        @if (Model.ActiveMonthByTrack.Any())
+        {
+            <p class="section-label">By Track</p>
+            @foreach (var track in Model.ActiveMonthByTrack)
+            {
+                <div class="track-block">
+                    <div class="track-block-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                        <span>@track.TrackCode</span>
+                        <i class="fas fa-chevron-down small"></i>
+                    </div>
+                    <div class="track-rows">
+                        @for (int i = 0; i < track.Rows.Count; i++)
+                        {
+                            <div class="track-row">
+                                <span class="pos">@rankIcons[i]</span>
+                                <span class="nm">@track.Rows[i].FullName</span>
+                                <span class="sc text-warning">@track.Rows[i].Score hrs</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ═══ ACTIVE TODAY ═══ *@
+    <div class="col-12">
+        <div class="lb-header">
+            <span class="icon">📅</span>
+            <div><h5>Active Today</h5><small>All students who submitted a log today</small></div>
+        </div>
+        @if (Model.ActiveToday.Any())
+        {
+            <div class="today-grid">
+                @foreach (var s in Model.ActiveToday)
+                {
+                    <span class="today-pill">✅ @s.FullName <span style="opacity:.6;font-size:.68rem;">(@s.Cohort)</span></span>
+                }
+            </div>
+            <p class="text-muted small mt-2">@Model.ActiveToday.Count student(s) logged today.</p>
+        }
+        else
+        {
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-clock fa-2x opacity-25 d-block mb-2"></i>
+                <small>No one has logged work today yet.</small>
+            </div>
+        }
+    </div>
+
+    @* ═══ CONSISTENCY ═══ *@
+    <div class="col-12">
+        <div class="lb-header">
+            <span class="icon">🔁</span>
+            <div><h5>Most Consistent (All Time)</h5><small>By unique days with an approved log</small></div>
+        </div>
+        <div class="podium">
+            @for (int i = 0; i < Math.Min(3, Model.Consistency.Count); i++)
+            {
+                var row = Model.Consistency[i];
+                <div class="podium-card @rankClasses[i]">
+                    <span class="rank-badge">@rankIcons[i]</span>
+                    <div class="p-name">@row.FullName</div>
+                    <div class="p-track">@row.Cohort</div>
+                    <div class="p-score text-info">@row.Score</div>
+                    <div class="p-unit">days logged</div>
+                </div>
+            }
+            @if (!Model.Consistency.Any())
+            {
+                <p class="text-muted small">No data yet.</p>
+            }
+        </div>
+    </div>
+
 </div>

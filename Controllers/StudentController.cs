@@ -408,11 +408,11 @@ public async Task<IActionResult> LogWork(
                 student.ProfilePicture = $"/uploads/profiles/{fileName}";
 
                 _context.Update(student);
-                await _auditService.LogAsync(
-    "STUDENT_PROFILE_UPDATED",
-    $"Student updated profile",
-    User.Identity.Name,
-    _userManager.GetUserId(User));
+                            await _auditService.LogAsync(
+                "STUDENT_PROFILE_UPDATED",
+                $"Student updated profile",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
 
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Profile picture updated successfully!";
@@ -436,10 +436,10 @@ public async Task<IActionResult> LogWork(
                 TempData["Success"] = "Password changed successfully!";
             }
             await _auditService.LogAsync(
-"PASSWORD_CHANGED",
-"User changed password",
-User.Identity.Name,
-_userManager.GetUserId(User));
+                "PASSWORD_CHANGED",
+                "User changed password",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
             return RedirectToAction(nameof(Profile));
         
 
@@ -492,7 +492,6 @@ _userManager.GetUserId(User));
                     ModuleName = m.ModuleName,
                     Title = m.ModuleName,
                     Topics = m.Topics,
-                    Description = m.Topics,
                     RequiredHours = m.RequiredHours,
                     Difficulty = m.DifficultyLevel,
                     IsCompleted = completedIds.Contains(m.Id),
@@ -506,21 +505,23 @@ _userManager.GetUserId(User));
                 };
             }).ToList();
 
-            return View(model);
             ViewBag.LatestAnnouncement = await _context.Announcements
-    .Where(a =>
-        a.TargetPage == "Curriculum" &&
-        (a.Audience == "All" || a.Audience == "Students")
-    )
-    .OrderByDescending(a => a.CreatedAt)
-    .FirstOrDefaultAsync();
+            .Where(a =>
+                a.TargetPage == "Curriculum" &&
+                (a.Audience == "All" || a.Audience == "Students")
+            )
+            .OrderByDescending(a => a.CreatedAt)
+            .FirstOrDefaultAsync();
+
+                    return View(model);
+
         }
 
 
-        // =========================
-        // GET: Attendance Page
-        // =========================
-        [HttpGet]
+            // =========================
+            // GET: Attendance Page
+            // =========================
+            [HttpGet]
         public async Task<IActionResult> Attendance()
         {
             var user = await _userManager.GetUserAsync(User);

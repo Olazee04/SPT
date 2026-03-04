@@ -14,10 +14,12 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
     <script>
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            document.documentElement.setAttribute('data-bs-theme', 'dark');
-        }
+        (function () {
+            var saved = localStorage.getItem('theme');
+            if (saved === 'dark') {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
     </script>
 </head>
 
@@ -27,30 +29,42 @@
     {
         <div id="wrapper">
 
+            @* ===================== SIDEBAR ===================== *@
             <div id="sidebar-wrapper">
+
                 <div class="sidebar-heading">
                     <i class="fas fa-graduation-cap me-2"></i> RMSys SPT <span class="fw-light">PORTAL</span>
                 </div>
 
                 <div class="list-group list-group-flush w-100 flex-grow-1">
 
+                    @* ── STUDENT LINKS ── *@
                     @if (User.IsInRole("Student"))
                     {
                         <div class="sidebar-header-label">Student Area</div>
-                        <a asp-controller="Student" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
+
+                        <a asp-controller="Student" asp-action="Dashboard"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                             <i class="fas fa-home"></i> Dashboard
                         </a>
-                        <a asp-controller="Student" asp-action="Curriculum" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Curriculum" ? "active-link" : "")">
+                        <a asp-controller="Student" asp-action="Curriculum"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Curriculum" ? "active-link" : "")">
                             <i class="fas fa-book"></i> Curriculum
                         </a>
-                        <a asp-controller="Leaderboard" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
+                        <a asp-controller="Student" asp-action="MyModuleQuizScores"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "MyModuleQuizScores" ? "active-link" : "")">
+                            <i class="fas fa-graduation-cap"></i> My Quiz Results
+                        </a>
+                        <a asp-controller="Leaderboard" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
                             <i class="fas fa-trophy"></i> Leaderboard
                         </a>
-                        <a asp-controller="Library" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Library" ? "active-link" : "")">
+                        <a asp-controller="Library" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Library" ? "active-link" : "")">
                             <i class="fas fa-folder-open"></i> Resources
                         </a>
 
-                        @if (User.IsInRole("Student") && (ViewBag.CapstoneUnlocked ?? false))
+                        @if (ViewBag.CapstoneUnlocked ?? false)
                         {
                             <a asp-controller="Capstone" asp-action="Index" class="list-group-item">
                                 <i class="fas fa-rocket"></i> Capstone
@@ -59,120 +73,165 @@
 
                         @if (ViewBag.CanViewCertificate == true)
                         {
-                            <a asp-controller="Student" asp-action="Certificate" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Certificate" ? "active-link" : "")">
+                            <a asp-controller="Student" asp-action="Certificate"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Certificate" ? "active-link" : "")">
                                 <i class="fas fa-certificate text-warning"></i> Certificate
                             </a>
                         }
                         else
                         {
-                            <a href="javascript:void(0)" class="list-group-item disabled text-muted" title="Complete all required modules to unlock certificate">
+                            <a href="javascript:void(0)" class="list-group-item disabled text-muted"
+                               title="Complete all required modules to unlock certificate">
                                 <i class="fas fa-lock"></i> Certificate (Locked)
                             </a>
                         }
 
                         <div class="sidebar-header-label">Account</div>
-                        <a asp-controller="Support" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Support" ? "active-link" : "")">
+
+                        <a asp-controller="Support" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Support" ? "active-link" : "")">
                             <i class="fas fa-headset"></i> Help & Support
                         </a>
-                        <a asp-controller="Student" asp-action="Settings" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active-link" : "")">
+                        <a asp-controller="Student" asp-action="Settings"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Settings" ? "active-link" : "")">
                             <i class="fas fa-cog"></i> Settings
                         </a>
                     }
 
+                    @* ── MENTOR / ADMIN LINKS ── *@
                     @if (User.IsInRole("Mentor") || User.IsInRole("Admin"))
                     {
                         <div class="sidebar-header-label">Management</div>
 
                         @if (User.IsInRole("Admin"))
                         {
-                            <a asp-controller="Admin" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
+                            <a asp-controller="Admin" asp-action="Dashboard"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                                 <i class="fas fa-tachometer-alt"></i> Master Dashboard
                             </a>
-                            <a asp-controller="Admin" asp-action="ProgressLogs" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" ? "active-link" : "")">
+                            <a asp-controller="Admin" asp-action="ProgressLogs"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active-link" : "")">
                                 <i class="fas fa-clipboard-check"></i> Review Logs
                             </a>
                         }
                         else
                         {
-                            <a asp-controller="Mentor" asp-action="Dashboard" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
+                            <a asp-controller="Mentor" asp-action="Dashboard"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Dashboard" ? "active-link" : "")">
                                 <i class="fas fa-chart-line"></i> Mentor Dashboard
                             </a>
                         }
 
                         @if (User.IsInRole("Mentor"))
                         {
-                            <a asp-controller="Mentor" asp-action="Students" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
+                            <a asp-controller="Mentor" asp-action="Students"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
                                 <i class="fas fa-users"></i> My Mentees
                             </a>
-                            <a asp-controller="Mentor" asp-action="Messages" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Messages" ? "active-link" : "")">
+                            <a asp-controller="Mentor" asp-action="ProgressLogs"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Mentor" ? "active-link" : "")">
+                                <i class="fas fa-clipboard-check"></i> Review Logs
+                            </a>
+                            <a asp-controller="Mentor" asp-action="Messages"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Messages" ? "active-link" : "")">
                                 <i class="fas fa-comment-dots"></i> Message A Student
                             </a>
-                            <a asp-controller="Mentor" asp-action="Profile" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active-link" : "")">
+                            <a asp-controller="Mentor" asp-action="Profile"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active-link" : "")">
                                 <i class="fas fa-user-cog"></i> My Profile
                             </a>
-                           
-                            <a class="nav-link" asp-controller="Mentor" asp-action="QuizScores">
-                                <i class="fas fa-star me-2"></i> Quiz Scores
+                           <a asp-controller="Mentor" asp-action="QuizScores"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "QuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Mentor" ? "active-link" : "")">
+                                <i class="fas fa-clipboard-list"></i> Exercise Scores
                             </a>
-                           
+
+                            <a asp-controller="Mentor" asp-action="ModuleQuizScores"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ModuleQuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Mentor" ? "active-link" : "")">
+                                <i class="fas fa-graduation-cap"></i> Module Quiz Scores
+                            </a>
                         }
 
-                        <a asp-controller="Attendance" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Attendance" ? "active-link" : "")">
+                        <a asp-controller="Attendance" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Attendance" ? "active-link" : "")">
                             <i class="fas fa-calendar-check"></i> Attendance
                         </a>
                         <a asp-controller="MentorCapstone" asp-action="Index" class="list-group-item">
                             <i class="fas fa-project-diagram"></i> Capstone Reviews
                         </a>
-                        <a asp-controller="Leaderboard" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
+                        <a asp-controller="Leaderboard" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Leaderboard" ? "active-link" : "")">
                             <i class="fas fa-trophy"></i> Leaderboard
                         </a>
-                        <a asp-controller="Admin" asp-action="ManageLibrary" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ManageLibrary" ? "active-link" : "")">
+                        <a asp-controller="Admin" asp-action="ManageLibrary"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ManageLibrary" ? "active-link" : "")">
                             <i class="fas fa-book"></i> Resource Library
                         </a>
-                        <a asp-controller="Quiz" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active-link" : "")">
+                        <a asp-controller="Quiz" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Quiz" ? "active-link" : "")">
                             <i class="fas fa-question-circle"></i> Manage Quizzes
                         </a>
-                        <a asp-controller="Admin" asp-action="CreateAnnouncement" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "CreateAnnouncement" ? "active-link" : "")">
+                        <a asp-controller="Admin" asp-action="CreateAnnouncement"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "CreateAnnouncement" ? "active-link" : "")">
                             <i class="fas fa-bullhorn"></i> Post Announcements
                         </a>
-                        <a asp-controller="Admin" asp-action="SupportTickets" class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "SupportTickets" ? "active-link" : "")">
+                        <a asp-controller="Admin" asp-action="SupportTickets"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "SupportTickets" ? "active-link" : "")">
                             <i class="fas fa-life-ring"></i> Help Desk
                         </a>
                     }
 
+                    @* ── ADMIN-ONLY LINKS ── *@
                     @if (User.IsInRole("Admin"))
                     {
                         <div class="sidebar-header-label">System Admin</div>
-
-                        <a asp-controller="Admin" asp-action="QuizScores" class="list-group-item">
-                            <i class="fas fa-star me-2"></i> Quiz Scores
+                        <a asp-controller="Admin" asp-action="QuizScores"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "QuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active-link" : "")">
+                            <i class="fas fa-clipboard-list"></i> Exercise Scores
                         </a>
-
-                        <a asp-controller="Admin" asp-action="Students" class="list-group-item">
-                            <i class="fas fa-user-graduate me-2"></i> Students
+                       
+                        <a asp-controller="Admin" asp-action="ModuleQuizScores"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ModuleQuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active-link" : "")">
+                            <i class="fas fa-graduation-cap"></i> Module Quiz Scores
+                        </a>
+                        <a asp-controller="Admin" asp-action="Students"
+                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
+                            <i class="fas fa-user-graduate"></i> Students
                         </a>
 
                         <a class="list-group-item" href="#userSubmenu" data-bs-toggle="collapse">
-                            <i class="fas fa-users-cog"></i> Users & Cohorts
+                            <i class="fas fa-users-cog"></i> Users 
                         </a>
                         <div class="collapse bg-dark bg-opacity-50" id="userSubmenu">
-                            <a asp-controller="Admin" asp-action="Students" class="list-group-item ps-5 small text-white-50"><i class="fas fa-angle-right me-2"></i> Students</a>
-                            <a asp-controller="Admin" asp-action="Mentors" class="list-group-item ps-5 small text-white-50"><i class="fas fa-angle-right me-2"></i> Mentors</a>
-                            <a asp-controller="Cohort" asp-action="Index" class="list-group-item ps-5 small text-white-50"><i class="fas fa-angle-right me-2"></i> Cohorts</a>
+                            <a asp-controller="Admin" asp-action="Students"
+                               class="list-group-item ps-5 small text-white-50">
+                                <i class="fas fa-angle-right me-2"></i> Students
+                            </a>
+                            <a asp-controller="Admin" asp-action="Mentors"
+                               class="list-group-item ps-5 small text-white-50">
+                                <i class="fas fa-angle-right me-2"></i> Mentors
+                            </a>
+                          
                         </div>
 
-                        <a asp-controller="Certificate" asp-action="Index" class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Certificate" ? "active-link" : "")">
+                        <a asp-controller="Certificate" asp-action="Index"
+                           class="list-group-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Certificate" ? "active-link" : "")">
                             <i class="fas fa-certificate"></i> Issue Certificates
                         </a>
-                        <a asp-controller="Admin" asp-action="AuditLogs" class="list-group-item text-warning @(ViewContext.RouteData.Values["Action"]?.ToString() == "AuditLogs" ? "active-link" : "")">
+                        <a asp-controller="Admin" asp-action="AuditLogs"
+                           class="list-group-item text-warning @(ViewContext.RouteData.Values["Action"]?.ToString() == "AuditLogs" ? "active-link" : "")">
                             <i class="fas fa-shield-alt"></i> Audit Logs
                         </a>
                     }
 
                 </div>
 
+                @* Sidebar Footer *@
                 <div class="sidebar-footer">
-                    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                    <form class="form-inline"
+                          asp-area="Identity"
+                          asp-page="/Account/Logout"
+                          asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"
+                          method="post">
                         <button type="submit" class="btn btn-outline-light w-100 btn-sm fw-bold">
                             <i class="fas fa-sign-out-alt me-2"></i> Log Out
                         </button>
@@ -181,8 +240,11 @@
                         &copy; 2026 RMSys Solution
                     </div>
                 </div>
-            </div>
 
+            </div>
+            @* end #sidebar-wrapper *@
+
+            @* ===================== MAIN CONTENT ===================== *@
             <div id="page-content-wrapper" class="w-100">
 
                 @{
@@ -196,35 +258,42 @@
                     }
                 }
 
-                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
-                    <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
+                @* TOP NAVBAR *@
+                <nav class="navbar navbar-expand-lg border-bottom shadow-sm px-4 py-3 top-navbar">
+                    <h4 class="m-0 fw-bold">@ViewData["Title"]</h4>
 
                     <div class="d-flex align-items-center ms-auto">
 
-                        <!-- Theme Toggle -->
-                        <button class="btn btn-light rounded-circle me-3" id="theme-toggle" title="Toggle Mode">
+                        @* Theme Toggle *@
+                        <button class="btn btn-light rounded-circle me-3" id="theme-toggle" title="Toggle Dark/Light Mode">
                             <i class="fas fa-moon"></i>
                         </button>
 
-                        <!-- Notifications -->
+                        @* Notifications *@
                         <div class="dropdown me-3">
-                            <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
+                            <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-bell fa-lg text-secondary"></i>
-                                <span id="notif-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;font-size:.6rem;">0</span>
+                                <span id="notif-count"
+                                      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                      style="display:none;font-size:.6rem;">0</span>
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0" style="width:320px;">
-                                <div class="bg-primary text-white p-2 text-center small fw-bold">NOTIFICATIONS</div>
+                            <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0 notif-dropdown" style="width:320px;">
+                                <div class="bg-primary text-white p-2 text-center small fw-bold rounded-top">
+                                    NOTIFICATIONS
+                                </div>
                                 <div id="notif-list" style="max-height:300px;overflow-y:auto;"></div>
-                                <div class="p-2 border-top text-center bg-light">
-                                    <a class="small fw-bold text-decoration-none" href="#" onclick="markAllRead()">Mark All as Read</a>
+                                <div class="p-2 border-top text-center notif-footer">
+                                    <a class="small fw-bold text-decoration-none" href="#" onclick="markAllRead()">
+                                        Mark All as Read
+                                    </a>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- User Info & Avatar -->
+                        @* User Info & Avatar *@
                         <div class="d-flex align-items-center border-start ps-3">
                             <div class="text-end me-3 d-none d-lg-block">
-                                <div class="small fw-bold text-dark">@User.Identity.Name</div>
+                                <div class="small fw-bold">@User.Identity.Name</div>
                                 <div class="badge bg-secondary">
                                     @User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value
                                 </div>
@@ -232,11 +301,14 @@
 
                             @if (!string.IsNullOrEmpty(avatarUrl))
                             {
-                                <img src="@avatarUrl" class="rounded-circle shadow-sm" style="width:40px;height:40px;object-fit:cover;" />
+                                <img src="@avatarUrl"
+                                     class="rounded-circle shadow-sm"
+                                     style="width:40px;height:40px;object-fit:cover;" />
                             }
                             else
                             {
-                                <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width:40px;height:40px;">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                                     style="width:40px;height:40px;">
                                     @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
                                 </div>
                             }
@@ -244,44 +316,50 @@
 
                     </div>
                 </nav>
+                @* end top-navbar *@
 
-               <div class="container-fluid p-4">
+                @* PAGE CONTENT *@
+                <div class="container-fluid p-4">
 
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i> @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["Warning"] != null)
-    {
-        <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Warning"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i> @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Warning"] != null)
+                    {
+                        <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Warning"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-    @RenderBody()
-</div>
+                    @RenderBody()
+
+                </div>
+                @* end container-fluid *@
 
             </div>
+            @* end #page-content-wrapper *@
 
         </div>
+        @* end #wrapper *@
     }
     else
     {
-        <!-- Public navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+        @* PUBLIC NAVBAR (unauthenticated) *@
+        <nav class="navbar navbar-expand-lg border-bottom shadow-sm px-4 py-3 top-navbar">
             <div class="d-flex w-100 justify-content-between align-items-center">
-                <h4 class="m-0 fw-bold text-dark">@ViewData["Title"]</h4>
+                <h4 class="m-0 fw-bold">@ViewData["Title"]</h4>
             </div>
         </nav>
 
@@ -297,6 +375,7 @@
     @if (User.Identity.IsAuthenticated)
     {
         <script>
+            // ── Notifications ─────────────────────────────────────────
             document.addEventListener("DOMContentLoaded", function () {
                 fetchNotifications();
                 setInterval(fetchNotifications, 60000);
@@ -321,34 +400,56 @@
                             list.innerHTML = '<div class="text-center py-4 small text-muted">No new alerts</div>';
                         } else {
                             data.notifications.forEach(n => {
-                                let bgClass = n.isRead ? 'bg-white' : 'bg-light fw-bold border-start border-4 border-primary';
+                                let bgClass = n.isRead ? '' : 'notif-unread';
                                 let item = `
-                                                <a class="dropdown-item d-flex align-items-center p-3 border-bottom ${bgClass}" href="${n.url || '#'}" onclick="markRead(${n.id})">
-                                                    <div class="me-3">
-                                                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
-                                                            <i class="fas fa-info small"></i>
-                                                        </div>
-                                                    </div>
-                                                    <div style="white-space:normal;line-height:1.2;">
-                                                        <div class="small text-muted mb-1" style="font-size:0.75rem;">${n.timeAgo}</div>
-                                                        <span class="d-block text-dark small">${n.message}</span>
-                                                    </div>
-                                                </a>`;
+                                    <a class="dropdown-item notif-item d-flex align-items-center p-3 border-bottom ${bgClass}"
+                                       href="${n.url || '#'}" onclick="markRead(${n.id})">
+                                        <div class="me-3">
+                                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center"
+                                                 style="width:32px;height:32px;">
+                                                <i class="fas fa-info small"></i>
+                                            </div>
+                                        </div>
+                                        <div style="white-space:normal;line-height:1.2;">
+                                            <div class="small text-muted mb-1" style="font-size:0.75rem;">${n.timeAgo}</div>
+                                            <span class="d-block small notif-message">${n.message}</span>
+                                        </div>
+                                    </a>`;
                                 list.innerHTML += item;
                             });
                         }
-                    });
+                    })
+                    .catch(err => console.warn('Notification fetch failed:', err));
             }
 
-            function markRead(id) { fetch('/Notification/MarkAsRead?id=' + id, { method: 'POST' }); }
-            function markAllRead() { fetch('/Notification/MarkAllRead', { method: 'POST' }).then(() => fetchNotifications()); }
+            function markRead(id) {
+                fetch('/Notification/MarkAsRead?id=' + id, { method: 'POST' });
+            }
 
+            function markAllRead() {
+                fetch('/Notification/MarkAllRead', { method: 'POST' })
+                    .then(() => fetchNotifications());
+            }
+
+            // ── Theme Toggle ──────────────────────────────────────────
             const themeToggle = document.getElementById('theme-toggle');
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-bs-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
+
+            function applyThemeIcon() {
+                const theme = document.documentElement.getAttribute('data-bs-theme');
+                themeToggle.innerHTML = theme === 'dark'
+                    ? '<i class="fas fa-sun text-warning"></i>'
+                    : '<i class="fas fa-moon"></i>';
+            }
+
+            // Apply correct icon immediately on every page load
+            applyThemeIcon();
+
+            themeToggle.addEventListener('click', function () {
+                const current = document.documentElement.getAttribute('data-bs-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-bs-theme', next);
+                localStorage.setItem('theme', next);
+                applyThemeIcon();
             });
         </script>
     }

@@ -40,31 +40,27 @@ namespace SPT.Controllers
                 .Include(s => s.Track)
                 .Include(s => s.ModuleCompletions)
                 .Include(s => s.ProgressLogs)
-                .Where(s => s.EnrollmentStatus == "Active")
                 .ToListAsync();
 
-            var eligibleList = new List<dynamic>();
+            var allModules = await _context.SyllabusModules
+                .Where(m => m.IsActive)
+                .ToListAsync();
 
-            foreach (var s in students)
+            var eligibleList = students.Select(s =>
             {
-                // Logic: Must verify 90% of total track hours or modules
-                // For simplicity here: Check if verified hours > 100 (example threshold)
-                // You can make this stricter later.
-                decimal totalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => l.Hours);
+                int totalModules = allModules.Count(m => m.TrackId == s.TrackId);
+                int completedModules = s.ModuleCompletions.Count(mc => mc.IsCompleted);
+                bool isReady = totalModules > 0 && completedModules >= totalModules;
 
-                // Check if already has cert
-                bool hasCert = await _context.Certificates.AnyAsync(c => c.StudentId == s.Id);
-
-                if (!hasCert)
+                return new
                 {
-                    eligibleList.Add(new
-                    {
-                        Student = s,
-                        TotalHours = totalHours,
-                        IsReady = totalHours >= 50 // Example threshold: 50 hours to graduate
-                    });
-                }
-            }
+                    Student = s,
+                    CompletedModules = completedModules,   
+                    TotalModules = totalModules > 0 ? totalModules : 1, // avoid div by zero
+                    TotalHours = s.ProgressLogs.Where(l => l.IsApproved).Sum(l => l.Hours), // keep for reference
+                    IsReady = isReady
+                };
+            }).ToList();
 
             ViewBag.EligibleList = eligibleList;
             return View();

@@ -3,37 +3,31 @@
     ViewData["Title"] = "My Students";
 }
 
-
 <div class="row mb-4 g-3">
-
     <div class="col-md-4">
         <div class="custom-card text-center p-4">
             <h6 class="text-muted text-uppercase small">My Students</h6>
             <h2 class="fw-bold">@ViewBag.MyStudentsCount</h2>
         </div>
     </div>
-
     <div class="col-md-4">
         <div class="custom-card text-center p-4">
             <h6 class="text-muted text-uppercase small">Pending Logs</h6>
             <h2 class="fw-bold text-warning">@ViewBag.PendingLogs</h2>
         </div>
     </div>
-
     <div class="col-md-4">
         <div class="custom-card text-center p-4">
             <h6 class="text-muted text-uppercase small">Avg Consistency</h6>
             <h2 class="fw-bold text-success">@ViewBag.AvgConsistency%</h2>
         </div>
     </div>
-
 </div>
-
 
 <div class="custom-card p-0 overflow-hidden">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-            <thead class="bg-light text-muted small text-uppercase">
+            <thead class="text-muted small text-uppercase">
                 <tr>
                     <th class="ps-4">Student</th>
                     <th>Cohort</th>
@@ -45,16 +39,15 @@
                 </tr>
             </thead>
             <tbody>
-
                 @foreach (var s in Model)
                 {
                     <tr>
+                        @* Student *@
                         <td class="ps-4">
                             <div class="d-flex align-items-center">
                                 <img src="@(s.ProfilePicture ?? "/images/default-avatar.png")"
                                      class="rounded-circle me-3 border"
                                      style="width:38px;height:38px;object-fit:cover;">
-
                                 <div>
                                     <span class="fw-bold d-block">@s.FullName</span>
                                     <small class="text-muted">@s.Email</small>
@@ -62,38 +55,33 @@
                             </div>
                         </td>
 
+                        @* Cohort *@
                         <td>@s.CohortName</td>
 
+                        @* Track *@
                         <td>
-                            <span class="badge bg-light border">
-                                @s.TrackCode
-                            </span>
+                            <span class="badge bg-secondary">@s.TrackCode</span>
                         </td>
 
+                        @* Hrs (7d) *@
                         <td class="text-center">
                             <strong>@s.HoursLast7Days</strong>
-                            <div class="small text-muted">
-                                @s.CheckInsLast7Days check-ins
-                            </div>
+                            <div class="small text-muted">@s.CheckInsLast7Days check-ins</div>
                         </td>
 
-                        <td style="width:160px;">
+                        @* Progress *@
+                        <td style="width:140px;">
                             @{
-                                double modProgress =
-                                s.TotalModules == 0 ? 0 :
-                                ((double)s.CompletedModules / s.TotalModules) * 100;
+                                double modProgress = s.TotalModules == 0 ? 0
+                                : ((double)s.CompletedModules / s.TotalModules) * 100;
                             }
-
-                            <div class="small mb-1">
-                                @s.CompletedModules / @s.TotalModules
-                            </div>
-
+                            <div class="small mb-1">@s.CompletedModules / @s.TotalModules</div>
                             <div class="progress" style="height:6px;">
-                                <div class="progress-bar bg-primary"
-                                     style="width:@modProgress%"></div>
+                                <div class="progress-bar bg-primary" style="width:@modProgress%"></div>
                             </div>
                         </td>
 
+                        @* Status — fixed: removed the extra orphan <td> that was here *@
                         <td>
                             @if (s.Status == "Active")
                             {
@@ -109,41 +97,33 @@
                             }
                         </td>
 
+                        @* Consistency *@
                         <td style="width:130px;">
                             @{
-                                string barColor =
-                                s.ConsistencyScore >= 75 ? "bg-success" :
-                                s.ConsistencyScore >= 40 ? "bg-warning" :
-                                "bg-danger";
+                                string barColor = s.ConsistencyScore >= 75 ? "bg-success"
+                                : s.ConsistencyScore >= 40 ? "bg-warning"
+                                : "bg-danger";
                             }
-
                             <div class="d-flex align-items-center">
                                 <div class="progress flex-grow-1 me-2" style="height:6px;">
                                     <div class="progress-bar @barColor"
                                          style="width:@s.ConsistencyScore%"></div>
                                 </div>
-                                <small class="fw-bold">
-                                    @s.ConsistencyScore%
-                                </small>
+                                <small class="fw-bold">@s.ConsistencyScore%</small>
                             </div>
                         </td>
                     </tr>
                 }
-
             </tbody>
         </table>
     </div>
 </div>
 
-
 <div class="custom-card mt-4">
-    <h5 class="card-title-custom mb-3">
-        📝 Logs Needing Review
-    </h5>
-
+    <h5 class="card-title-custom mb-3">📝 Logs Needing Review</h5>
     <div class="table-responsive">
         <table class="table table-hover align-middle">
-            <thead class="bg-light small text-uppercase">
+            <thead class="small text-uppercase">
                 <tr>
                     <th>Student</th>
                     <th>Module</th>
@@ -153,22 +133,20 @@
                 </tr>
             </thead>
             <tbody>
-
                 @if (ViewBag.PendingLogsList != null && ViewBag.PendingLogsList.Count > 0)
                 {
                     foreach (var log in ViewBag.PendingLogsList)
                     {
                         <tr>
                             <td>@log.Student.FullName</td>
-                            <td>@log.Module.ModuleCode</td>
+                            <td>@log.Module?.ModuleCode ?? "N/A"</td>
                             <td>@log.Date.ToShortDateString()</td>
                             <td>@log.Hours</td>
                             <td>
                                 <form asp-action="ApproveLog" method="post">
+                                    @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@log.Id" />
-                                    <button class="btn btn-success btn-sm">
-                                        Approve
-                                    </button>
+                                    <button class="btn btn-success btn-sm">Approve</button>
                                 </form>
                             </td>
                         </tr>
@@ -182,7 +160,6 @@
                         </td>
                     </tr>
                 }
-
             </tbody>
         </table>
     </div>

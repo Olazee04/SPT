@@ -1,5 +1,4 @@
 ﻿@model IEnumerable<SPT.Models.SyllabusModule>
-
 @{
     ViewData["Title"] = "Quiz Management";
 }
@@ -13,7 +12,8 @@
     </div>
 
     <div class="card shadow-sm mb-4 border-0 leaderboard-card">
-        <div class="card-body bg-light rounded">
+        @* FIX: card-body had "bg-light rounded" — removed bg-light *@
+        <div class="card-body rounded">
             <div class="row align-items-center">
                 <div class="col-auto">
                     <strong>Filter by Track:</strong>
@@ -36,7 +36,7 @@
         </div>
     </div>
 
-    <div class="card shadow border-0">
+    <div class="card shadow border-0 leaderboard-card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -67,13 +67,10 @@
                                     <td class="ps-4"><span class="badge bg-secondary">@item.Track?.Code</span></td>
                                     <td class="fw-bold">@item.ModuleCode</td>
                                     <td>@item.ModuleName</td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            @(item.Questions?.Count ?? 0) Questions
-                                        </span>
-                                    </td>
+                                    <td><span class="badge bg-info">@(item.Questions?.Count ?? 0) Questions</span></td>
                                     <td class="text-end pe-4">
-                                        <a asp-controller="Quiz" asp-action="Manage" asp-route-moduleId="@item.Id" class="btn btn-sm btn-outline-primary">
+                                        <a asp-controller="Quiz" asp-action="Manage" asp-route-moduleId="@item.Id"
+                                           class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i> Manage Questions
                                         </a>
                                     </td>
@@ -86,3 +83,4 @@
         </div>
     </div>
 </div>
+

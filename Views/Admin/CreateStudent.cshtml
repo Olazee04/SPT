@@ -2,9 +2,6 @@
 
 @{
     ViewData["Title"] = "Create Student";
-
-    // We need the list of tracks to get the "Code" for JavaScript
-
     var tracks = ViewBag.TrackList as IEnumerable<SPT.Models.Track>;
 }
 
@@ -17,21 +14,21 @@
                         <i class="fas fa-user-plus"></i> Create New Student
                     </h3>
                 </div>
-                <div class="card-body"
-                @if (TempData["Error"] != null)
+                <div class="card-body">
 
-                {
-        <div class="alert alert-danger fw-bold">@TempData["Error"]</div>
-                }
-                @if (TempData["Success"] != null)
-
-                {
-        <div class="alert alert-success fw-bold">@TempData["Success"]</div>
-                }>
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger fw-bold">@TempData["Error"]</div>
+                    }
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success fw-bold">@TempData["Success"]</div>
+                    }
 
                     <form asp-action="CreateStudent" method="post" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
 
+                        @* ── Personal Information ── *@
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h5 class="mb-0">📋 Personal Information</h5>
@@ -45,7 +42,9 @@
                                     </div>
 
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label text-primary fw-bold">Auto-Generated Username <i class="fas fa-magic"></i></label>
+                                        <label class="form-label text-primary fw-bold">
+                                            Auto-Generated Username <i class="fas fa-magic"></i>
+                                        </label>
                                         <input type="text" id="usernameDisplay" class="form-control bg-light" readonly placeholder="Will appear here..." />
                                     </div>
 
@@ -76,6 +75,7 @@
                             </div>
                         </div>
 
+                        @* ── Academic Information ── *@
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h5 class="mb-0">🎓 Academic Information</h5>
@@ -87,15 +87,11 @@
                                         <select asp-for="TrackId" id="trackSelect" class="form-select">
                                             <option value="" data-code="">-- Select Course --</option>
                                             @if (tracks != null)
-
                                             {
-
                                                 foreach (var track in tracks)
-
                                                 {
                                                     <option value="@track.Id" data-code="@track.Code">@track.Name</option>
                                                 }
-
                                             }
                                         </select>
                                         <span asp-validation-for="TrackId" class="text-danger"></span>
@@ -103,26 +99,40 @@
 
                                     <div class="col-md-6 mb-3">
                                         <label asp-for="DateJoined" class="form-label">Start Date *</label>
-                                        <input asp-for="DateJoined" id="dateInput" type="date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                                        <input asp-for="DateJoined" id="dateInput" type="date" class="form-control"
+                                               value="@DateTime.Now.ToString("yyyy-MM-dd")" />
                                         <span asp-validation-for="DateJoined" class="text-danger"></span>
                                     </div>
 
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label text-primary fw-bold">Auto-Generated Cohort <i class="fas fa-magic"></i></label>
+                                        <label class="form-label text-primary fw-bold">
+                                            Auto-Generated Cohort <i class="fas fa-magic"></i>
+                                        </label>
                                         <input type="text" id="cohortDisplay" class="form-control bg-light" readonly placeholder="Will appear here..." />
                                     </div>
 
+                                    @* ── Mentor dropdown — updates when track changes ── *@
                                     <div class="col-md-6 mb-3">
-                                        <label asp-for="MentorId" class="form-label">Assigned Mentor</label>
-                                        <select asp-for="MentorId" class="form-select" asp-items="ViewBag.Mentors">
-                                            <option value="">-- Assign Later --</option>
+                                        <label asp-for="MentorId" class="form-label">
+                                            Assigned Mentor
+                                            <small class="text-muted">(filtered by selected track)</small>
+                                        </label>
+                                        <select asp-for="MentorId" id="mentorSelect" class="form-select">
+                                            <option value="">-- Select a track first --</option>
                                         </select>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Shows <strong>[General]</strong> mentors and mentors for the selected track only.
+                                        </small>
                                         <span asp-validation-for="MentorId" class="text-danger"></span>
                                     </div>
 
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label" style="font-weight:bold; color:blue;">Set Login Password *</label>
-                                        <input type="text" name="password" class="form-control" placeholder="Enter initial password" required />
+                                        <label class="form-label" style="font-weight:bold; color:blue;">
+                                            Set Login Password *
+                                        </label>
+                                        <input type="text" name="password" class="form-control"
+                                               placeholder="Enter initial password" required />
                                     </div>
 
                                     <input type="hidden" asp-for="TargetHoursPerWeek" value="25" />
@@ -131,6 +141,7 @@
                             </div>
                         </div>
 
+                        @* ── Emergency Contact ── *@
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h5 class="mb-0">🚨 Emergency Contact</h5>
@@ -142,13 +153,11 @@
                                         <input asp-for="EmergencyContactName" class="form-control" />
                                         <span asp-validation-for="EmergencyContactName" class="text-danger"></span>
                                     </div>
-
                                     <div class="col-md-6 mb-3">
                                         <label asp-for="EmergencyContactPhone" class="form-label">Contact Phone *</label>
                                         <input asp-for="EmergencyContactPhone" class="form-control" />
                                         <span asp-validation-for="EmergencyContactPhone" class="text-danger"></span>
                                     </div>
-
                                     <div class="col-md-12 mb-3">
                                         <label asp-for="EmergencyContactAddress" class="form-label">Contact Address</label>
                                         <textarea asp-for="EmergencyContactAddress" class="form-control" rows="2"></textarea>
@@ -158,6 +167,7 @@
                             </div>
                         </div>
 
+                        @* ── Optional Links ── *@
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h5 class="mb-0">🔗 Optional Links</h5>
@@ -185,6 +195,7 @@
                             </button>
                         </div>
                     </form>
+
                 </div>
             </div>
         </div>
@@ -198,16 +209,17 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // ... (Your JavaScript logic remains exactly the same as before) ...
             const fullNameInput = document.getElementById('fullNameInput');
             const usernameDisplay = document.getElementById('usernameDisplay');
             const trackSelect = document.getElementById('trackSelect');
             const dateInput = document.getElementById('dateInput');
             const cohortDisplay = document.getElementById('cohortDisplay');
+            const mentorSelect = document.getElementById('mentorSelect');
             let nextStudentId = "001";
 
+            // ── Fetch next student ID for username preview ──
             fetch('/Admin/GetNextStudentId')
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
                     nextStudentId = data.toString().padStart(3, '0');
                     updateUsername();
@@ -239,9 +251,49 @@
                 }
             }
 
+            // ── Load mentor dropdown filtered by selected track ──
+            function loadMentors(trackId) {
+                mentorSelect.innerHTML = '<option value="">-- Loading mentors... --</option>';
+
+                if (!trackId) {
+                    mentorSelect.innerHTML = '<option value="">-- Select a track first --</option>';
+                    return;
+                }
+
+                fetch(`/Admin/GetMentorsForTrack?trackId=${trackId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        mentorSelect.innerHTML = '<option value="">-- Assign Later --</option>';
+                        data.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.id;
+                            opt.textContent = m.name;
+                            mentorSelect.appendChild(opt);
+                        });
+
+                        if (data.length === 0) {
+                            mentorSelect.innerHTML = '<option value="">No mentors available for this track</option>';
+                        }
+                    })
+                    .catch(() => {
+                        mentorSelect.innerHTML = '<option value="">-- Error loading mentors --</option>';
+                    });
+            }
+
+            // ── Wire up events ──
             fullNameInput.addEventListener('input', updateUsername);
-            trackSelect.addEventListener('change', updateCohort);
+
+            trackSelect.addEventListener('change', function () {
+                updateCohort();
+                loadMentors(this.value);
+            });
+
             dateInput.addEventListener('change', updateCohort);
+
+            // ── Init: if track already selected on page load (e.g. validation re-render) ──
+            if (trackSelect.value) {
+                loadMentors(trackSelect.value);
+            }
         });
     </script>
 }

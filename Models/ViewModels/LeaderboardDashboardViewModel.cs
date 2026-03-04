@@ -8,6 +8,10 @@
         public List<LeaderboardRow> ActiveThisMonth { get; set; } = new();
         public List<LeaderboardRow> Consistency { get; set; } = new();
         public List<LeaderboardRow> TopPerCohort { get; set; } = new();
+
+        public List<TrackLeaderboardGroup> CompletedByTrack { get; set; } = new();
+        public List<TrackLeaderboardGroup> ActiveWeekByTrack { get; set; } = new();
+        public List<TrackLeaderboardGroup> ActiveMonthByTrack { get; set; } = new();
     }
 
     public class LeaderboardRow
@@ -21,6 +25,13 @@
         public string Track { get; set; } = string.Empty;
         public string Cohort { get; set; } = string.Empty;
 
+        public string TrackCode { get; set; } = "";
         public int Score { get; set; }
+    }
+
+    public class TrackLeaderboardGroup
+    {
+        public string TrackCode { get; set; } = "";
+        public List<LeaderboardRow> Rows { get; set; } = new();
     }
 }

@@ -1,27 +1,33 @@
 ﻿@model SPT.Models.Mentor
 @{
     ViewData["Title"] = "My Profile";
+
+    // Determine the real specialization label
+    string specializationLabel = (Model.Track != null)
+        ? $"{Model.Track.Name} ({Model.Track.Code})"
+        : (Model.Specialization == "General" || string.IsNullOrEmpty(Model.Specialization))
+            ? "General (All Tracks)"
+            : Model.Specialization;
+
+    string trackCodeLabel = Model.Track?.Code ?? "ALL";
+    string trackNameLabel = Model.Track?.Name ?? "General Mentor";
 }
 
 <div class="container-fluid p-4">
     <div class="row g-4">
 
-        <!-- LEFT COLUMN: Photo & Password -->
+        @* ── Left Column: Photo + Password ── *@
         <div class="col-lg-4">
-
-            <!-- Profile Picture Card -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Profile Picture</h5>
                 </div>
                 <div class="card-body text-center p-4">
-
                     @if (!string.IsNullOrEmpty(Model.ProfilePicture))
                     {
                         <img src="@Model.ProfilePicture"
                              class="rounded-circle mb-3 border border-3 border-primary shadow"
-                             style="width:160px;height:160px;object-fit:cover;"
-                             alt="Profile" />
+                             style="width:160px;height:160px;object-fit:cover;" alt="Profile" />
                     }
                     else
                     {
@@ -30,19 +36,17 @@
                             @Model.FullName.Substring(0, 1).ToUpper()
                         </div>
                     }
-
                     <form asp-action="UpdateProfile" method="post" enctype="multipart/form-data">
                         <label class="btn btn-primary w-100 mb-2">
                             <i class="fas fa-upload me-2"></i>Change Photo
-                            <input type="file" name="profilePicture" hidden accept="image/*" onchange="this.form.submit()" />
+                            <input type="file" name="profilePicture" hidden accept="image/*"
+                                   onchange="this.form.submit()" />
                         </label>
                         <small class="text-muted d-block">Max 2MB • JPG/PNG only</small>
                     </form>
-
                 </div>
             </div>
 
-            <!-- Change Password Card -->
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Change Password</h5>
@@ -50,29 +54,26 @@
                 <div class="card-body p-4">
                     <form asp-action="UpdateProfile" method="post">
                         @Html.AntiForgeryToken()
-
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Current Password</label>
-                            <input type="password" name="currentPassword" class="form-control" placeholder="Enter current password" required />
+                            <input type="password" name="currentPassword" class="form-control"
+                                   placeholder="Enter current password" required />
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-bold small">New Password</label>
-                            <input type="password" name="newPassword" class="form-control" placeholder="Enter new password" required />
+                            <input type="password" name="newPassword" class="form-control"
+                                   placeholder="Enter new password" required />
                         </div>
-
                         <button type="submit" class="btn btn-warning w-100 fw-bold">
                             <i class="fas fa-key me-2"></i>Update Password
                         </button>
                     </form>
                 </div>
             </div>
-
         </div>
 
-        <!-- RIGHT COLUMN: Profile Information (Read-Only) -->
+        @* ── Right Column: Info ── *@
         <div class="col-lg-8">
-
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Mentor Information</h5>
@@ -80,104 +81,131 @@
                 </div>
                 <div class="card-body p-4">
 
-                    <!-- Personal Details Section -->
-                    <h6 class="text-primary border-bottom pb-2 mb-3"><i class="fas fa-id-card me-2"></i>Personal Details</h6>
-
+                    @* Personal Details *@
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-id-card me-2"></i>Personal Details
+                    </h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted text-uppercase">Full Name</label>
-                            <div class="p-2 bg-light rounded border">@Model.FullName</div>
+                            <div class="p-2 rounded border">@Model.FullName</div>
                         </div>
-
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted text-uppercase">Email</label>
-                            <div class="p-2 bg-light rounded border">
+                            <div class="p-2 rounded border">
                                 <i class="fas fa-envelope text-muted me-2"></i>@Model.User?.Email
                             </div>
                         </div>
-
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted text-uppercase">Phone</label>
-                            <div class="p-2 bg-light rounded border">
+                            <div class="p-2 rounded border">
                                 <i class="fas fa-phone text-muted me-2"></i>@(Model.Phone ?? "Not provided")
                             </div>
                         </div>
-
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted text-uppercase">Date Joined</label>
-                            <div class="p-2 bg-light rounded border">
+                            <div class="p-2 rounded border">
                                 <i class="fas fa-calendar text-muted me-2"></i>@Model.DateJoined.ToString("MMM dd, yyyy")
                             </div>
                         </div>
-
                         <div class="col-md-12">
                             <label class="small fw-bold text-muted text-uppercase">Address</label>
-                            <div class="p-2 bg-light rounded border">
+                            <div class="p-2 rounded border">
                                 <i class="fas fa-map-marker-alt text-muted me-2"></i>@(Model.Address ?? "Not provided")
                             </div>
                         </div>
                     </div>
 
-                    <!-- Course Mentoring Section -->
-                    <h6 class="text-primary border-bottom pb-2 mb-3"><i class="fas fa-chalkboard-teacher me-2"></i>Teaching Assignment</h6>
-
+                    @* Teaching Assignment — FIXED *@
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>Teaching Assignment
+                    </h6>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <label class="small fw-bold text-muted text-uppercase">Mentoring Track</label>
-                            <div class="p-2 bg-info bg-opacity-10 rounded border border-info">
-                                <i class="fas fa-graduation-cap text-info me-2"></i>
-                                <span class="fw-bold text-info">
-                                    @(Model.Track?.Name ?? Model.Specialization ?? "General Mentor")
-                                </span>
-                            </div>
+                            @if (Model.Track != null)
+                            {
+                                @* Specific track mentor *@
+                                <div class="p-2 bg-primary bg-opacity-10 rounded border border-primary">
+                                    <i class="fas fa-graduation-cap text-primary me-2"></i>
+                                    <span class="fw-bold text-primary">@Model.Track.Name</span>
+                                </div>
+                            }
+                            else
+                            {
+                                @* General mentor *@
+                                <div class="p-2 bg-info bg-opacity-10 rounded border border-info">
+                                    <i class="fas fa-globe text-info me-2"></i>
+                                    <span class="fw-bold text-info">General Mentor — All Tracks</span>
+                                </div>
+                            }
                         </div>
-
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="small fw-bold text-muted text-uppercase">Track Code</label>
-                            <div class="p-2 bg-info bg-opacity-10 rounded border border-info">
-                                <span class="badge bg-info fw-bold">@(Model.Track?.Code ?? "ALL")</span>
-                            </div>
+                            @if (Model.Track != null)
+                            {
+                                <div class="p-2 bg-primary bg-opacity-10 rounded border border-primary text-center">
+                                    <span class="badge bg-primary fs-6">@Model.Track.Code</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="p-2 bg-info bg-opacity-10 rounded border border-info text-center">
+                                    <span class="badge bg-info fs-6">ALL</span>
+                                </div>
+                            }
                         </div>
-
                         <div class="col-md-12">
-                            <label class="small fw-bold text-muted text-uppercase">Specialization</label>
-                            <div class="p-2 bg-light rounded border">
-                                @(Model.Specialization ?? "General")
+                            <label class="small fw-bold text-muted text-uppercase">Role Summary</label>
+                            <div class="p-2 rounded border d-flex align-items-center gap-2">
+                                @if (Model.Track != null)
+                                {
+                                    <span class="badge bg-primary">Track Mentor</span>
+                                    <span class="text-muted small">
+                                        You mentor students enrolled in the
+                                        <strong>@Model.Track.Name</strong> track.
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-info">General Mentor</span>
+                                    <span class="text-muted small">
+                                        You mentor students across all tracks.
+                                    </span>
+                                }
                             </div>
                         </div>
                     </div>
 
-                    <!-- Emergency Contact Section -->
-                    <h6 class="text-primary border-bottom pb-2 mb-3"><i class="fas fa-phone-square-alt me-2"></i>Emergency Contact</h6>
-
+                    @* Emergency Contact *@
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-phone-square-alt me-2"></i>Emergency Contact
+                    </h6>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted text-uppercase">Next of Kin</label>
-                            <div class="p-2 bg-light rounded border">@(Model.NextOfKin ?? "Not provided")</div>
+                            <div class="p-2 rounded border">@(Model.NextOfKin ?? "Not provided")</div>
                         </div>
-
                         <div class="col-md-6">
                             <label class="small fw-bold text-muted text-uppercase">Next of Kin Phone</label>
-                            <div class="p-2 bg-light rounded border">@(Model.NextOfKinPhone ?? "Not provided")</div>
+                            <div class="p-2 rounded border">@(Model.NextOfKinPhone ?? "Not provided")</div>
                         </div>
-
                         <div class="col-md-12">
                             <label class="small fw-bold text-muted text-uppercase">Next of Kin Address</label>
-                            <div class="p-2 bg-light rounded border">@(Model.NextOfKinAddress ?? "Not provided")</div>
+                            <div class="p-2 rounded border">@(Model.NextOfKinAddress ?? "Not provided")</div>
                         </div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(Model.Bio))
                     {
-                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-info-circle me-2"></i>Bio</h6>
-                        <div class="p-3 bg-light rounded border">
-                            @Model.Bio
-                        </div>
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-info-circle me-2"></i>Bio
+                        </h6>
+                        <div class="p-3 rounded border">@Model.Bio</div>
                     }
 
                 </div>
             </div>
-
         </div>
 
     </div>

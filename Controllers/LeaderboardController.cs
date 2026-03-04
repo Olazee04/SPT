@@ -18,120 +18,129 @@ namespace SPT.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var model = new LeaderboardDashboardViewModel
-            {
-                CompletedModules = await CompletedModules(),
-                ActiveThisWeek = await ActiveThisWeek(),
-                ActiveToday = await ActiveToday(),
-                ActiveThisMonth = await ActiveThisMonth(),
-                Consistency = await Consistency(),
-                TopPerCohort = await TopPerCohort()
-            };
+            var today = DateTime.UtcNow.Date;
+            int daysSinceMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var weekStart = today.AddDays(-daysSinceMonday);
+            var monthStart = new DateTime(today.Year, today.Month, 1);
 
-            return View(model);
-        }
+            var students = await _context.Students
+                .Include(s => s.Track)
+                .Include(s => s.Cohort)
+                .Include(s => s.ModuleCompletions)
+                .Include(s => s.ProgressLogs)
+                .ToListAsync();
 
-        // ---------- PRIVATE METHODS (NOT CONTROLLERS) ----------
+            var tracks = await _context.Tracks.ToListAsync();
 
-        private async Task<List<LeaderboardRow>> CompletedModules()
-        {
-            return await _context.Students
+            // ── 1. COMPLETED MODULES ──
+            var completedRows = students
                 .Select(s => new LeaderboardRow
                 {
                     FullName = s.FullName,
-                    Cohort = s.Cohort!.Name,
+                    Cohort = s.Cohort?.Name ?? "N/A",
+                    TrackCode = s.Track?.Code ?? "N/A",
                     Score = s.ModuleCompletions.Count(mc => mc.IsCompleted)
                 })
                 .OrderByDescending(x => x.Score)
-                .Take(5)
-                .ToListAsync();
-        }
+                .ToList();
 
-        private async Task<List<LeaderboardRow>> ActiveThisWeek()
-        {
-            var start = DateTime.UtcNow.Date.AddDays(-7);
-
-            return await _context.ProgressLogs
-                .Where(l => l.Date >= start)
-                .GroupBy(l => l.Student)
-                .Select(g => new LeaderboardRow
+            var completedByTrack = tracks
+                .Select(t => new TrackLeaderboardGroup
                 {
-                    FullName = g.Key.FullName,
-                    Cohort = g.Key.Cohort!.Name,
-                    Score = g.Count()
+                    TrackCode = t.Code,
+                    Rows = completedRows.Where(r => r.TrackCode == t.Code).Take(3).ToList()
                 })
-                .OrderByDescending(x => x.Score)
-                .Take(5)
-                .ToListAsync();
-        }
+                .Where(g => g.Rows.Any())
+                .ToList();
 
-        private async Task<List<LeaderboardRow>> ActiveToday()
-        {
-            var today = DateTime.UtcNow.Date;
-
-            return await _context.ProgressLogs
-                .Where(l => l.Date.Date == today)
-                .GroupBy(l => l.Student)
-                .Select(g => new LeaderboardRow
-                {
-                    FullName = g.Key.FullName,
-                    Cohort = g.Key.Cohort!.Name,
-                    Score = g.Count()
-                })
-                .OrderByDescending(x => x.Score)
-                .Take(5)
-                .ToListAsync();
-        }
-
-        private async Task<List<LeaderboardRow>> ActiveThisMonth()
-        {
-            var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-
-            return await _context.ProgressLogs
-                .Where(l => l.Date >= start)
-                .GroupBy(l => l.Student)
-                .Select(g => new LeaderboardRow
-                {
-                    FullName = g.Key.FullName,
-                    Cohort = g.Key.Cohort!.Name,
-                    Score = g.Count()
-                })
-                .OrderByDescending(x => x.Score)
-                .Take(5)
-                .ToListAsync();
-        }
-
-        private async Task<List<LeaderboardRow>> Consistency()
-        {
-            return await _context.Students
+            // ── 2. ACTIVE THIS WEEK (log count, Mon–Sun) ──
+            var weekRows = students
                 .Select(s => new LeaderboardRow
                 {
                     FullName = s.FullName,
-                    Cohort = s.Cohort!.Name,
-                    Score = s.ProgressLogs
-                        .Select(l => l.Date.Date)
-                        .Distinct()
-                        .Count()
+                    Cohort = s.Cohort?.Name ?? "N/A",
+                    TrackCode = s.Track?.Code ?? "N/A",
+                    Score = s.ProgressLogs.Count(l => l.Date.Date >= weekStart)
+                })
+                .Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            var weekByTrack = tracks
+                .Select(t => new TrackLeaderboardGroup
+                {
+                    TrackCode = t.Code,
+                    Rows = weekRows.Where(r => r.TrackCode == t.Code).Take(3).ToList()
+                })
+                .Where(g => g.Rows.Any())
+                .ToList();
+
+            // ── 3. ACTIVE THIS MONTH (approved hours) ──
+            var monthRows = students
+                .Select(s => new LeaderboardRow
+                {
+                    FullName = s.FullName,
+                    Cohort = s.Cohort?.Name ?? "N/A",
+                    TrackCode = s.Track?.Code ?? "N/A",
+                    Score = (int)s.ProgressLogs
+                                    .Where(l => l.Date.Date >= monthStart && l.IsApproved)
+                                    .Sum(l => l.Hours)
+                })
+                .Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            var monthByTrack = tracks
+                .Select(t => new TrackLeaderboardGroup
+                {
+                    TrackCode = t.Code,
+                    Rows = monthRows.Where(r => r.TrackCode == t.Code).Take(3).ToList()
+                })
+                .Where(g => g.Rows.Any())
+                .ToList();
+
+            // ── 4. ACTIVE TODAY (all who logged today) ──
+            var todayRows = students
+                .Where(s => s.ProgressLogs.Any(l => l.Date.Date == today))
+                .Select(s => new LeaderboardRow
+                {
+                    FullName = s.FullName,
+                    Cohort = s.Cohort?.Name ?? "N/A",
+                    TrackCode = s.Track?.Code ?? "N/A",
+                    Score = s.ProgressLogs.Count(l => l.Date.Date == today)
                 })
                 .OrderByDescending(x => x.Score)
-                .Take(5)
-                .ToListAsync();
-        }
+                .ToList();
 
-        private async Task<List<LeaderboardRow>> TopPerCohort()
-        {
-            return await _context.Students
-                .GroupBy(s => s.Cohort!.Name)
-                .Select(g => g
-                    .OrderByDescending(s => s.ProgressLogs.Count)
-                    .Select(s => new LeaderboardRow
-                    {
-                        FullName = s.FullName,
-                        Cohort = g.Key,
-                        Score = s.ProgressLogs.Count
-                    })
-                    .First())
-                .ToListAsync();
+            // ── 5. CONSISTENCY (distinct approved log days, all time) ──
+            var consistencyRows = students
+                .Select(s => new LeaderboardRow
+                {
+                    FullName = s.FullName,
+                    Cohort = s.Cohort?.Name ?? "N/A",
+                    TrackCode = s.Track?.Code ?? "N/A",
+                    Score = s.ProgressLogs
+                                  .Where(l => l.IsApproved)
+                                  .Select(l => l.Date.Date)
+                                  .Distinct()
+                                  .Count()
+                })
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            var model = new LeaderboardDashboardViewModel
+            {
+                CompletedModules = completedRows.Take(3).ToList(),
+                CompletedByTrack = completedByTrack,
+                ActiveThisWeek = weekRows.Take(3).ToList(),
+                ActiveWeekByTrack = weekByTrack,
+                ActiveThisMonth = monthRows.Take(3).ToList(),
+                ActiveMonthByTrack = monthByTrack,
+                ActiveToday = todayRows,
+                Consistency = consistencyRows.Take(3).ToList()
+            };
+
+            return View(model);
         }
     }
 }

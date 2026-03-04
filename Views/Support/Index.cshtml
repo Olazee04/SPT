@@ -1,8 +1,9 @@
 ﻿@model SPT.Models.SupportDashboardViewModel
 @if (TempData["SupportSuccess"] != null)
 {
-    <div class="alert alert-success">
-        @TempData["SupportSuccess"]
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i> @TempData["SupportSuccess"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 @{
@@ -14,265 +15,189 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>
             <i class="fas fa-headset text-primary"></i>
-            Support & Reflections
+            Support &amp; Reflections
         </h2>
     </div>
 
-   
-
-    <!-- TABS -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
+    <ul class="nav nav-tabs mb-4 support-tabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#help">
-                <i class="fas fa-ticket-alt"></i> Help Desk
+                <i class="fas fa-ticket-alt me-1"></i> Help Desk
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#journal">
-                <i class="fas fa-book-open"></i> Daily Reflection
+                <i class="fas fa-book-open me-1"></i> Daily Reflection
             </button>
         </li>
     </ul>
 
     <div class="tab-content">
 
-        <!-- ================= HELP DESK ================= -->
+        @* ── HELP DESK ── *@
         <div class="tab-pane fade show active" id="help">
             <div class="row">
 
-                <!-- CREATE TICKET -->
+                @* CREATE TICKET — FIX: was bg-light hardcoded *@
                 <div class="col-md-4">
-                    <div class="card shadow-sm border-0 bg-light">
-                        <div class="card-body">
-                            <h5 class="fw-bold mb-3">Submit a Request</h5>
+                    <div class="custom-card">
+                        <h5 class="fw-bold mb-3">Submit a Request</h5>
 
-                            <form asp-action="CreateTicket" method="post">
+                        <form asp-action="CreateTicket" method="post">
 
-                                <div class="mb-3">
-                                    <label class="form-label">Subject</label>
-                                    <input name="Subject" class="form-control" required />
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Subject</label>
+                                <input name="Subject" class="form-control" required />
+                            </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Category</label>
-                                    <select name="Category" class="form-select">
-                                        <option>Technical Issue</option>
-                                        <option>Course Content Help</option>
-                                        <option>Mentorship Request</option>
-                                        <option>Profile Update</option>
-                                        <option>Personal / Other</option>
-                                    </select>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <select name="Category" class="form-select">
+                                    <option>Technical Issue</option>
+                                    <option>Course Content Help</option>
+                                    <option>Mentorship Request</option>
+                                    <option>Profile Update</option>
+                                    <option>Personal / Other</option>
+                                </select>
+                            </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Priority</label>
-                                    <select name="Priority" class="form-select">
-                                        <option>Low</option>
-                                        <option selected>Medium</option>
-                                        <option>High</option>
-                                    </select>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Priority</label>
+                                <select name="Priority" class="form-select">
+                                    <option>Low</option>
+                                    <option selected>Medium</option>
+                                    <option>High</option>
+                                </select>
+                            </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Message</label>
-                                    <textarea name="Message" class="form-control" rows="4" required></textarea>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Message</label>
+                                <textarea name="Message" class="form-control" rows="4" required></textarea>
+                            </div>
 
-                                <button type="submit" class="btn btn-primary w-100">
-                                    Submit Ticket
-                                </button>
-                            </form>
-                        </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                Submit Ticket
+                            </button>
+                        </form>
                     </div>
                 </div>
 
-                <!-- MY TICKETS -->
+                @* MY TICKETS *@
                 <div class="col-md-8">
-                    <div class="card shadow">
-                        <div class="card-header">
-                            <h6 class="fw-bold text-primary mb-0">My Tickets</h6>
-                        </div>
+                    <div class="custom-card">
+                        <h6 class="fw-bold text-primary mb-3">My Tickets</h6>
 
-                        <div class="card-body">
-
-                            @if (Model.Tickets.Any())
+                        @if (Model.Tickets.Any())
+                        {
+                            foreach (var ticket in Model.Tickets)
                             {
-                                foreach (var ticket in Model.Tickets)
-                                {
-                                            <div class="border rounded p-3 mb-3 @(ticket.IsResolved ? "bg-light" : "")">
+                                @* FIX: was "border rounded p-3 mb-3 bg-light" — bg-light hardcoded *@
+                                <div class="border rounded p-3 mb-3 @(ticket.IsResolved ? "ticket-resolved" : "")">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="fw-bold">@ticket.Subject</h6>
+                                        <span class="badge @(ticket.IsResolved ? "bg-success" : "bg-warning")">
+                                            @(ticket.IsResolved ? "Resolved" : "Open")
+                                        </span>
+                                    </div>
+                                    <p class="small text-muted mb-1">@ticket.CreatedAt.ToString("g")</p>
+                                    <p>@ticket.Message</p>
 
-                                                <div class="d-flex justify-content-between">
-                                                    <h6 class="fw-bold">@ticket.Subject</h6>
-                                                    <span class="badge @(ticket.IsResolved ? "bg-success" : "bg-warning")">
-                                                @(ticket.IsResolved ? "Resolved" : "Open")
-                                                    </span>
-                                                </div>
-
-                                                <p class="small text-muted">
-                                            @ticket.CreatedAt.ToString("g")
-                                                </p>
-
-                                                <p>@ticket.Message</p>
-
-                                        @if (!string.IsNullOrEmpty(ticket.AdminResponse))
-                                        {
-                                            <div class="custom-card border rounded p-3 mt-3">
-                                                            <small class="fw-bold text-primary">
-                                                                <i class="fas fa-reply"></i> Admin Response
-                                                            </small>
-                                                            <p class="mb-0 mt-1">@ticket.AdminResponse</p>
-                                                        </div>
-                                        }
-                                            </div>
-                                }
+                                    @if (!string.IsNullOrEmpty(ticket.AdminResponse))
+                                    {
+                                        <div class="custom-card border rounded p-3 mt-3">
+                                            <small class="fw-bold text-primary">
+                                                <i class="fas fa-reply me-1"></i> Admin Response
+                                            </small>
+                                            <p class="mb-0 mt-1">@ticket.AdminResponse</p>
+                                        </div>
+                                    }
+                                </div>
                             }
-                            else
-                            {
-                                    <p class="text-center text-muted py-4">
-                                        No tickets submitted yet.
-                                    </p>
-                            }
-
-                        </div>
+                        }
+                        else
+                        {
+                            <p class="text-center text-muted py-4">No tickets submitted yet.</p>
+                        }
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ================= JOURNAL ================= -->
+        @* ── JOURNAL ── *@
         <div class="tab-pane fade" id="journal">
             <div class="row">
 
-                <!-- CREATE REFLECTION -->
                 <div class="col-md-4">
                     <div class="card shadow-sm border-success">
                         <div class="card-header bg-success">
                             <h5 class="mb-0">
-                                <i class="fas fa-pen-fancy"></i> Daily Check-in
+                                <i class="fas fa-pen-fancy me-2"></i> Daily Check-in
                             </h5>
                         </div>
 
                         <div class="card-body">
                             <form asp-action="CreateReflection" method="post">
                                 <div class="mb-3">
-    <label class="fw-bold mb-2 d-block">Mood</label>
+                                    <label class="fw-bold mb-2 d-block">Mood</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="Mood" id="mood-happy" value="🙂" checked />
+                                        <label class="btn btn-outline-primary" for="mood-happy">🙂 Happy</label>
 
-    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="Mood" id="mood-excited" value="🤩" />
+                                        <label class="btn btn-outline-success" for="mood-excited">🤩 Excited</label>
 
-        <input type="radio"
-               class="btn-check"
-               name="Mood"
-               id="mood-happy"
-               value="🙂"
-               checked />
+                                        <input type="radio" class="btn-check" name="Mood" id="mood-neutral" value="😐" />
+                                        <label class="btn btn-outline-secondary" for="mood-neutral">😐 Neutral</label>
 
-        <label class="btn btn-outline-primary" for="mood-happy">
-            🙂 Happy
-        </label>
-
-        <input type="radio"
-               class="btn-check"
-               name="Mood"
-               id="mood-excited"
-               value="🤩" />
-
-        <label class="btn btn-outline-success" for="mood-excited">
-            🤩 Excited
-        </label>
-
-        <input type="radio"
-               class="btn-check"
-               name="Mood"
-               id="mood-neutral"
-               value="😐" />
-
-        <label class="btn btn-outline-secondary" for="mood-neutral">
-            😐 Neutral
-        </label>
-
-        <input type="radio"
-               class="btn-check"
-               name="Mood"
-               id="mood-stressed"
-               value="😫" />
-
-        <label class="btn btn-outline-warning" for="mood-stressed">
-            😫 Stressed
-        </label>
-
-    </div>
-</div>
-
+                                        <input type="radio" class="btn-check" name="Mood" id="mood-stressed" value="😫" />
+                                        <label class="btn btn-outline-warning" for="mood-stressed">😫 Stressed</label>
+                                    </div>
+                                </div>
 
                                 <div class="mb-3">
                                     <label class="fw-bold">What did you learn?</label>
                                     <textarea name="WhatILearned" class="form-control" rows="2" required></textarea>
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="fw-bold">Any struggles?</label>
                                     <textarea name="Struggles" class="form-control" rows="2"></textarea>
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="fw-bold">Goal for tomorrow</label>
                                     <input name="GoalTomorrow" class="form-control" />
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="fw-bold">Understanding (1–5)</label>
-                                    <input type="range" name="UnderstandingRating" min="1" max="5" class="form-range">
+                                    <input type="range" name="UnderstandingRating" min="1" max="5" class="form-range" />
                                 </div>
-
-                                <button type="submit" class="btn btn-success w-100">
-                                    Save Journal
-                                </button>
+                                <button type="submit" class="btn btn-success w-100">Save Journal</button>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- RECENT REFLECTIONS -->
                 <div class="col-md-8">
                     <h5 class="fw-bold mb-3">Recent Journals</h5>
-
                     <div class="row">
                         @foreach (var r in Model.Reflections)
                         {
-                                <div class="col-md-6 mb-3">
-                                    <div class="card shadow-sm h-100">
-                                        <div class="card-body">
-
-                                            <div class="d-flex justify-content-between">
-                                                <span class="fs-4">@r.Mood</span>
-                                                <small class="text-muted">
-                                                @r.Date.ToString("MMM dd")
-                                                </small>
-                                            </div>
-
-                                            <hr />
-
-                                            <p>
-                                                <strong>Learned:</strong>
-                                            @r.WhatILearned
-                                            </p>
-
-                                        @if (!string.IsNullOrEmpty(r.Struggles))
-                                        {
-                                                    <p class="text-danger small">
-                                                        <strong>Struggle:</strong>
-                                                @r.Struggles
-                                                    </p>
-                                        }
-
-                                            <div class="text-end">
-                                                <span class="badge bg-light border">
-                                                    Rating: @r.UnderstandingRating / 5
-                                                </span>
-                                            </div>
-                                        </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="custom-card h-100">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fs-4">@r.Mood</span>
+                                        <small class="text-muted">@r.Date.ToString("MMM dd")</small>
+                                    </div>
+                                    <hr />
+                                    <p><strong>Learned:</strong> @r.WhatILearned</p>
+                                    @if (!string.IsNullOrEmpty(r.Struggles))
+                                    {
+                                        <p class="text-danger small"><strong>Struggle:</strong> @r.Struggles</p>
+                                    }
+                                    <div class="text-end">
+                                        <span class="badge bg-secondary">Rating: @r.UnderstandingRating / 5</span>
                                     </div>
                                 </div>
+                            </div>
                         }
                     </div>
                 </div>
@@ -282,3 +207,4 @@
 
     </div>
 </div>
+

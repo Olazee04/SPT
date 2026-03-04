@@ -1,10 +1,13 @@
 ﻿@model List<QuizAttempt>
 @{
     ViewData["Title"] = "My Quiz History";
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
 }
 
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white fw-bold border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+<div class="card shadow-sm border-0 leaderboard-card">
+    @* FIX: bg-white → removed *@
+    <div class="card-header fw-bold border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
         <span><i class="fas fa-history me-2 text-primary"></i> Quiz Attempt History</span>
         <span class="badge bg-secondary">@Model.Count total attempts</span>
     </div>
@@ -21,7 +24,8 @@
         {
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    @* FIX: table-light → removed *@
+                    <thead>
                         <tr>
                             <th>Module</th>
                             <th style="width:180px;">Score</th>
@@ -38,8 +42,7 @@
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="progress flex-grow-1" style="height:8px;">
-                                            <div class="progress-bar bg-@(passed ? "success" : "danger")"
-                                                 style="width:@a.Score%"></div>
+                                            <div class="progress-bar bg-@(passed ? "success" : "danger")" style="width:@a.Score%"></div>
                                         </div>
                                         <span class="fw-bold small">@a.Score%</span>
                                     </div>
@@ -55,6 +58,27 @@
                     </tbody>
                 </table>
             </div>
+            @if (totalPages > 1)
+            {
+                <div class="d-flex justify-content-center py-3">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" asp-route-page="@(currentPage - 1)">«</a>
+                            </li>
+                            @for (int p = 1; p <= totalPages; p++)
+                            {
+                                <li class="page-item @(p == currentPage ? "active" : "")">
+                                    <a class="page-link" asp-route-page="@p">@p</a>
+                                </li>
+                            }
+                            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                <a class="page-link" asp-route-page="@(currentPage + 1)">»</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
         }
     </div>
 </div>
