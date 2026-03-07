@@ -2,13 +2,15 @@
 @{
     ViewData["Title"] = "Master Progress Logs";
     string status = ViewBag.CurrentStatus as string;
+    string updateController = User.IsInRole("Admin") ? "Admin" : "Mentor";
 }
 
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="font-weight-bold text-gray-800"><i class="fas fa-clipboard-check text-primary mr-2"></i> Review Activity Logs</h2>
-
+            <h2 class="font-weight-bold text-gray-800">
+                <i class="fas fa-clipboard-check text-primary mr-2"></i> Review Activity Logs
+            </h2>
             @if (ViewBag.IsFiltered == true)
             {
                 <div class="badge badge-warning fw-bold p-2 mt-1">
@@ -20,7 +22,6 @@
                 <p class="text-muted mb-0">Approve, reject, or edit student submissions.</p>
             }
         </div>
-
         @if (ViewBag.IsFiltered == true)
         {
             <a asp-action="ProgressLogs" class="btn btn-outline-secondary btn-sm">
@@ -34,7 +35,6 @@
             <h5 class="font-weight-bold mb-0 text-gray-800">Activity Logs</h5>
             <p class="text-muted small mb-0">Audit daily submissions.</p>
         </div>
-
         <div class="d-flex align-items-center">
             <div class="btn-group shadow-sm mr-3">
                 <a asp-action="ProgressLogs" asp-route-status="All"
@@ -44,7 +44,6 @@
                 <a asp-action="ProgressLogs" asp-route-status="Approved"
                    class="btn btn-sm @(status == "Approved" ? "btn-success font-weight-bold" : "btn-light border")">Approved</a>
             </div>
-
             <form method="get" class="form-inline">
                 <input type="hidden" name="status" value="@status" />
                 <div class="input-group">
@@ -94,13 +93,11 @@
                                         </div>
                                     </div>
                                 </td>
-
                                 <td class="small text-muted">
                                     <i class="far fa-calendar-alt mr-1"></i> @log.Date.ToString("MMM dd")
                                 </td>
-
                                 <td>
-                                    <div class="text-truncate" style="max-width: 180px;" title="@log.ActivityDescription">
+                                    <div class="text-truncate" style="max-width:180px;" title="@log.ActivityDescription">
                                         @(string.IsNullOrEmpty(log.ActivityDescription) ? "No description" : log.ActivityDescription)
                                     </div>
                                     @if (log.Module != null)
@@ -108,13 +105,10 @@
                                         <small class="text-primary font-weight-bold">@log.Module.ModuleCode</small>
                                     }
                                 </td>
-
                                 <td class="small text-muted">
                                     @(string.IsNullOrEmpty(log.Blocker) ? "-" : log.Blocker)
                                 </td>
-
                                 <td class="text-center font-weight-bold">@log.Hours</td>
-                           
                                 <td class="text-center">
                                     @if (log.QuizScore.HasValue)
                                     {
@@ -124,13 +118,14 @@
                                     }
                                     else
                                     {
-                                        <span class="text-muted small">—</span>
+                                        <span class="text-muted small">&#8212;</span>
                                     }
                                 </td>
                                 <td class="text-center">
                                     @if (!string.IsNullOrEmpty(log.EvidenceUrl))
                                     {
-                                        <a href="@log.EvidenceUrl" target="_blank" class="btn btn-sm btn-light border text-primary" title="Open Link">
+                                        <a href="@log.EvidenceUrl" target="_blank"
+                                           class="btn btn-sm btn-light border text-primary" title="Open Link">
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
                                     }
@@ -139,48 +134,60 @@
                                         <span class="text-muted small">-</span>
                                     }
                                 </td>
-
                                 <td class="text-center leaderboard-card">
                                     @if (log.IsApproved)
                                     {
-                    <span class="badge rounded-pill bg-success px-3 py-2">
-                        <i class="fas fa-check-circle me-1"></i> Approved
-                    </span>
+                                        <span class="badge rounded-pill bg-success px-3 py-2">
+                                            <i class="fas fa-check-circle me-1"></i> Approved
+                                        </span>
                                     }
                                     else
                                     {
                                         <span class="badge rounded-pill bg-warning fw-bold px-3 py-2">
-                        <i class="fas fa-hourglass-half me-1"></i> Pending
-                    </span>
+                                            <i class="fas fa-hourglass-half me-1"></i> Pending
+                                        </span>
                                     }
-        </td>
-
-
+                                </td>
                                 <td class="text-right pr-4">
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                                    data-bs-toggle="modal" data-bs-target="#logModal_@log.Id">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#logModal_@log.Id">
                                         <i class="fas fa-eye mr-1"></i> Review
                                     </button>
                                 </td>
                             </tr>
 
-                            <div class="modal fade" id="logModal_@log.Id" tabindex="-1" role="dialog" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered" role="document">
-                                       <div class="modal-body p-4 leaderboard-card">
-                                                <div class="d-flex align-items-center mb-3 p-3 bg-light rounded border">
-                                            <div>
-                                                <h6 class="mb-0 font-weight-bold text-gray-800">@log.Student?.FullName</h6>
-                                                <small class="text-muted">@log.Date.ToString("D")</small>
-                                            </div>
-                                            <div class="ml-auto text-right">
-                                                <h4 class="font-weight-bold text-primary mb-0">@log.Hours</h4>
-                                                <small class="text-muted">Hours</small>
-                                            </div>
+                            <div class="modal fade" id="logModal_@log.Id" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content leaderboard-card border-0 shadow">
+
+                                        <div class="modal-header border-0 pb-0">
+                                            <h5 class="modal-title fw-bold">
+                                                <i class="fas fa-clipboard-check text-primary me-2"></i> Review Log
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
 
+                                        <div class="modal-body p-4">
 
-                                            <div class="mb-3 leaderboard-card">
-                                                <label class="small text-muted font-weight-bold text-uppercase">Description</label>
+                                            <div class="d-flex align-items-center mb-3 p-3 bg-light rounded border">
+                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-3"
+                                                     style="width:42px;height:42px;font-size:1.1rem;flex-shrink:0;">
+                                                    @(log.Student?.FullName.Substring(0, 1) ?? "?")
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">@log.Student?.FullName</h6>
+                                                    <small class="text-muted">@log.Date.ToString("D")</small>
+                                                </div>
+                                                <div class="ms-auto text-end">
+                                                    <h4 class="fw-bold text-primary mb-0">@log.Hours hrs</h4>
+                                                    <small class="text-muted">Logged</small>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="small text-muted fw-bold text-uppercase">Description</label>
                                                 <p class="p-3 border rounded custom-card small mb-0">
                                                     @(string.IsNullOrEmpty(log.ActivityDescription) ? "No description." : log.ActivityDescription)
                                                 </p>
@@ -188,105 +195,114 @@
 
                                             <div class="mb-3">
                                                 <label class="small fw-bold text-muted">Student Blocker</label>
-                                                <div class="border rounded p-2 bg-light small">
-                                                    @(log.Blocker ?? "—")
-                                                </div>
+                                                <div class="border rounded p-2 bg-light small">@(log.Blocker ?? "&#8212;")</div>
                                             </div>
 
                                             <div class="mb-3">
                                                 <label class="small fw-bold text-muted">Next Goal</label>
-                                                <div class="border rounded p-2 bg-light small">
-                                                    @(log.NextGoal ?? "—")
-                                                </div>
+                                                <div class="border rounded p-2 bg-light small">@(log.NextGoal ?? "&#8212;")</div>
                                             </div>
-
 
                                             @if (!string.IsNullOrEmpty(log.EvidenceUrl))
                                             {
                                                 <div class="mb-3">
-                                                    <a href="@log.EvidenceUrl" target="_blank" class="btn btn-outline-primary btn-sm btn-block">
+                                                    <a href="@log.EvidenceUrl" target="_blank"
+                                                       class="btn btn-outline-primary btn-sm w-100">
                                                         <i class="fas fa-external-link-alt mr-1"></i> Open Evidence Link
                                                     </a>
                                                 </div>
                                             }
 
-                                                   <form asp-action="UpdateLog" method="post">
-            <input type="hidden" name="id" value="@log.Id" />
-                                                <div class="mb-2">
-                                                    <label class="small fw-bold">Adjust Hours</label>
-                                                    <input type="number"
-                                                           name="hours"
-                                                           value="@log.Hours"
-                                                           step="0.5"
-                                                           min="0.5"
-                                                           max="5"
-                                                           class="form-control form-control-sm" />
+                                            <form asp-controller="@updateController" asp-action="UpdateLog" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@log.Id" />
+
+                                                <div class="mb-3">
+                                                    <label class="small fw-bold">
+                                                        Adjust Hours <span class="text-muted fw-normal">(max 5 hrs / day)</span>
+                                                    </label>
+                                                    <div class="input-group">
+                                                        <button type="button" class="btn btn-outline-secondary"
+                                                                onclick="decreaseHours(@log.Id)">
+                                                            <i class="fas fa-minus"></i>
+                                                        </button>
+                                                        <input type="number"
+                                                               id="hoursInput_@log.Id"
+                                                               name="hours"
+                                                               value="@log.Hours"
+                                                               step="0.5"
+                                                               min="0.5"
+                                                               max="5"
+                                                               class="form-control text-center fw-bold" />
+                                                        <button type="button" class="btn btn-outline-secondary"
+                                                                onclick="increaseHours(@log.Id)">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                    <small class="text-muted">Steps of 0.5 &bull; Server enforces 5-hr daily cap.</small>
                                                 </div>
 
-
-            <div class="row g-2">
-                <div class="col">
-                    <label class="form-label small fw-bold">Rating</label>
-                    <select name="mentorRating" class="form-select form-select-sm">
-                        <option value="">--</option>
-                        <option value="5">⭐ 5</option>
-                        <option value="4">⭐ 4</option>
-                        <option value="3">⭐ 3</option>
-                        <option value="2">⭐ 2</option>
-                        <option value="1">⭐ 1</option>
-                    </select>
-                </div>
-
-                <div class="col">
-                    <label class="form-label small fw-bold">Quiz Score</label>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col">
+                                                        <label class="small fw-bold">Rating</label>
+                                                        @{
+                                                            int currentRating = log.MentorRating ?? 0;
+                                                        }
+                                                        <select name="mentorRating" class="form-control form-control-sm">
+                                                            <option value="">--</option>
+                                                            <option value="5">⭐ 5</option>
+                                                            <option value="4">⭐ 4</option>
+                                                            <option value="3">⭐ 3</option>
+                                                            <option value="2">⭐ 2</option>
+                                                            <option value="1">⭐ 1</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col">
+                                                        <label class="small fw-bold">Quiz Score</label>
                                                         <input type="number"
-                                                                name="quizScore"
-                                                                class="form-control form-control-sm"
-                                                                min="0"
-                                                                max="100"
-                                                        @(log.PracticeDone ? "" : "disabled") />
+                                                               name="quizScore"
+                                                               class="form-control form-control-sm"
+                                                               min="0" max="100"
+                                                               value="@(log.QuizScore.HasValue ? log.QuizScore.ToString() : "")"
+                                                               @(log.PracticeDone ? "" : "disabled")
+                                                               placeholder="@(log.PracticeDone ? "0-100" : "N/A")" />
+                                                    </div>
+                                                </div>
 
-                </div>
-            </div>
-
-                                                <div class="mt-3">
-                                                    <label class="small fw-bold">Mentor Advice</label>
+                                                <div class="mb-3">
+                                                    <label class="small fw-bold">Mentor Advice / Response</label>
                                                     <textarea name="mentorResponse"
                                                               class="form-control form-control-sm"
                                                               rows="2"
                                                               placeholder="Reply to blocker or give guidance...">@log.MentorResponse</textarea>
                                                 </div>
 
-
-            <div class="d-flex justify-content-end mt-3">
-                <button type="submit"
-                        name="action"
-                        value="Reject"
-                        class="btn btn-outline-danger btn-sm me-2"
-                        onclick="return confirm('Reject this log?');">
-                    <i class="fas fa-times"></i> Reject
-                </button>
-
-                <button type="submit"
-                        name="action"
-                        value="Approve"
-                        class="btn btn-success btn-sm px-4">
-                    <i class="fas fa-check"></i> Approve
-                </button>
-            </div>
-        </form>
+                                                <div class="d-flex justify-content-end gap-2 mt-3">
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                            data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" name="action" value="Reject"
+                                                            class="btn btn-outline-danger btn-sm"
+                                                            onclick="return confirm('Reject this log?');">
+                                                        <i class="fas fa-times me-1"></i> Reject
+                                                    </button>
+                                                    <button type="submit" name="action" value="Approve"
+                                                            class="btn btn-success btn-sm px-4">
+                                                        <i class="fas fa-check me-1"></i> Approve
+                                                    </button>
+                                                </div>
+                                            </form>
 
                                         </div>
                                     </div>
                                 </div>
-                            
+                            </div>
                         }
                     }
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-5">
-                                <i class="fas fa-folder-open fa-3x text-muted opacity-25 mb-3"></i>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-folder-open fa-3x text-muted opacity-25 mb-3 d-block"></i>
                                 <h6 class="text-muted">No logs found</h6>
                             </td>
                         </tr>
@@ -294,22 +310,21 @@
                 </tbody>
             </table>
         </div>
-
     </div>
 </div>
+
 @section Scripts {
     <script>
         function decreaseHours(logId) {
-            const input = document.getElementById(`hoursInput_${logId}`);
-            let value = parseFloat(input.value);
-            if (value > 0.5) input.value = (value - 0.5).toFixed(1);
+            var input = document.getElementById('hoursInput_' + logId);
+            var val = parseFloat(input.value) || 0.5;
+            if (val > 0.5) input.value = (val - 0.5).toFixed(1);
         }
+
         function increaseHours(logId) {
-            const input = document.getElementById(`hoursInput_${logId}`);
-            let value = parseFloat(input.value);
-            if (value < 5) input.value = (value + 0.5).toFixed(1);
+            var input = document.getElementById('hoursInput_' + logId);
+            var val = parseFloat(input.value) || 0;
+            if (val < 5) input.value = (val + 0.5).toFixed(1);
         }
     </script>
 }
-
-

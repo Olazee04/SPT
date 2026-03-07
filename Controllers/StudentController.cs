@@ -825,5 +825,26 @@ public async Task<IActionResult> LogWork(
             }
             return Redirect(Request.Headers["Referer"].ToString());
         }
+
+        // =========================
+        // GET: My Module Quiz Results
+        // =========================
+        [HttpGet]
+        public async Task<IActionResult> MyModuleQuizScores()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => s.UserId == user.Id);
+
+            if (student == null) return RedirectToAction(nameof(Dashboard));
+
+            var attempts = await _context.QuizAttempts
+                .Include(a => a.Module)
+                .Where(a => a.StudentId == student.Id)
+                .OrderByDescending(a => a.AttemptedAt)
+                .ToListAsync();
+
+            return View(attempts);
+        }
     }
 }

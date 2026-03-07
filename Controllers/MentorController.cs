@@ -115,6 +115,7 @@ namespace SPT.Controllers
             var userId = _userManager.GetUserId(User);
             return await _context.Mentors
                 .Include(m => m.User)
+                .Include(m => m.Track)   // <-- THIS was missing, causing Track to always be null
                 .FirstOrDefaultAsync(m => m.UserId == userId);
         }
 
