@@ -179,6 +179,26 @@
             .forgot-link:hover {
                 text-decoration: underline;
             }
+
+        .role-notice {
+            font-size: 0.78rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .theme-student .role-notice {
+            background: #ede9fe;
+            color: #4f46e5;
+            display: block;
+        }
+
+        .theme-admin .role-notice {
+            background: #1e3a5f;
+            color: #93c5fd;
+            display: block;
+        }
     </style>
 </head>
 
@@ -186,49 +206,70 @@
 
     <div class="login-card theme-student" id="loginCard">
 
-        <!-- Role Switch -->
+        <!-- Role Switch Tabs -->
         <div class="role-switch">
-            <button type="button" class="role-btn active" onclick="setRole('student', this)">Student</button>
-            <button type="button" class="role-btn" onclick="setRole('admin', this)">Admin / Mentor</button>
+            <button type="button" class="role-btn active" onclick="setRole('Student', this)">
+                <i class="fas fa-graduation-cap me-1"></i> Student
+            </button>
+            <button type="button" class="role-btn" onclick="setRole('AdminMentor', this)">
+                <i class="fas fa-user-shield me-1"></i> Admin / Mentor
+            </button>
         </div>
 
         <!-- Visual Side -->
         <div class="visual-side">
-            <i class="fas fa-graduation-cap" style="font-size: 5rem; margin-bottom: 20px;" id="visualIcon"></i>
+            <i class="fas fa-graduation-cap" style="font-size:5rem;margin-bottom:20px;" id="visualIcon"></i>
             <h2 id="visualTitle" class="fw-bold">Welcome Student</h2>
-            <p id="visualText" style="opacity: 0.9;">Access your dashboard, track progress, and learn.</p>
+            <p id="visualText" style="opacity:0.9;">Access your dashboard, track progress, and learn.</p>
         </div>
 
         <!-- Form Side -->
         <div class="form-side">
-            <div class="mb-4">
+            <div class="mb-3">
                 <h3 class="fw-bold" id="formHeader">Student Login</h3>
-                <p class="text-muted small">Please sign in to continue.</p>
+                <p class="text-muted small mb-0">Please sign in to continue.</p>
+            </div>
+
+            <!-- Role notice shown under header -->
+            <div class="role-notice" id="roleNotice">
+                <i class="fas fa-info-circle me-1"></i>
+                <span id="roleNoticeText">This portal is for students only.</span>
             </div>
 
             <form method="post">
                 @Html.AntiForgeryToken()
 
-                <input type="hidden" name="Input.LoginType" id="loginType" value="student" />
+                <!--
+                    IMPORTANT: value must exactly match what LoginModel checks:
+                    "Student"     → student tab
+                    "AdminMentor" → admin/mentor tab
+                -->
+                <input type="hidden" name="Input.LoginType" id="loginTypeInput" value="Student" />
 
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
                 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                 {
-                    <div class="alert alert-danger small py-2">@Model.ErrorMessage</div>
+                    <div class="alert alert-danger small py-2">
+                        <i class="fas fa-exclamation-circle me-1"></i> @Model.ErrorMessage
+                    </div>
                 }
 
-                <!-- Email / Username -->
+                <!-- Username or Email -->
                 <div class="mb-3">
-                    <label asp-for="Input.Email" class="form-label fw-bold small">Email or Username</label>
+                    <label asp-for="Input.Email" class="form-label fw-bold small">Username or Email</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user"></i></span>
-                        <input asp-for="Input.Email" class="form-control" placeholder="Enter email or username" autocomplete="username" required />
+                        <input asp-for="Input.Email"
+                               class="form-control"
+                               placeholder="Enter your username or email"
+                               autocomplete="username"
+                               required />
                     </div>
                     <span asp-validation-for="Input.Email" class="text-danger small"></span>
                 </div>
 
-                <!-- Password with toggle -->
+                <!-- Password -->
                 <div class="mb-2">
                     <label asp-for="Input.Password" class="form-label fw-bold small">Password</label>
                     <div class="input-group">
@@ -240,7 +281,6 @@
                                placeholder="Enter your password"
                                autocomplete="current-password"
                                required />
-                        <!-- ✅ Show/Hide toggle -->
                         <button type="button" class="toggle-password" id="togglePassword" title="Show/Hide Password">
                             <i class="fas fa-eye" id="eyeIcon"></i>
                         </button>
@@ -249,28 +289,26 @@
                 </div>
 
                 <!-- Remember me + Forgot password -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
                     <div class="form-check">
                         <input asp-for="Input.RememberMe" class="form-check-input" />
                         <label asp-for="Input.RememberMe" class="form-check-label small">Remember me</label>
                     </div>
-                    <!-- ✅ Forgot Password link -->
                     <a asp-page="./ForgotPassword" class="forgot-link">
                         <i class="fas fa-key me-1"></i> Forgot password?
                     </a>
                 </div>
 
                 <button type="submit" class="btn-action shadow-sm">
-                    <i class="fas fa-sign-in-alt me-2"></i> Log In
+                    <i class="fas fa-sign-in-alt me-2"></i> <span id="loginBtnText">Log In as Student</span>
                 </button>
-
             </form>
         </div>
 
     </div>
 
     <script>
-        // ✅ Password show/hide toggle
+        // Password show/hide
         document.getElementById('togglePassword').addEventListener('click', function () {
             const field = document.getElementById('passwordField');
             const icon = document.getElementById('eyeIcon');
@@ -279,22 +317,27 @@
             icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
         });
 
-        // ✅ Role theme switcher
+        // Role tab switcher
+        // NOTE: role values MUST match exactly what LoginModel.OnPostAsync checks:
+        //   "Student"     → student tab
+        //   "AdminMentor" → admin/mentor tab
         function setRole(role, btn) {
             const card = document.getElementById('loginCard');
-            const btns = document.querySelectorAll('.role-btn');
-
-            btns.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById('loginType').value = role;
 
-            if (role === 'student') {
+            // Set the hidden input value — this is what the server reads
+            document.getElementById('loginTypeInput').value = role;
+
+            if (role === 'Student') {
                 card.className = 'login-card theme-student';
                 document.body.style.backgroundColor = '#f0f2f5';
                 document.getElementById('visualTitle').innerText = 'Welcome Student';
                 document.getElementById('formHeader').innerText = 'Student Login';
                 document.getElementById('visualText').innerText = 'Access your dashboard, track progress, and learn.';
                 document.getElementById('visualIcon').className = 'fas fa-graduation-cap';
+                document.getElementById('loginBtnText').innerText = 'Log In as Student';
+                document.getElementById('roleNoticeText').innerText = 'This portal is for students only.';
             } else {
                 card.className = 'login-card theme-admin';
                 document.body.style.backgroundColor = '#0f172a';
@@ -302,6 +345,8 @@
                 document.getElementById('formHeader').innerText = 'Admin / Mentor Login';
                 document.getElementById('visualText').innerText = 'Manage students, review logs, and monitor performance.';
                 document.getElementById('visualIcon').className = 'fas fa-user-shield';
+                document.getElementById('loginBtnText').innerText = 'Log In as Staff';
+                document.getElementById('roleNoticeText').innerText = 'This portal is for Admins and Mentors only.';
             }
         }
     </script>

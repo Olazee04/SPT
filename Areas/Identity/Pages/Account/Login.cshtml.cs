@@ -37,16 +37,18 @@ namespace SPT.Areas.Identity.Pages.Account
 
         public class InputModel
         {
-            [Required]
-            public string Email { get; set; }
+            [Required(ErrorMessage = "Please enter your username or email.")]
+            [Display(Name = "Username or Email")]
+            public string Email { get; set; }  // kept as "Email" so existing view binding still works
 
-            [Required]
+            [Required(ErrorMessage = "Please enter your password.")]
             [DataType(DataType.Password)]
             public string Password { get; set; }
 
             public bool RememberMe { get; set; }
 
-            public string LoginType { get; set; } // Student / AdminMentor
+            // "Student" or "AdminMentor" — sent from the login tab buttons
+            public string LoginType { get; set; }
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -63,12 +65,9 @@ namespace SPT.Areas.Identity.Pages.Account
             if (!ModelState.IsValid)
                 return Page();
 
-            // Try find by email first
-            var user = await _userManager.FindByEmailAsync(Input.Email);
-
-            // If not found → try username
-            if (user == null)
-                user = await _userManager.FindByNameAsync(Input.Email);
+            // ── Step 1: Find user by email OR username ──────────────────
+            var user = await _userManager.FindByEmailAsync(Input.Email)
+                    ?? await _userManager.FindByNameAsync(Input.Email);
 
             if (user == null)
             {
@@ -77,11 +76,37 @@ namespace SPT.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            // ── Step 2: Enforce tab/role restriction ────────────────────
+            bool isStudent = await _userManager.IsInRoleAsync(user, "Student");
+            bool isAdminOrMentor = await _userManager.IsInRoleAsync(user, "Admin")
+                                || await _userManager.IsInRoleAsync(user, "Mentor");
+
+            if (Input.LoginType == "Student" && !isStudent)
+            {
+                // Admin/Mentor tried to use the Student tab
+                ModelState.AddModelError("", "This login is for students only. Please use the Admin / Mentor login.");
+                return Page();
+            }
+
+            if (Input.LoginType == "AdminMentor" && !isAdminOrMentor)
+            {
+                // Student tried to use the Admin/Mentor tab
+                ModelState.AddModelError("", "This login is for staff only. Please use the Student login.");
+                return Page();
+            }
+
+            // ── Step 3: Attempt sign in ─────────────────────────────────
             var result = await _signInManager.PasswordSignInAsync(
                 user.UserName,
                 Input.Password,
                 Input.RememberMe,
-                false);
+                lockoutOnFailure: true);
+
+            if (result.IsLockedOut)
+            {
+                ModelState.AddModelError("", "Account locked due to multiple failed attempts. Try again in 5 minutes.");
+                return Page();
+            }
 
             if (!result.Succeeded)
             {
@@ -92,19 +117,15 @@ namespace SPT.Areas.Identity.Pages.Account
 
             await _audit.LogAsync("LOGIN_SUCCESS", "User logged in", user.UserName, user.Id);
 
+            // ── Step 4: Redirect by role ────────────────────────────────
             if (await _userManager.IsInRoleAsync(user, "Admin"))
                 return RedirectToAction("Dashboard", "Admin");
-
             if (await _userManager.IsInRoleAsync(user, "Mentor"))
                 return RedirectToAction("Dashboard", "Mentor");
-
             if (await _userManager.IsInRoleAsync(user, "Student"))
                 return RedirectToAction("Dashboard", "Student");
 
             return RedirectToAction("Index", "Home");
         }
-       
     }
-
 }
-

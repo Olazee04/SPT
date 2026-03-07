@@ -21,16 +21,19 @@ namespace SPT.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
         private readonly AuditService _auditService;
+        private readonly IEmailService _emailService;
 
         public StudentController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env, AuditService auditService)
+            IWebHostEnvironment env, AuditService auditService,
+            IEmailService emailService)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
             _auditService = auditService;
+            _emailService = emailService;
         }
 
         // =========================
@@ -406,16 +409,17 @@ public async Task<IActionResult> LogWork(
                     await profilePicture.CopyToAsync(stream);
                 }
                 student.ProfilePicture = $"/uploads/profiles/{fileName}";
-
                 _context.Update(student);
-                            await _auditService.LogAsync(
-                "STUDENT_PROFILE_UPDATED",
-                $"Student updated profile",
-                User.Identity.Name,
-                _userManager.GetUserId(User));
+
+                await _auditService.LogAsync(
+                    "STUDENT_PROFILE_UPDATED",
+                    "Student updated profile picture",
+                    User.Identity.Name,
+                    _userManager.GetUserId(User));
 
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Profile picture updated successfully!";
+                return RedirectToAction(nameof(Profile));
             }
 
             // 2. Change Password
@@ -428,24 +432,45 @@ public async Task<IActionResult> LogWork(
                 }
 
                 var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+
                 if (!result.Succeeded)
                 {
-                    TempData["Error"] = "Password error: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                    TempData["Error"] = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
                     return RedirectToAction(nameof(Profile));
                 }
-                TempData["Success"] = "Password changed successfully!";
+
+                // Send password change notification email
+                // NOTE: 'student' is already declared above — no need to re-declare
+                try
+                {
+                    string emailBody = $@"
+<div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
+    <h2 style='color:#fd7e14;'>Password Changed &#128274;</h2>
+    <p>Hi <strong>{student.FullName}</strong>,</p>
+    <p>Your SPT Academy account password was successfully changed.</p>
+    <p>If you made this change, no further action is needed.</p>
+    <p style='color:#dc3545;'><strong>If you did NOT make this change, contact your mentor or admin immediately.</strong></p>
+    <hr/>
+    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated security notification from RMSys SPT Academy.</p>
+</div>";
+                    await _emailService.SendEmailAsync(user.Email, "SPT Academy - Password Changed", emailBody);
+                }
+                catch { /* don't block if email fails */ }
+
+                await _auditService.LogAsync(
+                    "PASSWORD_CHANGED",
+                    "Student changed password",
+                    User.Identity.Name,
+                    _userManager.GetUserId(User));
+
+                TempData["Success"] = "Password changed successfully! A confirmation email has been sent.";
+                return RedirectToAction(nameof(Profile));
             }
-            await _auditService.LogAsync(
-                "PASSWORD_CHANGED",
-                "User changed password",
-                User.Identity.Name,
-                _userManager.GetUserId(User));
+
+            TempData["Error"] = "No changes were submitted.";
             return RedirectToAction(nameof(Profile));
-        
-
-
-
         }
+
         // =========================
         // GET: My Curriculum / Roadmap
         // =========================

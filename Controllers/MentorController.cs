@@ -16,16 +16,19 @@ namespace SPT.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
         private readonly AuditService _auditService;
+        private readonly IEmailService _emailService;
 
         public MentorController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env, AuditService auditService)
+            IWebHostEnvironment env, AuditService auditService,
+             IEmailService emailService) 
         {
             _context = context;
             _userManager = userManager;
             _env = env;
             _auditService = auditService;
+            _emailService = emailService; 
         }
 
         // =========================
@@ -355,11 +358,6 @@ namespace SPT.Controllers
 
         // =========================
         // QUIZ SCORES — FIXED
-        // Two bugs fixed:
-        //   1. Added `int page = 1` to method signature
-        //   2. Added `int pageSize = 15` as first line inside method body
-        //   3. Count total BEFORE Skip/Take
-        //   4. Apply Skip/Take to the query
         // =========================
         [HttpGet]
         public async Task<IActionResult> QuizScores(string search = "", int page = 1)
@@ -489,6 +487,8 @@ namespace SPT.Controllers
         public async Task<IActionResult> UpdateProfile(IFormFile? profilePicture, string? currentPassword, string? newPassword)
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
             var mentor = await _context.Mentors
                 .Include(m => m.User)
                 .Include(m => m.Track)
@@ -496,6 +496,7 @@ namespace SPT.Controllers
 
             if (mentor == null) return NotFound();
 
+            // Handle profile picture update
             if (profilePicture != null && profilePicture.Length > 0)
             {
                 var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
@@ -507,12 +508,16 @@ namespace SPT.Controllers
                 }
                 mentor.ProfilePicture = $"/uploads/profiles/{fileName}";
                 _context.Update(mentor);
-                await _auditService.LogAsync("MENTOR_PROFILE_UPDATED", $"Mentor updated profile",
-                    User.Identity.Name, _userManager.GetUserId(User));
                 await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync("MENTOR_PROFILE_UPDATED", "Mentor updated profile picture",
+                    User.Identity.Name, _userManager.GetUserId(User));
+
                 TempData["Success"] = "Profile picture updated!";
+                return RedirectToAction(nameof(Profile));
             }
 
+            // Handle password change
             if (!string.IsNullOrEmpty(newPassword))
             {
                 if (string.IsNullOrEmpty(currentPassword))
@@ -520,18 +525,40 @@ namespace SPT.Controllers
                     TempData["Error"] = "Current password is required to set a new one.";
                     return RedirectToAction(nameof(Profile));
                 }
+
                 var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+
                 if (!result.Succeeded)
                 {
                     TempData["Error"] = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
                     return RedirectToAction(nameof(Profile));
                 }
-                TempData["Success"] = "Password changed successfully!";
+
+                await _auditService.LogAsync("PASSWORD_CHANGED", "Mentor changed password",
+                    User.Identity.Name, _userManager.GetUserId(User));
+
+                // Send password change notification email
+                try
+                {
+                    string emailBody = $@"
+<div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
+    <h2 style='color:#fd7e14;'>Password Changed &#128274;</h2>
+    <p>Hi <strong>{mentor.FullName}</strong>,</p>
+    <p>Your SPT Academy account password was successfully changed.</p>
+    <p>If you made this change, no further action is needed.</p>
+    <p style='color:#dc3545;'><strong>If you did NOT make this change, contact your admin immediately.</strong></p>
+    <hr/>
+    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated security notification from RMSys SPT Academy.</p>
+</div>";
+                    await _emailService.SendEmailAsync(user.Email, "SPT Academy - Password Changed", emailBody);
+                }
+                catch { /* don't block if email fails */ }
+
+                TempData["Success"] = "Password changed successfully! A confirmation email has been sent.";
+                return RedirectToAction(nameof(Profile));
             }
 
-            await _auditService.LogAsync("PASSWORD_CHANGED", "User changed password",
-                User.Identity.Name, _userManager.GetUserId(User));
-
+            TempData["Error"] = "No changes were submitted.";
             return RedirectToAction(nameof(Profile));
         }
     }

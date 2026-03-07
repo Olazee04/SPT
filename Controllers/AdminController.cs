@@ -517,18 +517,39 @@ namespace SPT.Controllers
                 try
                 {
                     string emailBody = $@"
-<h2>Welcome to RMSys SPT Academy! 🎓</h2>
-<p>Hi {model.FullName},</p>
-<p>Your student account has been created. Here are your login details:</p>
-<table style='border-collapse:collapse;'>
-    <tr><td style='padding:8px;font-weight:bold;'>Username:</td><td style='padding:8px;'>{username}</td></tr>
-    <tr><td style='padding:8px;font-weight:bold;'>Password:</td><td style='padding:8px;'>{finalPassword}</td></tr>
-</table>
-<p>Please login at <a href='https://rmsysspt.onrender.com'>rmsysspt.onrender.com</a> and change your password immediately.</p>
-<p>Best regards,<br/>RMSys SPT Team</p>";
+<div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
+    <h2 style='color:#0d6efd;'>Welcome to RMSys SPT Academy! 🎓</h2>
+    <p>Hi <strong>{model.FullName}</strong>,</p>
+    <p>Your student account has been created. Here are your login details:</p>
+    <table style='border-collapse:collapse;width:100%;margin:16px 0;'>
+        <tr style='background:#f8f9fa;'>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Username</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'><strong>{username}</strong></td>
+        </tr>
+        <tr>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Email</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'>{model.Email}</td>
+        </tr>
+        <tr style='background:#f8f9fa;'>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Password</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'><strong>{finalPassword}</strong></td>
+        </tr>
+    </table>
+    <p>You can login using either your <strong>username</strong> or <strong>email address</strong>.</p>
+    <p>
+        <a href='https://rmsysspt.onrender.com'
+           style='background:#0d6efd;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;'>
+            Login Now
+        </a>
+    </p>
+    <p style='color:#dc3545;'><strong>⚠️ Please change your password immediately after logging in for the first time.</strong></p>
+    <hr/>
+    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated message from RMSys SPT Academy. Do not reply to this email.</p>
+</div>";
 
-                    await _emailService.SendEmailAsync(model.Email, "Your SPT Account Credentials", emailBody);
+                    await _emailService.SendEmailAsync(model.Email, "🎓 Welcome to SPT Academy – Your Login Details", emailBody);
                     TempData["Success"] = $"✅ Student Created! Username: {username} — Login details sent to {model.Email}";
+
                 }
                 catch
                 {
@@ -715,7 +736,46 @@ namespace SPT.Controllers
  User.Identity.Name,
 _userManager.GetUserId(User));
 
-            TempData["Success"] = $"✅ Mentor Created! Login: {username}";
+            try
+            {
+                string mentorWelcomeEmail = $@"
+<div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
+    <h2 style='color:#0d6efd;'>Welcome to RMSys SPT Academy! &#127979;</h2>
+    <p>Hi <strong>{mentor.FullName}</strong>,</p>
+    <p>Your mentor account has been created. Here are your login details:</p>
+    <table style='border-collapse:collapse;width:100%;margin:16px 0;'>
+        <tr style='background:#f8f9fa;'>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Username</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'><strong>{username}</strong></td>
+        </tr>
+        <tr>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Email</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'>{email}</td>
+        </tr>
+        <tr style='background:#f8f9fa;'>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Password</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'><strong>{password}</strong></td>
+        </tr>
+    </table>
+    <p>You can login using either your <strong>username</strong> or <strong>email address</strong>.</p>
+    <p>
+        <a href='https://rmsysspt.onrender.com'
+           style='background:#0d6efd;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;'>
+            Login Now
+        </a>
+    </p>
+    <p style='color:#dc3545;'><strong>Please change your password immediately after your first login.</strong></p>
+    <hr/>
+    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated message from RMSys SPT Academy.</p>
+</div>";
+                await _emailService.SendEmailAsync(email, "Welcome to SPT Academy - Your Login Details", mentorWelcomeEmail);
+                TempData["Success"] = $"Mentor Created! Login details sent to {email}";
+            }
+            catch
+            {
+                TempData["Success"] = $"Mentor Created! Username: {username} | Password: {password} (Email delivery failed)";
+            }
+
             return RedirectToAction("Mentors");
 
         }
