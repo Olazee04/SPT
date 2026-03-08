@@ -875,7 +875,7 @@ _userManager.GetUserId(User));
         }
 
 
-       
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
@@ -884,6 +884,7 @@ _userManager.GetUserId(User));
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound();
 
+            // Generate a readable temp password
             var newPassword = "Temp@" + new Random().Next(1000, 9999);
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -895,14 +896,60 @@ _userManager.GetUserId(User));
                 return RedirectToAction("Mentors");
             }
 
-            TempData["Success"] = $"Password reset. New password: {newPassword}";
             await _auditService.LogAsync(
-"PASSWORD_RESET",
-$"Admin reset password for {user.Email}",
-User.Identity.Name,
-_userManager.GetUserId(User));
+                "PASSWORD_RESET",
+                $"Admin reset password for {user.Email}",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
+
+            // Find the person's full name (check Mentor first, then Student)
+            string fullName = user.UserName ?? "User";
+            var mentor = await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == userId);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == userId);
+            if (mentor != null) fullName = mentor.FullName;
+            else if (student != null) fullName = student.FullName;
+
+            // Send email with new password
+            try
+            {
+                string emailBody = $@"
+<div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
+    <h2 style='color:#dc3545;'>Password Reset &#128274;</h2>
+    <p>Hi <strong>{fullName}</strong>,</p>
+    <p>Your SPT Academy account password has been reset by an administrator.</p>
+    <table style='border-collapse:collapse;width:100%;margin:16px 0;'>
+        <tr style='background:#f8f9fa;'>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Username / Email</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'>{user.Email}</td>
+        </tr>
+        <tr>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>New Temporary Password</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'><strong style='color:#dc3545;'>{newPassword}</strong></td>
+        </tr>
+    </table>
+    <p>
+        <a href='https://rmsysspt.onrender.com'
+           style='background:#0d6efd;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;'>
+            Login Now
+        </a>
+    </p>
+    <p style='color:#dc3545;'><strong>&#9888; Please change your password immediately after logging in.</strong></p>
+    <hr/>
+    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated security message from RMSys SPT Academy. Do not reply.</p>
+</div>";
+
+                await _emailService.SendEmailAsync(user.Email, "SPT Academy - Your Password Has Been Reset", emailBody);
+                TempData["Success"] = $"Password reset. New password sent to {user.Email}";
+            }
+            catch
+            {
+                // Email failed — still show the password on screen as fallback
+                TempData["Success"] = $"Password reset. New password: {newPassword} (Email delivery failed — share this manually)";
+            }
+
             return RedirectToAction("Mentors");
         }
+
 
 
         // =========================
