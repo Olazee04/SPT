@@ -1,0 +1,203 @@
+﻿@* ===================================================
+   SAVE AS: Views/Admin/ManageResources.cshtml
+=================================================== *@
+@model SPT.Models.SyllabusModule
+@{
+    ViewData["Title"] = "Manage Resources";
+}
+
+<div class="container mt-4" style="max-width:800px">
+
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="ManageCurriculum" asp-route-trackId="@Model.TrackId" class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="mb-0 fw-bold"><i class="fas fa-book-open me-2 text-info"></i>Study Materials</h2>
+            <small class="text-muted">@Model.ModuleCode — @Model.ModuleName</small>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info bg-opacity-10 border-info">
+            <h6 class="mb-0 fw-bold text-info"><i class="fas fa-plus me-2"></i>Add New Resource</h6>
+        </div>
+        <div class="card-body">
+            <form asp-action="AddResource" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="moduleId" value="@Model.Id" />
+
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. C# Basics – Official Docs" required />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">URL <span class="text-danger">*</span></label>
+                        <input type="url" name="url" class="form-control" placeholder="https://..." required />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Type</label>
+                        <select name="type" class="form-select">
+                            <option value="Article">Article</option>
+                            <option value="Video">Video</option>
+                            <option value="PDF">PDF</option>
+                            <option value="GitRepo">Git Repo</option>
+                            <option value="eBook">eBook</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-info text-white mt-3">
+                    <i class="fas fa-plus me-1"></i>Add Resource
+                </button>
+            </form>
+        </div>
+    </div>
+
+    
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>Current Resources</h6>
+            <span class="badge bg-info text-dark">@Model.Resources.Count total</span>
+        </div>
+        <div class="card-body p-0">
+            @if (!Model.Resources.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-folder-open fa-2x mb-2"></i>
+                    <p class="mb-0">No resources yet. Add the first one above.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var res in Model.Resources.OrderBy(r => r.Id))
+                {
+                    <div class="border-bottom p-3 @(!res.IsActive ? "bg-light opacity-75" : "")">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-center gap-3">
+                                
+                                <div class="text-center" style="width:40px">
+                                    @if (res.Type == "Video" || res.Url.Contains("youtube"))
+                                    {
+                                        <i class="fab fa-youtube fa-2x text-danger"></i>
+                                    }
+                                    else if (res.Type == "PDF")
+                                    {
+                                        <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                                    }
+                                    else if (res.Type == "GitRepo")
+                                    {
+                                        <i class="fab fa-github fa-2x text-dark"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-link fa-2x text-primary"></i>
+                                    }
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">@res.Title</div>
+                                    <a href="@res.Url" target="_blank" class="text-muted small text-truncate d-block" style="max-width:400px">
+                                        @res.Url <i class="fas fa-external-link-alt ms-1"></i>
+                                    </a>
+                                    <div class="mt-1">
+                                        <span class="badge bg-secondary me-1">@res.Type</span>
+                                        @if (!res.IsActive)
+                                        {
+                                            <span class="badge bg-warning text-dark">Hidden from students</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 ms-3 flex-shrink-0">
+                                <button class="btn btn-outline-primary btn-sm" onclick="editResource(@res.Id)"
+                                        title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <form asp-action="DeleteResource_Module" method="post" class="d-inline"
+                                      onsubmit="return confirm('Delete this resource?')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@res.Id" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        
+                        <div id="editForm_@res.Id" class="mt-3 p-3 bg-light rounded" style="display:none">
+                            <form asp-action="EditResource" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@res.Id" />
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <input type="text" name="title" value="@res.Title" class="form-control form-control-sm" placeholder="Title" required />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="url" name="url" value="@res.Url" class="form-control form-control-sm" placeholder="URL" required />
+                                    </div>
+                                    <div class="col-md-2">
+                                        @{
+                                            var resType = res.Type;
+                                        }
+                                        <select name="type" class="form-select form-select-sm">
+                                            <option value="Article" selected="@(resType == "Article")">Article</option>
+                                            <option value="Video" selected="@(resType == "Video")">Video</option>
+                                            <option value="PDF" selected="@(resType == "PDF")">PDF</option>
+                                            <option value="GitRepo" selected="@(resType == "GitRepo")">Git Repo</option>
+                                            <option value="eBook" selected="@(resType == "eBook")">eBook</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-center">
+                                        <div class="form-check mb-0">
+                                            <input type="checkbox" name="isActive" value="true" class="form-check-input" @(res.IsActive ? "checked" : "") />
+                                            <label class="form-check-label small">Active</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-save me-1"></i>Save
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit(@res.Id)">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        function editResource(id) {
+            document.querySelectorAll('[id^="editForm_"]').forEach(f => f.style.display = 'none');
+            document.getElementById('editForm_' + id).style.display = 'block';
+        }
+        function cancelEdit(id) {
+            document.getElementById('editForm_' + id).style.display = 'none';
+        }
+    </script>
+}

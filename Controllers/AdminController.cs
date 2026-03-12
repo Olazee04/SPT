@@ -302,7 +302,7 @@ namespace SPT.Controllers
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.Mentor)
-                  .Include(s => s.User)
+                .Include(s => s.User)
                 .Include(s => s.ProgressLogs)
                 .Include(s => s.ModuleCompletions)
                 .AsQueryable();
@@ -319,8 +319,11 @@ namespace SPT.Controllers
                 .ToListAsync();
 
             var modelList = new List<StudentPerformanceViewModel>();
+
+            // ✅ FIX: Week starts on MONDAY — resets every Monday at 00:00
             var today = DateTime.UtcNow.Date;
-            var last7Days = today.AddDays(-7);
+            int daysSinceMonday = ((int)today.DayOfWeek + 6) % 7;
+            var startOfWeek = today.AddDays(-daysSinceMonday);
 
             var trackModuleCounts = await _context.SyllabusModules
                 .Where(m => m.IsActive)
@@ -329,9 +332,10 @@ namespace SPT.Controllers
 
             foreach (var s in students)
             {
-                var recentLogs = s.ProgressLogs.Where(l => l.Date >= last7Days && l.IsApproved).ToList();
-                decimal hours7Days = recentLogs.Sum(l => l.Hours);
-                int checkIns7Days = recentLogs.Select(l => l.Date.Date).Distinct().Count();
+                // ✅ FIX: Weekly hours use Monday-based week
+                var weekLogs = s.ProgressLogs.Where(l => l.Date.Date >= startOfWeek && l.IsApproved).ToList();
+                decimal hoursThisWeek = weekLogs.Sum(l => l.Hours);
+                int checkInsThisWeek = weekLogs.Select(l => l.Date.Date).Distinct().Count();
 
                 int totalMods = trackModuleCounts.ContainsKey(s.TrackId) ? trackModuleCounts[s.TrackId] : 1;
                 int completedMods = s.ModuleCompletions.Count(mc => mc.IsCompleted);
@@ -339,7 +343,7 @@ namespace SPT.Controllers
                 int consistency = 0;
                 if (s.TargetHoursPerWeek > 0)
                 {
-                    consistency = (int)((hours7Days / s.TargetHoursPerWeek) * 100);
+                    consistency = (int)((hoursThisWeek / s.TargetHoursPerWeek) * 100);
                     if (consistency > 100) consistency = 100;
                 }
 
@@ -350,7 +354,7 @@ namespace SPT.Controllers
                 modelList.Add(new StudentPerformanceViewModel
                 {
                     StudentId = s.Id,
-                    UserId = s.UserId,       
+                    UserId = s.UserId,
                     Username = s.User?.UserName,
                     FullName = s.FullName,
                     Email = s.Email,
@@ -359,8 +363,8 @@ namespace SPT.Controllers
                     TrackCode = s.Track?.Code ?? "N/A",
                     MentorName = s.Mentor?.FullName ?? "Unassigned",
                     TargetHoursPerWeek = s.TargetHoursPerWeek,
-                    HoursLast7Days = hours7Days,
-                    CheckInsLast7Days = checkIns7Days,
+                    HoursLast7Days = hoursThisWeek,      // ✅ Now = this week (Mon–Sun)
+                    CheckInsLast7Days = checkInsThisWeek,
                     CompletedModules = completedMods,
                     TotalModules = totalMods,
                     ConsistencyScore = consistency,
@@ -374,6 +378,7 @@ namespace SPT.Controllers
 
             return View(modelList);
         }
+
 
 
         // =========================
@@ -893,7 +898,11 @@ _userManager.GetUserId(User));
             if (!result.Succeeded)
             {
                 TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
-                return RedirectToAction("Mentors");
+                // ✅ FIX: redirect back to wherever we came from
+                string referer = Request.Headers["Referer"].ToString();
+                if (!string.IsNullOrEmpty(referer) && referer.Contains("Mentor"))
+                    return RedirectToAction("Mentors");
+                return RedirectToAction("Students");
             }
 
             await _auditService.LogAsync(
@@ -902,7 +911,7 @@ _userManager.GetUserId(User));
                 User.Identity.Name,
                 _userManager.GetUserId(User));
 
-            // Find the person's full name (check Mentor first, then Student)
+            // Find the person's full name
             string fullName = user.UserName ?? "User";
             var mentor = await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == userId);
             var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == userId);
@@ -919,14 +928,15 @@ _userManager.GetUserId(User));
     <p>Your SPT Academy account password has been reset by an administrator.</p>
     <table style='border-collapse:collapse;width:100%;margin:16px 0;'>
         <tr style='background:#f8f9fa;'>
-            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Username / Email</td>
-            <td style='padding:10px;border:1px solid #dee2e6;'>{user.Email}</td>
+            <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>Username</td>
+            <td style='padding:10px;border:1px solid #dee2e6;'>{user.UserName}</td>
         </tr>
         <tr>
             <td style='padding:10px;font-weight:bold;border:1px solid #dee2e6;'>New Temporary Password</td>
             <td style='padding:10px;border:1px solid #dee2e6;'><strong style='color:#dc3545;'>{newPassword}</strong></td>
         </tr>
     </table>
+    <p><strong>Login using your username above</strong> (not email) with the temporary password.</p>
     <p>
         <a href='https://rmsysspt.onrender.com'
            style='background:#0d6efd;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;'>
@@ -943,11 +953,12 @@ _userManager.GetUserId(User));
             }
             catch
             {
-                // Email failed — still show the password on screen as fallback
-                TempData["Success"] = $"Password reset. New password: {newPassword} (Email delivery failed — share this manually)";
+                TempData["Success"] = $"Password reset. New temp password: {newPassword} (Email failed — share manually)";
             }
 
-            return RedirectToAction("Mentors");
+            // ✅ FIX: redirect to correct page based on who was reset
+            if (mentor != null) return RedirectToAction("Mentors");
+            return RedirectToAction("Students");
         }
 
 
@@ -1230,6 +1241,178 @@ _userManager.GetUserId(User));
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(SupportTickets));
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ManageTracks()
+        {
+            var tracks = await _context.Tracks
+                .Include(t => t.Students)
+                .Include(t => t.Modules)
+                .OrderBy(t => t.Name)
+                .ToListAsync();
+
+            return View(tracks);
+        }
+
+        // POST: /Admin/CreateTrack
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateTrack(string name, string code)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
+            {
+                TempData["Error"] = "Track name and code are required.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            code = code.Trim().ToUpper();
+            name = name.Trim();
+
+            // Check for duplicate code
+            bool codeExists = await _context.Tracks.AnyAsync(t => t.Code == code);
+            if (codeExists)
+            {
+                TempData["Error"] = $"A track with code '{code}' already exists.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            var track = new Track
+            {
+                Name = name,
+                Code = code,
+                IsActive = true
+            };
+
+            _context.Tracks.Add(track);
+            await _context.SaveChangesAsync();
+
+            // Auto-create 19 modules for the new track (same pattern as SeedData)
+            var modules = new List<SyllabusModule>();
+
+            for (int i = 1; i <= 18; i++)
+            {
+                modules.Add(new SyllabusModule
+                {
+                    TrackId = track.Id,
+                    DisplayOrder = i,
+                    ModuleCode = $"{track.Code}-{i:00}",
+                    ModuleName = $"{track.Name} – Module {i}",
+                    RequiredHours = 8,
+                    DifficultyLevel = i <= 5 ? "Beginner" : i <= 12 ? "Intermediate" : "Advanced",
+                    Topics = $"Core learning content for {track.Name} (Part {i})",
+                    HasQuiz = i % 3 == 0,
+                    IsActive = true
+                });
+            }
+
+            modules.Add(new SyllabusModule
+            {
+                TrackId = track.Id,
+                DisplayOrder = 19,
+                ModuleCode = $"CAP-{track.Code}",
+                ModuleName = "Mini Project",
+                RequiredHours = 40,
+                DifficultyLevel = "Expert",
+                Topics = $"Build a real-world {track.Name} project",
+                HasProject = true,
+                IsMiniProject = true,
+                IsActive = true
+            });
+
+            _context.SyllabusModules.AddRange(modules);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Track '{name}' ({code}) created with 19 modules.";
+            return RedirectToAction("ManageTracks");
+        }
+
+        // POST: /Admin/EditTrack
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditTrack(int id, string name, string code)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code))
+            {
+                TempData["Error"] = "Track name and code are required.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            var track = await _context.Tracks.FindAsync(id);
+            if (track == null)
+            {
+                TempData["Error"] = "Track not found.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            code = code.Trim().ToUpper();
+            name = name.Trim();
+
+            // Check duplicate code (excluding current track)
+            bool codeExists = await _context.Tracks.AnyAsync(t => t.Code == code && t.Id != id);
+            if (codeExists)
+            {
+                TempData["Error"] = $"A track with code '{code}' already exists.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            track.Name = name;
+            track.Code = code;
+
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Track updated to '{name}' ({code}).";
+            return RedirectToAction("ManageTracks");
+        }
+
+        // POST: /Admin/ToggleTrack
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleTrack(int id)
+        {
+            var track = await _context.Tracks.FindAsync(id);
+            if (track == null)
+            {
+                TempData["Error"] = "Track not found.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            track.IsActive = !track.IsActive;
+            await _context.SaveChangesAsync();
+
+            string status = track.IsActive ? "activated" : "deactivated";
+            TempData["Success"] = $"Track '{track.Name}' has been {status}.";
+            return RedirectToAction("ManageTracks");
+        }
+
+        // POST: /Admin/DeleteTrack
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteTrack(int id)
+        {
+            var track = await _context.Tracks
+                .Include(t => t.Students)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (track == null)
+            {
+                TempData["Error"] = "Track not found.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            if (track.Students != null && track.Students.Any())
+            {
+                TempData["Error"] = $"Cannot delete '{track.Name}' — it has {track.Students.Count} enrolled student(s). Deactivate it instead.";
+                return RedirectToAction("ManageTracks");
+            }
+
+            _context.Tracks.Remove(track);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Track '{track.Name}' has been deleted.";
+            return RedirectToAction("ManageTracks");
+        }
+
+
         // =========================
         // LIBRARY MANAGEMENT
         // =========================
@@ -1315,6 +1498,307 @@ _userManager.GetUserId(User));
                 TempData["Success"] = "Resource deleted.";
             }
             return RedirectToAction(nameof(ManageLibrary));
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> ManageCurriculum(int? trackId)
+        {
+            bool isAdmin = User.IsInRole("Admin");
+            int? mentorTrackId = null;
+
+            if (!isAdmin)
+            {
+                var userId = _userManager.GetUserId(User);
+                var mentor = await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == userId);
+                if (mentor != null)
+                {
+                    mentorTrackId = mentor.TrackId;
+                    // Track-specific mentor: force to their track
+                    if (mentor.Specialization != "General" && mentor.TrackId.HasValue)
+                        trackId = mentor.TrackId;
+                }
+            }
+
+            var availableTracks = isAdmin
+                ? await _context.Tracks.Where(t => t.IsActive).ToListAsync()
+                : await _context.Tracks.Where(t => t.IsActive && (mentorTrackId == null || t.Id == mentorTrackId)).ToListAsync();
+
+            var query = _context.SyllabusModules
+                .Include(m => m.Track)
+                .Include(m => m.Resources)
+                .Include(m => m.Questions)
+                .AsQueryable();
+
+            if (trackId.HasValue)
+                query = query.Where(m => m.TrackId == trackId.Value);
+            else if (!isAdmin && mentorTrackId.HasValue)
+                query = query.Where(m => m.TrackId == mentorTrackId.Value);
+
+            var modules = await query.OrderBy(m => m.TrackId).ThenBy(m => m.DisplayOrder).ToListAsync();
+
+            ViewBag.Tracks = availableTracks;
+            ViewBag.SelectedTrackId = trackId;
+            ViewBag.IsAdmin = isAdmin;
+            // Pass total counts per track for the tab badges
+            ViewBag.TrackCounts = await _context.SyllabusModules
+                .GroupBy(m => m.TrackId)
+                .ToDictionaryAsync(g => g.Key, g => g.Count());
+
+            return View(modules);
+        }
+
+        // =========================
+        // CREATE MODULE — GET
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> CreateModule(int? trackId)
+        {
+            ViewBag.Tracks = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
+                await _context.Tracks.Where(t => t.IsActive).ToListAsync(), "Id", "Name", trackId);
+            ViewBag.SelectedTrackId = trackId;
+            return View(new SyllabusModule { TrackId = trackId ?? 0, IsActive = true, RequiredHours = 8, PassScore = 75 });
+        }
+
+        // =========================
+        // CREATE MODULE — POST
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> CreateModule(SyllabusModule model)
+        {
+            ModelState.Remove("Track");
+            ModelState.Remove("PrerequisiteModule");
+            ModelState.Remove("ProgressLogs");
+            ModelState.Remove("ModuleCompletions");
+            ModelState.Remove("Resources");
+            ModelState.Remove("Questions");
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Tracks = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
+                    await _context.Tracks.Where(t => t.IsActive).ToListAsync(), "Id", "Name", model.TrackId);
+                return View(model);
+            }
+
+            // Auto-set display order to next available for this track
+            if (model.DisplayOrder == 0)
+            {
+                int maxOrder = await _context.SyllabusModules
+                    .Where(m => m.TrackId == model.TrackId)
+                    .MaxAsync(m => (int?)m.DisplayOrder) ?? 0;
+                model.DisplayOrder = maxOrder + 1;
+            }
+
+            _context.SyllabusModules.Add(model);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync("MODULE_CREATED", $"Module created: {model.ModuleName}", User.Identity.Name, _userManager.GetUserId(User));
+            TempData["Success"] = $"✅ Module '{model.ModuleName}' created successfully.";
+            return RedirectToAction(nameof(ManageCurriculum), new { trackId = model.TrackId });
+        }
+
+        // =========================
+        // EDIT MODULE — GET
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> EditModule(int id)
+        {
+            var module = await _context.SyllabusModules
+                .Include(m => m.Track)
+                .Include(m => m.Resources)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (module == null) return NotFound();
+
+            ViewBag.Tracks = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
+                await _context.Tracks.Where(t => t.IsActive).ToListAsync(), "Id", "Name", module.TrackId);
+
+            return View(module);
+        }
+
+        // =========================
+        // EDIT MODULE — POST
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> EditModule(SyllabusModule model)
+        {
+            ModelState.Remove("Track");
+            ModelState.Remove("PrerequisiteModule");
+            ModelState.Remove("ProgressLogs");
+            ModelState.Remove("ModuleCompletions");
+            ModelState.Remove("Resources");
+            ModelState.Remove("Questions");
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Tracks = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
+                    await _context.Tracks.Where(t => t.IsActive).ToListAsync(), "Id", "Name", model.TrackId);
+                return View(model);
+            }
+
+            var existing = await _context.SyllabusModules.FindAsync(model.Id);
+            if (existing == null) return NotFound();
+
+            existing.ModuleCode = model.ModuleCode;
+            existing.ModuleName = model.ModuleName;
+            existing.TrackId = model.TrackId;
+            existing.Topics = model.Topics;
+            existing.RequiredHours = model.RequiredHours;
+            existing.DifficultyLevel = model.DifficultyLevel;
+            existing.DisplayOrder = model.DisplayOrder;
+            existing.HasQuiz = model.HasQuiz;
+            existing.HasProject = model.HasProject;
+            existing.IsMiniProject = model.IsMiniProject;
+            existing.PassScore = model.PassScore;
+            existing.IsActive = model.IsActive;
+            existing.WeightPercentage = model.WeightPercentage;
+
+            await _context.SaveChangesAsync();
+            await _auditService.LogAsync("MODULE_UPDATED", $"Module updated: {model.ModuleName}", User.Identity.Name, _userManager.GetUserId(User));
+            TempData["Success"] = $"✅ Module '{model.ModuleName}' updated successfully.";
+            return RedirectToAction(nameof(ManageCurriculum), new { trackId = model.TrackId });
+        }
+
+        // =========================
+        // DELETE MODULE — POST
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteModule(int id)
+        {
+            var module = await _context.SyllabusModules
+                .Include(m => m.ModuleCompletions)
+                .Include(m => m.Resources)
+                .Include(m => m.Questions)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (module == null) return NotFound();
+
+            // Block deletion if any student completed it
+            if (module.ModuleCompletions.Any(mc => mc.IsCompleted))
+            {
+                TempData["Error"] = $"❌ Cannot delete '{module.ModuleName}' — {module.ModuleCompletions.Count(mc => mc.IsCompleted)} student(s) have completed it.";
+                return RedirectToAction(nameof(ManageCurriculum), new { trackId = module.TrackId });
+            }
+
+            int trackId = module.TrackId;
+            _context.SyllabusModules.Remove(module);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync("MODULE_DELETED", $"Module deleted: {module.ModuleName}", User.Identity.Name, _userManager.GetUserId(User));
+            TempData["Success"] = $"✅ Module '{module.ModuleName}' deleted.";
+            return RedirectToAction(nameof(ManageCurriculum), new { trackId });
+        }
+
+        // =========================
+        // TOGGLE MODULE ACTIVE
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> ToggleModule(int id)
+        {
+            var module = await _context.SyllabusModules.FindAsync(id);
+            if (module == null) return NotFound();
+
+            module.IsActive = !module.IsActive;
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Module '{module.ModuleName}' is now {(module.IsActive ? "Active" : "Inactive")}.";
+            return RedirectToAction(nameof(ManageCurriculum), new { trackId = module.TrackId });
+        }
+
+        // =========================
+        // MANAGE RESOURCES — GET (for a specific module)
+        // =========================
+        [HttpGet]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> ManageResources(int moduleId)
+        {
+            var module = await _context.SyllabusModules
+                .Include(m => m.Track)
+                .Include(m => m.Resources)
+                .FirstOrDefaultAsync(m => m.Id == moduleId);
+
+            if (module == null) return NotFound();
+
+            return View(module);
+        }
+
+        // =========================
+        // ADD RESOURCE — POST
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> AddResource(int moduleId, string title, string url, string type)
+        {
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(url))
+            {
+                TempData["Error"] = "Title and URL are required.";
+                return RedirectToAction(nameof(ManageResources), new { moduleId });
+            }
+
+            _context.ModuleResources.Add(new ModuleResource
+            {
+                ModuleId = moduleId,
+                Title = title,
+                Url = url,
+                Type = type ?? "Article",
+                IsActive = true
+            });
+
+            await _context.SaveChangesAsync();
+            await _auditService.LogAsync("RESOURCE_ADDED", $"Resource added to module #{moduleId}: {title}", User.Identity.Name, _userManager.GetUserId(User));
+            TempData["Success"] = "✅ Resource added successfully.";
+            return RedirectToAction(nameof(ManageResources), new { moduleId });
+        }
+
+        // =========================
+        // EDIT RESOURCE — POST
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> EditResource(int id, string title, string url, string type, bool isActive)
+        {
+            var resource = await _context.ModuleResources.FindAsync(id);
+            if (resource == null) return NotFound();
+
+            resource.Title = title;
+            resource.Url = url;
+            resource.Type = type;
+            resource.IsActive = isActive;
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "✅ Resource updated.";
+            return RedirectToAction(nameof(ManageResources), new { moduleId = resource.ModuleId });
+        }
+
+        // =========================
+        // DELETE RESOURCE — POST
+        // =========================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> DeleteResource_Module(int id)
+        {
+            var resource = await _context.ModuleResources.FindAsync(id);
+            if (resource == null) return NotFound();
+
+            int moduleId = resource.ModuleId;
+            _context.ModuleResources.Remove(resource);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "✅ Resource deleted.";
+            return RedirectToAction(nameof(ManageResources), new { moduleId });
         }
         // =========================
         // GET: MANAGE QUIZZES

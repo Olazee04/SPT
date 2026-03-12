@@ -52,36 +52,32 @@ namespace SPT.Controllers
 
             ViewBag.DashboardAlerts = alerts;
 
-            // 1. Fetch Student with ALL necessary data (Merged Includes)
             var student = await _context.Students
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
                 .Include(s => s.Mentor)
                 .Include(s => s.ModuleCompletions)
                 .Include(s => s.ProgressLogs)
-                    .ThenInclude(pl => pl.Module) // 👈 Critical for "Recent Activity" table names
+                    .ThenInclude(pl => pl.Module)
                 .FirstOrDefaultAsync(s => s.UserId == user.Id);
 
             if (student == null) return RedirectToAction("CreateProfile");
 
-            // ✅ NEW: Calculate module statistics and pass to ViewBag
+            // ── Module stats ──────────────────────────────────────────
             var totalModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .CountAsync();
 
-            var completedModules = student.ModuleCompletions
-                .Count(mc => mc.IsCompleted);
+            var completedModules = student.ModuleCompletions.Count(mc => mc.IsCompleted);
 
             ViewBag.TotalModules = totalModules;
             ViewBag.CompletedModules = completedModules;
             ViewBag.ProgressPercentage = totalModules > 0
                 ? (int)((double)completedModules / totalModules * 100)
                 : 0;
-
-            // Check if certificate can be viewed
             ViewBag.CanViewCertificate = completedModules == totalModules && totalModules > 0;
 
-            // 2. Fetch Active Modules for Dropdown
+            // ── Fetch active modules for dropdown ─────────────────────
             var modules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
@@ -89,19 +85,45 @@ namespace SPT.Controllers
 
             ViewBag.CurrentModules = modules;
 
-            // 3. Calculate Personal Stats
+            // ── Personal stats ────────────────────────────────────────
             var logs = student.ProgressLogs ?? new List<ProgressLog>();
             var approvedLogs = logs.Where(l => l.IsApproved).ToList();
 
-            // --- A. Consistency Score ---
-            var last28Days = Enumerable.Range(0, 28).Select(i => DateTime.UtcNow.Date.AddDays(-i)).ToList();
-            int daysLogged = approvedLogs.Select(l => l.Date.Date).Distinct().Count(d => last28Days.Contains(d));
+            // ✅ FIX: Week starts on MONDAY at 00:00, resets every Monday
+            // ((DayOfWeek + 6) % 7) gives: Mon=0, Tue=1, Wed=2 ... Sun=6
+            int daysSinceMonday = ((int)DateTime.UtcNow.DayOfWeek + 6) % 7;
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-daysSinceMonday);
+
+            // ✅ Weekly verified hours (resets Monday) vs target
+            decimal weeklyVerifiedHours = approvedLogs
+                .Where(l => l.Date.Date >= startOfWeek)
+                .Sum(l => l.Hours);
+
+            // ✅ All-time verified hours (never resets)
+            decimal allTimeVerifiedHours = approvedLogs.Sum(l => l.Hours);
+
+            ViewBag.WeeklyVerifiedHours = weeklyVerifiedHours;
+            ViewBag.AllTimeVerifiedHours = allTimeVerifiedHours;
+            ViewBag.WeekStartDate = startOfWeek.ToString("MMM dd");
+
+            // ── Consistency Score (last 28 days) ──────────────────────
+            var last28Days = Enumerable.Range(0, 28)
+                .Select(i => DateTime.UtcNow.Date.AddDays(-i))
+                .ToList();
+            int daysLogged = approvedLogs
+                .Select(l => l.Date.Date)
+                .Distinct()
+                .Count(d => last28Days.Contains(d));
             int consistency = (int)((daysLogged / 28.0) * 100);
             ViewBag.Consistency = consistency;
 
-            // --- B. Streak Calculation ---
+            // ── Streak ────────────────────────────────────────────────
             int streak = 0;
-            var dates = approvedLogs.Select(l => l.Date.Date).Distinct().OrderByDescending(d => d).ToList();
+            var dates = approvedLogs
+                .Select(l => l.Date.Date)
+                .Distinct()
+                .OrderByDescending(d => d)
+                .ToList();
             var checkDate = DateTime.UtcNow.Date;
             if (dates.Contains(checkDate) || dates.Contains(checkDate.AddDays(-1)))
             {
@@ -114,37 +136,44 @@ namespace SPT.Controllers
             }
             ViewBag.Streak = streak;
 
-            // --- C. Weekly Hours ---
-            var startOfWeek = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek); // Sunday as start
-            ViewBag.WeeklyHours = approvedLogs.Where(l => l.Date >= startOfWeek).Sum(l => l.Hours);
+            // Keep WeeklyHours for any other parts of the view that use it
+            ViewBag.WeeklyHours = weeklyVerifiedHours;
 
-            // --- D. Global Rank (Restored from your old code) ---
-            decimal myTotalHours = approvedLogs.Sum(l => l.Hours);
+            // ── Weekly attendance (check-in days this week) ───────────
+            var weeklyAttendance = await _context.ProgressLogs
+                .Where(l => l.StudentId == student.Id && l.Date >= startOfWeek)
+                .Select(l => l.Date.Date)
+                .Distinct()
+                .CountAsync();
+            ViewBag.WeeklyAttendance = weeklyAttendance;
+
+            // ── Global rank ───────────────────────────────────────────
             var betterStudentsCount = await _context.Students
                 .Where(s => s.EnrollmentStatus == "Active" && s.Id != student.Id)
                 .Select(s => new
                 {
-                    Id = s.Id,
-                    TotalHours = s.ProgressLogs.Where(p => p.IsApproved).Sum(p => (decimal?)p.Hours) ?? 0
+                    TotalHours = s.ProgressLogs
+                        .Where(p => p.IsApproved)
+                        .Sum(p => (decimal?)p.Hours) ?? 0
                 })
-                .CountAsync(x => x.TotalHours > myTotalHours);
-
+                .CountAsync(x => x.TotalHours > allTimeVerifiedHours);
             ViewBag.Rank = betterStudentsCount + 1;
 
-            var weeklyAttendance = await _context.ProgressLogs
-                .Where(l => l.StudentId == student.Id &&
-                            l.Date >= DateTime.UtcNow.AddDays(-6))
-                .Select(l => l.Date.Date)
-                .Distinct()
-                .CountAsync();
+            // ── Monthly hours breakdown (last 6 months) ───────────────
+            var today = DateTime.UtcNow.Date;
+            var monthlyHours = new List<object>();
+            for (int i = 5; i >= 0; i--)
+            {
+                var monthStart = new DateTime(today.Year, today.Month, 1).AddMonths(-i);
+                var monthEnd = monthStart.AddMonths(1);
+                decimal hrs = approvedLogs
+                    .Where(l => l.Date >= monthStart && l.Date < monthEnd)
+                    .Sum(l => l.Hours);
+                monthlyHours.Add(new { Month = monthStart.ToString("MMM yyyy"), Hours = hrs });
+            }
+            ViewBag.MonthlyHours = monthlyHours;
 
-            ViewBag.WeeklyAttendance = weeklyAttendance;
-
-            // ---------------------------------------------------------
-            // 🔒 MODULE LOCKING LOGIC (Fixed Property Names)
-            // ---------------------------------------------------------
-
-            // 1. Fetch All Active Modules with Original Names
+            // ── Module locking logic ──────────────────────────────────
             var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .OrderBy(m => m.DisplayOrder)
@@ -161,7 +190,6 @@ namespace SPT.Controllers
                 .Select(c => c.ModuleId)
                 .ToList();
 
-            // 2. Find last completed order
             int lastCompletedOrder = 0;
             if (completedModuleIds.Any())
             {
@@ -169,40 +197,30 @@ namespace SPT.Controllers
                     .Where(m => completedModuleIds.Contains(m.Id))
                     .OrderByDescending(m => m.DisplayOrder)
                     .FirstOrDefault();
-
                 if (lastCompleted != null) lastCompletedOrder = lastCompleted.DisplayOrder;
             }
 
-            // 3. Filter Unlocked Modules
             var unlockedModules = allModules
                 .Where(m => m.DisplayOrder <= lastCompletedOrder + 1)
                 .ToList();
-
             ViewBag.CurrentModules = unlockedModules;
 
             bool capstoneUnlocked = student.ModuleCompletions
                 .Any(mc => mc.ModuleId == 19 && mc.IsCompleted);
-
             ViewBag.CapstoneUnlocked = capstoneUnlocked;
 
-            // ---------------------------------------------------------
-            // 🚀 NEW FEATURES (Announcement, Next Up, Leaderboard)
-            // ---------------------------------------------------------
-
-            // 1. Announcement
+            // ── Announcements ─────────────────────────────────────────
             ViewBag.LatestAnnouncement = await _context.Announcements
-                .Where(a =>
-                    a.TargetPage == "Dashboard" &&
-                    (a.Audience == "All" || a.Audience == "Students")
-                )
+                .Where(a => a.TargetPage == "Dashboard" &&
+                            (a.Audience == "All" || a.Audience == "Students"))
                 .OrderByDescending(a => a.CreatedAt)
                 .FirstOrDefaultAsync();
 
-            // 2. Next Up Module
+            // ── Next module ───────────────────────────────────────────
             var nextModule = allModules.FirstOrDefault(m => !completedModuleIds.Contains(m.Id));
             ViewBag.NextModule = nextModule;
 
-            // 3. Mini Leaderboard
+            // ── Mini leaderboard ──────────────────────────────────────
             if (student.CohortId != null)
             {
                 var topStudents = await _context.Students
@@ -215,7 +233,6 @@ namespace SPT.Controllers
                     .OrderByDescending(x => x.TotalHours)
                     .Take(3)
                     .ToListAsync();
-
                 ViewBag.Leaderboard = topStudents;
             }
 

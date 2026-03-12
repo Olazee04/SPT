@@ -77,6 +77,14 @@
         </div>
     </div>
 
+    <div class="col-md-3">
+        <div class="custom-card border-start border-4 border-info p-3 h-100">
+            <h6 class="text-muted text-uppercase small fw-bold">Avg Consistency</h6>
+            <h2 class="fw-bold mb-0 text-info">@Math.Round(Model.AvgConsistency)%</h2>
+            <small class="text-muted">Class-wide performance</small>
+        </div>
+    </div>
+
     @if (Model.AtRiskStudents != null && Model.AtRiskStudents.Any())
 
     {
@@ -99,7 +107,7 @@
                             else
                             {
                                 <div class="rounded-circle bg-danger text-white d-flex align-items-center
-                                        justify-content-center me-3 fw-bold" style="width:38px;height:38px;">
+                                                    justify-content-center me-3 fw-bold" style="width:38px;height:38px;">
                                     @s.FullName.Substring(0, 1).ToUpper()
                                 </div>
                             }
@@ -116,13 +124,6 @@
             </ul>
         </div>
     }
-    <div class="col-md-3">
-        <div class="custom-card border-start border-4 border-info p-3 h-100">
-            <h6 class="text-muted text-uppercase small fw-bold">Avg Consistency</h6>
-            <h2 class="fw-bold mb-0 text-info">@Math.Round(Model.AvgConsistency)%</h2>
-            <small class="text-muted">Class-wide performance</small>
-        </div>
-    </div>
 </div>
 
 <style>

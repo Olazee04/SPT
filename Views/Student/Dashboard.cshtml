@@ -26,10 +26,10 @@
 
     {
         <div class="alert alert-@(
-    alert.Type == "Success" ? "success" :
-    alert.Type == "Info" ? "info" :
-    "danger"
-) alert-dismissible fade show">
+             alert.Type == "Success" ? "success" :
+             alert.Type == "Info" ? "info" :
+             "danger"
+     ) alert-dismissible fade show">
 
             <strong>@alert.Title</strong><br />
             @alert.Message
@@ -69,21 +69,52 @@
     </div>
 
     <div class="row g-3 mb-4">
+
+        @* ✅ FIX 1: Weekly Verified Hours — resets every Monday *@
         <div class="col-md-3">
             <div class="card shadow-sm border-0 leaderboard-card h-100">
                 <div class="card-body">
-                    <h6 class="text-muted text-uppercase small fw-bold">Verified Hours</h6>
-                    <div class="d-flex align-items-center">
-                        <h2 class="mb-0 fw-bold text-success">@approvedHours</h2>
-                        <span class="ms-2 small text-muted">/ @Model.TargetHoursPerWeek</span>
+                    <h6 class="text-muted text-uppercase small fw-bold">Weekly Verified Hours</h6>
+                    <div class="d-flex align-items-end gap-1">
+                        <h2 class="mb-0 fw-bold text-success">@ViewBag.WeeklyVerifiedHours</h2>
+                        <span class="mb-1 small text-muted">/ @Model.TargetHoursPerWeek hrs</span>
                     </div>
-                    @if (pendingHours > 0)
+                    @{
+                        decimal weekPct = Model.TargetHoursPerWeek > 0
+                        ? Math.Min(100, (decimal)ViewBag.WeeklyVerifiedHours / Model.TargetHoursPerWeek * 100)
+                        : 0;
+                        string weekBarColor = weekPct >= 100 ? "bg-success" : weekPct >= 60 ? "bg-primary" : weekPct >= 30 ? "bg-warning" : "bg-danger";
+                    }
+                    <div class="progress mt-2" style="height:5px;">
+                        <div class="progress-bar @weekBarColor" style="width:@weekPct%"></div>
+                    </div>
+                    <small class="text-muted">Week of @ViewBag.WeekStartDate · resets Monday</small>
+                </div>
+            </div>
+        </div>
+
+        @* ✅ FIX 2: All-Time Verified Hours — never resets *@
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 leaderboard-card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small fw-bold">All-Time Verified Hours</h6>
+                    <div class="d-flex align-items-center">
+                        <h2 class="mb-0 fw-bold text-primary">@ViewBag.AllTimeVerifiedHours</h2>
+                        <span class="ms-2 small text-muted">hrs total</span>
+                    </div>
+                    @{
+                        var pendingHrsCount = (Model.ProgressLogs ?? new List<SPT.Models.ProgressLog>())
+                        .Where(p => !p.IsApproved && !p.IsRejected).Sum(p => p.Hours);
+                    }
+                    @if (pendingHrsCount > 0)
                     {
-                        <div class="mt-2 badge bg-warning"><i class="fas fa-clock"></i> @pendingHours hrs pending</div>
+                        <div class="mt-2 badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1"></i>@pendingHrsCount hrs pending
+                        </div>
                     }
                     else
                     {
-                        <small class="text-muted">All logs verified</small>
+                        <small class="text-muted">All logs verified ✅</small>
                     }
                 </div>
             </div>
@@ -94,10 +125,11 @@
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold">Consistency</h6>
                     <div class="d-flex align-items-center">
-                        <h2 class="mb-0 fw-bold @(consistencyScore >= 80 ? "text-primary" : "text-warning")">@consistencyScore%</h2>
+                        <h2 class="mb-0 fw-bold @(((int)(ViewBag.Consistency ?? 0)) >= 80 ? "text-primary" : "text-warning")">@ViewBag.Consistency%</h2>
                     </div>
                     <div class="progress mt-2" style="height: 5px;">
-                        <div class="progress-bar @(consistencyScore >= 80 ? "bg-primary" : "bg-warning")" style="width: @consistencyScore%"></div>
+                        <div class="progress-bar @(((int)(ViewBag.Consistency ?? 0)) >= 80 ? "bg-primary" : "bg-warning")"
+                             style="width: @ViewBag.Consistency%"></div>
                     </div>
                     <small class="text-muted">Last 28 Days</small>
                 </div>
@@ -109,7 +141,7 @@
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold">Current Streak</h6>
                     <div class="d-flex align-items-center">
-                        <h2 class="mb-0 fw-bold text-danger"><i class="fas fa-fire"></i> @streak</h2>
+                        <h2 class="mb-0 fw-bold text-danger"><i class="fas fa-fire"></i> @ViewBag.Streak</h2>
                         <span class="ms-2 small text-muted">days</span>
                     </div>
                     <small class="text-muted">Don't break the chain!</small>
@@ -122,23 +154,22 @@
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold">Attendance</h6>
                     <div class="d-flex align-items-center">
-                      
                         <span class="badge bg-success">
-                            Attendance this week: @ViewBag.WeeklyAttendance days
+                            This week: @ViewBag.WeeklyAttendance days
                         </span>
                     </div>
                     <small class="text-muted">Don't miss Tomorrow!</small>
                 </div>
             </div>
         </div>
-        
 
         <div class="col-md-3">
             <div class="card shadow-sm leaderboard-card border-0 h-100">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase small fw-bold">Your Mentor</h6>
                     <div class="d-flex align-items-center mt-2">
-                        <div class="avatar-circle bg-warning me-2" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">
+                        <div class="avatar-circle bg-warning me-2"
+                             style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">
                             @(Model.Mentor?.FullName.Substring(0, 1) ?? "?")
                         </div>
                         <div>
@@ -149,7 +180,11 @@
                 </div>
             </div>
         </div>
+
     </div>
+
+
+
     <!-- Module Progress Bar Card -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
@@ -415,14 +450,14 @@
                         </label>
                     </div>
                     <div class="mb-3">
-    <label class="form-label fw-bold">Blockers / Challenges</label>
-    <textarea name="Blocker" class="form-control" rows="2" placeholder="Did you get stuck on anything?"></textarea>
-</div>
+                        <label class="form-label fw-bold">Blockers / Challenges</label>
+                        <textarea name="Blocker" class="form-control" rows="2" placeholder="Did you get stuck on anything?"></textarea>
+                    </div>
 
-<div class="mb-3">
-    <label class="form-label fw-bold">What will you learn tomorrow?</label>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">What will you learn tomorrow?</label>
                         <textarea name="NextGoal" class="form-control" rows="2" placeholder="What is your goal for the next session?"></textarea>
-</div>
+                    </div>
                     <div class="mb-4">
                         <label class="form-label fw-bold small text-uppercase text-muted">Proof of Work (Link)</label>
                         <div class="input-group">

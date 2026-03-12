@@ -113,6 +113,15 @@
                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ProgressLogs" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active-link" : "")">
                                 <i class="fas fa-clipboard-check"></i> Review Logs
                             </a>
+                            <a asp-controller="Admin" asp-action="ManageCurriculum"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ManageCurriculum" ? "active-link" : "")">
+                                <i class="fas fa-graduation-cap"></i> Manage Curriculum
+                            </a>
+                            <a asp-controller="Admin" asp-action="ManageTracks"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ManageTracks" ? "active-link" : "")">
+                                <i class="fas fa-road me-2"></i> Manage Tracks
+                            </a>
+
                         }
                         else
                         {
@@ -140,6 +149,12 @@
                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active-link" : "")">
                                 <i class="fas fa-user-cog"></i> My Profile
                             </a>
+
+                            <a asp-controller="Mentor" asp-action="ManageCurriculum"
+                               class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ManageCurriculum" ? "active-link" : "")">
+                                <i class="fas fa-graduation-cap"></i> Manage Curriculum
+                            </a>
+
                            <a asp-controller="Mentor" asp-action="QuizScores"
                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "QuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Mentor" ? "active-link" : "")">
                                 <i class="fas fa-clipboard-list"></i> Exercise Scores
@@ -149,6 +164,7 @@
                                class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ModuleQuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Mentor" ? "active-link" : "")">
                                 <i class="fas fa-graduation-cap"></i> Module Quiz Scores
                             </a>
+
                         }
 
                         <a asp-controller="Attendance" asp-action="Index"
@@ -193,10 +209,7 @@
                            class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "ModuleQuizScores" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active-link" : "")">
                             <i class="fas fa-graduation-cap"></i> Module Quiz Scores
                         </a>
-                        <a asp-controller="Admin" asp-action="Students"
-                           class="list-group-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" ? "active-link" : "")">
-                            <i class="fas fa-user-graduate"></i> Students
-                        </a>
+                       
 
                         <a class="list-group-item" href="#userSubmenu" data-bs-toggle="collapse">
                             <i class="fas fa-users-cog"></i> Users 

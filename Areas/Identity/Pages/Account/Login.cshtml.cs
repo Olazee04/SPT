@@ -1,4 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// =====================================================================
+// FILE: Areas/Identity/Pages/Account/Login.cshtml.cs
+// REPLACE entire file
+// =====================================================================
+
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -37,9 +42,10 @@ namespace SPT.Areas.Identity.Pages.Account
 
         public class InputModel
         {
+            // ✅ NO [EmailAddress] here — this field accepts both username AND email
             [Required(ErrorMessage = "Please enter your username or email.")]
             [Display(Name = "Username or Email")]
-            public string Email { get; set; }  // kept as "Email" so existing view binding still works
+            public string Email { get; set; }
 
             [Required(ErrorMessage = "Please enter your password.")]
             [DataType(DataType.Password)]
@@ -47,7 +53,7 @@ namespace SPT.Areas.Identity.Pages.Account
 
             public bool RememberMe { get; set; }
 
-            // "Student" or "AdminMentor" — sent from the login tab buttons
+            // "Student" or "AdminMentor"
             public string LoginType { get; set; }
         }
 
@@ -65,9 +71,17 @@ namespace SPT.Areas.Identity.Pages.Account
             if (!ModelState.IsValid)
                 return Page();
 
-            // ── Step 1: Find user by email OR username ──────────────────
-            var user = await _userManager.FindByEmailAsync(Input.Email)
-                    ?? await _userManager.FindByNameAsync(Input.Email);
+            // ── Step 1: Find user by USERNAME first, then fall back to EMAIL ──
+            // ✅ FIX: Never use FindByEmailAsync — it crashes if two accounts share the same email.
+            //         Instead query directly with FirstOrDefault which is safe.
+            ApplicationUser user = await _userManager.FindByNameAsync(Input.Email);
+
+            if (user == null)
+            {
+                // ✅ Case-insensitive email lookup — "john@gmail.com" matches "John@Gmail.com"
+                string emailLower = Input.Email.ToLower();
+                user = _userManager.Users.FirstOrDefault(u => u.Email.ToLower() == emailLower);
+            }
 
             if (user == null)
             {
@@ -76,26 +90,24 @@ namespace SPT.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            // ── Step 2: Enforce tab/role restriction ────────────────────
+            // ── Step 2: Enforce tab/role restriction ──
             bool isStudent = await _userManager.IsInRoleAsync(user, "Student");
             bool isAdminOrMentor = await _userManager.IsInRoleAsync(user, "Admin")
                                 || await _userManager.IsInRoleAsync(user, "Mentor");
 
             if (Input.LoginType == "Student" && !isStudent)
             {
-                // Admin/Mentor tried to use the Student tab
                 ModelState.AddModelError("", "This login is for students only. Please use the Admin / Mentor login.");
                 return Page();
             }
 
             if (Input.LoginType == "AdminMentor" && !isAdminOrMentor)
             {
-                // Student tried to use the Admin/Mentor tab
                 ModelState.AddModelError("", "This login is for staff only. Please use the Student login.");
                 return Page();
             }
 
-            // ── Step 3: Attempt sign in ─────────────────────────────────
+            // ── Step 3: Attempt sign in ──
             var result = await _signInManager.PasswordSignInAsync(
                 user.UserName,
                 Input.Password,
@@ -117,7 +129,7 @@ namespace SPT.Areas.Identity.Pages.Account
 
             await _audit.LogAsync("LOGIN_SUCCESS", "User logged in", user.UserName, user.Id);
 
-            // ── Step 4: Redirect by role ────────────────────────────────
+            // ── Step 4: Redirect by role ──
             if (await _userManager.IsInRoleAsync(user, "Admin"))
                 return RedirectToAction("Dashboard", "Admin");
             if (await _userManager.IsInRoleAsync(user, "Mentor"))

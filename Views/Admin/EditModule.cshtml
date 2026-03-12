@@ -1,0 +1,110 @@
+﻿@* ===================================================
+   SAVE AS: Views/Admin/EditModule.cshtml
+=================================================== *@
+@model SPT.Models.SyllabusModule
+@{
+    ViewData["Title"] = "Edit Module";
+}
+
+<div class="container mt-4" style="max-width:720px">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="ManageCurriculum" asp-route-trackId="@Model.TrackId" class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="mb-0 fw-bold"><i class="fas fa-edit me-2 text-primary"></i>Edit Module</h2>
+            <small class="text-muted">@Model.ModuleCode — @Model.Track?.Name</small>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <form asp-action="EditModule" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Track <span class="text-danger">*</span></label>
+                        <select asp-for="TrackId" asp-items="ViewBag.Tracks" class="form-select"></select>
+                        <span asp-validation-for="TrackId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Module Code <span class="text-danger">*</span></label>
+                        <input asp-for="ModuleCode" class="form-control" />
+                        <span asp-validation-for="ModuleCode" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Display Order</label>
+                        <input asp-for="DisplayOrder" type="number" class="form-control" min="1" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Module Name <span class="text-danger">*</span></label>
+                        <input asp-for="ModuleName" class="form-control" />
+                        <span asp-validation-for="ModuleName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Topics / Description</label>
+                        <textarea asp-for="Topics" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Required Hours</label>
+                        <input asp-for="RequiredHours" type="number" class="form-control" min="1" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Difficulty Level</label>
+                        <select asp-for="DifficultyLevel" class="form-select">
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Expert">Expert</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Pass Score (%)</label>
+                        <input asp-for="PassScore" type="number" class="form-control" min="1" max="100" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold d-block mb-2">Module Flags</label>
+                        <div class="d-flex flex-wrap gap-4">
+                            <div class="form-check">
+                                <input asp-for="HasQuiz" class="form-check-input" type="checkbox" />
+                                <label asp-for="HasQuiz" class="form-check-label">Has Quiz</label>
+                            </div>
+                            <div class="form-check">
+                                <input asp-for="HasProject" class="form-check-input" type="checkbox" />
+                                <label asp-for="HasProject" class="form-check-label">Has Project</label>
+                            </div>
+                            <div class="form-check">
+                                <input asp-for="IsMiniProject" class="form-check-input" type="checkbox" />
+                                <label asp-for="IsMiniProject" class="form-check-label">Is Mini Project (Capstone)</label>
+                            </div>
+                            <div class="form-check">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                <label asp-for="IsActive" class="form-check-label">Active (visible to students)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                    <a asp-action="ManageResources" asp-route-moduleId="@Model.Id" class="btn btn-outline-info">
+                        <i class="fas fa-book me-1"></i>Manage Resources
+                    </a>
+                    <a asp-action="ManageCurriculum" asp-route-trackId="@Model.TrackId" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

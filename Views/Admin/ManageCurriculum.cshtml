@@ -1,0 +1,234 @@
+﻿@model List<SPT.Models.SyllabusModule>
+@{
+    ViewData["Title"] = "Manage Curriculum";
+    var tracks = ViewBag.Tracks as List<SPT.Models.Track> ?? new List<SPT.Models.Track>();
+    int? selectedTrackId = ViewBag.SelectedTrackId as int?;
+    bool isAdmin = ViewBag.IsAdmin == true;
+}
+
+<div class="container-fluid mt-4">
+
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 fw-bold"><i class="fas fa-graduation-cap me-2 text-primary"></i>Manage Curriculum</h2>
+            <small class="text-muted">Add, edit or remove modules and their study materials</small>
+        </div>
+        <a asp-action="CreateModule" asp-route-trackId="@selectedTrackId" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> New Module
+        </a>
+    </div>
+
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-2"></i>@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+
+
+    <div class="mb-4">
+        <ul class="nav nav-pills flex-wrap gap-1">
+            <li class="nav-item">
+                <a class="nav-link @(selectedTrackId == null ? "active" : "")"
+                   asp-action="ManageCurriculum">All Tracks</a>
+            </li>
+            @foreach (var track in tracks)
+            {
+                <li class="nav-item">
+                    <a class="nav-link @(selectedTrackId == track.Id ? "active" : "")"
+                       asp-action="ManageCurriculum" asp-route-trackId="@track.Id">
+                        @track.Code
+                        <span class="badge bg-white text-primary ms-1">
+                            @((ViewBag.TrackCounts as Dictionary<int, int>)?
+                                                    .GetValueOrDefault(track.Id, 0) ?? 0)
+                        </span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+
+
+    @{
+        var grouped = Model.GroupBy(m => m.Track?.Name ?? "Unknown").OrderBy(g => g.Key);
+    }
+
+    @foreach (var group in grouped)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-layer-group me-2"></i>@group.Key</h6>
+                <span class="badge bg-white text-primary">@group.Count() modules</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:50px">#</th>
+                            <th style="width:100px">Code</th>
+                            <th>Module Name</th>
+                            <th style="width:100px">Difficulty</th>
+                            <th style="width:80px" class="text-center">Hrs</th>
+                            <th style="width:80px" class="text-center">Quiz</th>
+                            <th style="width:80px" class="text-center">Resources</th>
+                            <th style="width:80px" class="text-center">Status</th>
+                            <th style="width:160px" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var module in group.OrderBy(m => m.DisplayOrder))
+                        {
+                            <tr class="@(!module.IsActive ? "table-secondary text-muted" : "")">
+                                <td class="fw-bold text-muted">@module.DisplayOrder</td>
+                                <td><span class="badge bg-secondary">@module.ModuleCode</span></td>
+                                <td>
+                                    <div class="fw-semibold">@module.ModuleName</div>
+                                    @if (!string.IsNullOrEmpty(module.Topics))
+                                    {
+                                        <small class="text-muted d-block text-truncate" style="max-width:300px">@module.Topics</small>
+                                    }
+                                    @if (module.IsMiniProject)
+                                    {
+                                        <span class="badge bg-warning text-dark mt-1"><i class="fas fa-star me-1"></i>Mini Project</span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var diffColor = module.DifficultyLevel switch
+                                        {
+                                            "Beginner" => "success",
+                                            "Intermediate" => "warning",
+                                            "Advanced" => "danger",
+                                            "Expert" => "dark",
+                                            _ => "secondary"
+                                        };
+                                    }
+                                    <span class="badge bg-@diffColor">@module.DifficultyLevel</span>
+                                </td>
+                                <td class="text-center">@module.RequiredHours</td>
+                                <td class="text-center">
+                                    @if (module.HasQuiz)
+                                    {
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-times-circle text-muted"></i>
+                                    }
+                                    @if (module.Questions?.Any() == true)
+                                    {
+                                        <small class="text-muted d-block">@module.Questions.Count Qs</small>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info text-dark">@(module.Resources?.Count ?? 0)</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (module.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+
+                                        <a asp-action="EditModule" asp-route-id="@module.Id"
+                                           class="btn btn-outline-primary" title="Edit Module">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+
+                                        <a asp-action="ManageResources" asp-route-moduleId="@module.Id"
+                                           class="btn btn-outline-info" title="Study Materials">
+                                            <i class="fas fa-book"></i>
+                                        </a>
+
+
+                                        <form asp-action="ToggleModule" method="post" class="d-inline">
+                                            <input type="hidden" name="id" value="@module.Id" />
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-warning" title="@(module.IsActive ? "Deactivate" : "Activate")">
+                                                <i class="fas fa-@(module.IsActive ? "eye-slash" : "eye")"></i>
+                                            </button>
+                                        </form>
+
+
+                                        @if (isAdmin)
+                                        {
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    title="Delete Module"
+                                                    onclick="confirmDelete(@module.Id, '@Html.Raw(module.ModuleName.Replace("'", "\\'"))')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No modules found. <a asp-action="CreateModule">Create the first one.</a></p>
+        </div>
+    }
+</div>
+
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Delete Module</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteModuleName"></strong>?</p>
+                <div class="alert alert-warning small mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This will also delete all resources and quiz questions for this module.
+                    Deletion is blocked if any student has completed this module.
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            document.getElementById('deleteModuleName').textContent = name;
+            document.getElementById('deleteForm').action = '/Admin/DeleteModule';
+            document.querySelector('#deleteForm input[name="id"]')?.remove();
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'id';
+            input.value = id;
+            document.getElementById('deleteForm').appendChild(input);
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+}
