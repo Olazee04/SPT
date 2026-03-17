@@ -324,8 +324,6 @@ Render's file system is **ephemeral** — any uploaded profile pictures stored i
 
 ## 🖼️ Screenshots
 
-
-```markdown
 ![Student Dashboard](screenshots/StudentDashboard.PNG)
 ![Mentor Dashboard](screenshots/Mentor.PNG)
 ![Admin Dashboard](screenshots/AdminDashboard.PNG)
@@ -340,9 +338,6 @@ Render's file system is **ephemeral** — any uploaded profile pictures stored i
 ![Student NavBar](screenshots/StudentNav.PNG)
 ![Study Material](screenshots/StudyMaterials.PNG)
 ![Mentor NavBar](screenshots/MentorNavBar.PNG)
-```
-
----
 
 ## 📄 License
 
