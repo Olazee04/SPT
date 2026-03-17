@@ -339,7 +339,7 @@ Render's file system is **ephemeral** — any uploaded profile pictures stored i
 ![Study Material](screenshots/StudyMaterials.PNG)
 ![Mentor NavBar](screenshots/MentorNavBar.PNG)
 
----
+----
 
 ## 📄 License
 
