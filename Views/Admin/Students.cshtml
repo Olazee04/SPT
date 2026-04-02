@@ -132,14 +132,23 @@
                         <td class="text-end pe-4">
 
                             <a asp-action="Details"
-                               asp-route-id="@s.StudentId"
-                               class="btn btn-sm btn-light text-muted mb-1">
+                                   asp-route-id="@s.StudentId"
+                                   class="btn btn-sm btn-light text-muted mb-1"
+                                   title="View Details">
                                 <i class="fas fa-ellipsis-v"></i>
                             </a>
 
-                            <form asp-action="ResetUserPassword" method="post">
+                            <a asp-action="ManageModuleProgress"
+                                   asp-route-studentId="@s.StudentId"
+                                   class="btn btn-sm btn-outline-primary mb-1"
+                                   title="Manage Module Progress">
+                                <i class="fas fa-tasks"></i>
+                            </a>
+
+                            <form asp-action="ResetUserPassword" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="userId" value="@s.UserId" />
-                                <button class="btn btn-sm btn-outline-warning">
+                                <button class="btn btn-sm btn-outline-warning mb-1" title="Reset Password">
                                     <i class="fas fa-key"></i>
                                 </button>
                             </form>

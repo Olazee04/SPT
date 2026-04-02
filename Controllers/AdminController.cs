@@ -8,6 +8,7 @@ using SPT.Models;
 using SPT.Models.ViewModels;
 using SPT.Services;
 
+
 namespace SPT.Controllers
 {
     public class AdminController : Controller
@@ -17,6 +18,7 @@ namespace SPT.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly IEmailService _emailService;
         private readonly AuditService _auditService;
+        private readonly IConfiguration _config;
 
         private static DateTime ToUtc(DateTime dt) =>
             DateTime.SpecifyKind(dt, DateTimeKind.Utc);
@@ -26,19 +28,22 @@ namespace SPT.Controllers
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment env,
             IEmailService emailService,
-            AuditService auditService)
-        {
-            _context = context;
-            _userManager = userManager;
-            _env = env;
-            _emailService = emailService;
-            _auditService = auditService;
-        }
+            AuditService auditService,
+            IConfiguration config)
+   
+            {
+                _context = context;
+                _userManager = userManager;
+                _env = env;
+                _emailService = emailService;
+                _auditService = auditService;
+                _config = config;
+            }
 
-        // =========================
-        // ADMIN DASHBOARD
-        // =========================
-        [Authorize(Roles = "Admin, Mentor")]
+            // =========================
+            // ADMIN DASHBOARD
+            // =========================
+            [Authorize(Roles = "Admin, Mentor")]
         public async Task<IActionResult> Dashboard()
         {
             var mentors = await _userManager.GetUsersInRoleAsync("Mentor");
@@ -415,7 +420,6 @@ namespace SPT.Controllers
                 return View(model);
             }
 
-            // ✅ FIX 1: Declare username here (only once)
             string username = string.Empty;
             string finalPassword = string.IsNullOrEmpty(password) ? "Student@123" : password;
 
@@ -429,7 +433,6 @@ namespace SPT.Controllers
                     ? await _context.Students.MaxAsync(s => s.Id) + 1
                     : 1;
 
-                // ✅ FIX 1: ASSIGN don't redeclare (no 'string' keyword here)
                 username = $"{surname}{firstInitial}{nextId:D3}";
 
                 while (await _userManager.FindByNameAsync(username) != null)
@@ -450,6 +453,7 @@ namespace SPT.Controllers
 
                 if (!result.Succeeded)
                 {
+                    TempData["Error"] = "Failed to create user: " + string.Join(", ", result.Errors.Select(e => e.Description));
                     await PopulateDropdowns();
                     return View(model);
                 }
@@ -461,6 +465,7 @@ namespace SPT.Controllers
                 if (track == null)
                 {
                     await _userManager.DeleteAsync(user);
+                    TempData["Error"] = "Selected track not found.";
                     await PopulateDropdowns();
                     return View(model);
                 }
@@ -515,13 +520,23 @@ namespace SPT.Controllers
                 await _auditService.LogAsync(
                     "CREATE_STUDENT",
                     $"Student created: {model.FullName}",
-                    User.Identity.Name,
+                    User.Identity.Name ?? "Admin",
                     _userManager.GetUserId(User));
 
-                // Email credentials to student
+                // STEP 6: Send welcome email
+                string? emailError = null;
                 try
                 {
-                    string emailBody = $@"
+                    var emailUser = _config["Email:User"];
+                    var emailHost = _config["Email:Host"];
+
+                    if (string.IsNullOrWhiteSpace(emailUser) || string.IsNullOrWhiteSpace(emailHost))
+                    {
+                        emailError = $"Email config missing — User: '{emailUser}', Host: '{emailHost}'";
+                    }
+                    else
+                    {
+                        string emailBody = $@"
 <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
     <h2 style='color:#0d6efd;'>Welcome to RMSys SPT Academy! 🎓</h2>
     <p>Hi <strong>{model.FullName}</strong>,</p>
@@ -552,18 +567,23 @@ namespace SPT.Controllers
     <p style='color:#6c757d;font-size:0.85rem;'>This is an automated message from RMSys SPT Academy. Do not reply to this email.</p>
 </div>";
 
-                    await _emailService.SendEmailAsync(model.Email, "🎓 Welcome to SPT Academy – Your Login Details", emailBody);
-                    TempData["Success"] = $"✅ Student Created! Username: {username} — Login details sent to {model.Email}";
-
+                        await _emailService.SendEmailAsync(model.Email, "🎓 Welcome to SPT Academy – Your Login Details", emailBody);
+                        TempData["Success"] = $"✅ Student '{model.FullName}' created! Username: {username} — Login details sent to {model.Email}";
+                    }
                 }
-                catch
+                catch (Exception emailEx)
                 {
-                    TempData["Success"] = $"✅ Student Created! Username: {username} | Temp Password: {finalPassword} (Email delivery failed — note this down)";
+                    emailError = emailEx.Message;
+                }
+
+                if (emailError != null)
+                {
+                    TempData["Success"] = $"✅ Student '{model.FullName}' created! Username: {username} | Password: {finalPassword}";
+                    TempData["Warning"] = $"⚠️ Welcome email could not be sent to {model.Email}. Error: {emailError} — Please share credentials manually.";
                 }
 
                 return RedirectToAction(nameof(Students));
             }
-            // ✅ FIX 2: Outer catch was missing entirely
             catch (Exception ex)
             {
                 TempData["Error"] = $"EXCEPTION: {ex.Message} | INNER: {ex.InnerException?.Message}";
@@ -1048,11 +1068,11 @@ _userManager.GetUserId(User));
                 .Include(l => l.Module)
                 .AsQueryable();
 
-              if (studentId.HasValue)
+            if (studentId.HasValue)
             {
                 query = query.Where(l => l.StudentId == studentId.Value);
 
-                
+
                 var studentName = await _context.Students
                     .Where(s => s.Id == studentId)
                     .Select(s => s.FullName)
@@ -1087,6 +1107,86 @@ _userManager.GetUserId(User));
 
             var logs = await query.ToListAsync();
             return View(logs);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetNextStudentId()
+        {
+            int nextId = await _context.Students.AnyAsync()
+                ? await _context.Students.MaxAsync(s => s.Id) + 1
+                : 1;
+            return Json(nextId);
+        }
+
+        // POST: /Admin/EditLog
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> EditLog(int id, decimal hours, string? description, DateTime date)
+        {
+            var log = await _context.ProgressLogs
+                .Include(l => l.Student)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
+            if (log == null) return NotFound();
+
+            // Enforce 5hr daily cap — exclude this log's own hours from the check
+            decimal otherLogsTotal = await _context.ProgressLogs
+                .Where(l => l.StudentId == log.StudentId && l.Date.Date == date.Date && l.Id != id)
+                .SumAsync(l => l.Hours);
+
+            if (otherLogsTotal + hours > 5)
+            {
+                TempData["Error"] = $"⚠️ Cannot update — student already has {otherLogsTotal} hrs on {date:MMM dd}. Max 5 hrs/day.";
+                return RedirectToAction("ProgressLogs");
+            }
+
+            log.Hours = hours;
+            log.Date = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+            if (!string.IsNullOrWhiteSpace(description))
+                log.ActivityDescription = description;
+            log.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                "LOG_EDITED",
+                $"Log #{log.Id} edited — new hours: {hours}, date: {date:MMM dd}",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
+
+            TempData["Success"] = $"✅ Log updated. Student's stats now reflect {hours} hrs for {date:MMM dd}.";
+            return RedirectToAction("ProgressLogs");
+        }
+
+        // POST: /Admin/DeleteLog
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Mentor")]
+        public async Task<IActionResult> DeleteLog(int id)
+        {
+            var log = await _context.ProgressLogs
+                .Include(l => l.Student)
+                .FirstOrDefaultAsync(l => l.Id == id);
+
+            if (log == null) return NotFound();
+
+            string studentName = log.Student?.FullName ?? "Unknown";
+            decimal hours = log.Hours;
+            DateTime date = log.Date;
+
+            _context.ProgressLogs.Remove(log);
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                "LOG_DELETED",
+                $"Log #{id} deleted for {studentName} — {hours} hrs on {date:MMM dd} removed from totals",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
+
+            TempData["Success"] = $"✅ Log deleted. {studentName}'s total hours reduced by {hours} hrs.";
+            return RedirectToAction("ProgressLogs");
         }
         // =========================
         // STUDENT DETAILS (Profile View for Admin)
@@ -1983,6 +2083,155 @@ _userManager.GetUserId(User));
 
             return View("~/Views/Quiz/AllResults.cshtml", data);
         }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ManageModuleProgress(int studentId)
+        {
+            var student = await _context.Students
+                .Include(s => s.Track)
+                .Include(s => s.ModuleCompletions)
+                .FirstOrDefaultAsync(s => s.Id == studentId);
+
+            if (student == null) return NotFound();
+
+            var modules = await _context.SyllabusModules
+                .Where(m => m.TrackId == student.TrackId && m.IsActive)
+                .OrderBy(m => m.DisplayOrder)
+                .ToListAsync();
+
+            var completedIds = student.ModuleCompletions
+                .Where(mc => mc.IsCompleted)
+                .Select(mc => mc.ModuleId)
+                .ToHashSet();
+
+            ViewBag.Student = student;
+            ViewBag.CompletedIds = completedIds;
+
+            return View(modules);
+        }
+
+        // POST: /Admin/SaveModuleProgress
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SaveModuleProgress(int studentId, List<int> completedModuleIds)
+        {
+            var student = await _context.Students
+                .Include(s => s.ModuleCompletions)
+                .FirstOrDefaultAsync(s => s.Id == studentId);
+
+            if (student == null) return NotFound();
+
+            completedModuleIds ??= new List<int>();
+
+            // Get all modules for this student's track
+            var allModules = await _context.SyllabusModules
+                .Where(m => m.TrackId == student.TrackId && m.IsActive)
+                .Select(m => m.Id)
+                .ToListAsync();
+
+            foreach (var moduleId in allModules)
+            {
+                var existing = student.ModuleCompletions
+                    .FirstOrDefault(mc => mc.ModuleId == moduleId);
+
+                bool shouldBeCompleted = completedModuleIds.Contains(moduleId);
+
+                if (shouldBeCompleted && existing == null)
+                {
+                    // Add new completion
+                    _context.ModuleCompletions.Add(new ModuleCompletion
+                    {
+                        StudentId = studentId,
+                        ModuleId = moduleId,
+                        IsCompleted = true,
+                        QuizCompleted = false,
+                        CompletionDate = DateTime.UtcNow,
+                        VerifiedBy = $"Admin ({User.Identity.Name})"
+                    });
+                }
+                else if (shouldBeCompleted && existing != null && !existing.IsCompleted)
+                {
+                    // Update existing to completed
+                    existing.IsCompleted = true;
+                    existing.CompletionDate = DateTime.UtcNow;
+                    existing.VerifiedBy = $"Admin ({User.Identity.Name})";
+                }
+                else if (!shouldBeCompleted && existing != null && existing.IsCompleted)
+                {
+                    // Unmark as completed
+                    existing.IsCompleted = false;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                "MODULES_OVERRIDDEN",
+                $"Admin manually set module completions for {student.FullName} ({completedModuleIds.Count} modules marked complete)",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
+
+            TempData["Success"] = $"Module progress updated for {student.FullName}.";
+            return RedirectToAction(nameof(ManageModuleProgress), new { studentId });
+        }
+
+        // POST: /Admin/UnlockCapstone
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UnlockCapstone(int studentId)
+        {
+            var student = await _context.Students
+                .Include(s => s.ModuleCompletions)
+                .FirstOrDefaultAsync(s => s.Id == studentId);
+
+            if (student == null) return NotFound();
+
+            // Module 19 is the capstone/mini project module
+            var capstoneMod = await _context.SyllabusModules
+                .FirstOrDefaultAsync(m => m.TrackId == student.TrackId && m.IsMiniProject);
+
+            if (capstoneMod == null)
+            {
+                TempData["Error"] = "No mini project module found for this student's track.";
+                return RedirectToAction(nameof(ManageModuleProgress), new { studentId });
+            }
+
+            var existing = student.ModuleCompletions
+                .FirstOrDefault(mc => mc.ModuleId == capstoneMod.Id);
+
+            if (existing == null)
+            {
+                _context.ModuleCompletions.Add(new ModuleCompletion
+                {
+                    StudentId = studentId,
+                    ModuleId = capstoneMod.Id,
+                    IsCompleted = true,
+                    QuizCompleted = false,
+                    CompletionDate = DateTime.UtcNow,
+                    VerifiedBy = $"Admin Unlock ({User.Identity.Name})"
+                });
+            }
+            else
+            {
+                existing.IsCompleted = true;
+                existing.VerifiedBy = $"Admin Unlock ({User.Identity.Name})";
+            }
+
+            await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                "CAPSTONE_UNLOCKED",
+                $"Admin manually unlocked capstone for {student.FullName}",
+                User.Identity.Name,
+                _userManager.GetUserId(User));
+
+            TempData["Success"] = $"Capstone unlocked for {student.FullName}! They can now submit their project.";
+            return RedirectToAction(nameof(ManageModuleProgress), new { studentId });
+        }
+
 
         // =========================
         // BULK IMPORT STUDENTS
