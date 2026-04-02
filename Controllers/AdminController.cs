@@ -136,7 +136,7 @@ namespace SPT.Controllers
             model.ActivityDates = dateLabels.ToArray();
             model.ActivityCounts = logCounts.ToArray();
 
-            // At-Risk Students: no approved log in last 5 days
+            
             var fiveDaysAgo = DateTime.UtcNow.Date.AddDays(-5);
 
             model.AtRiskStudents = students
@@ -325,7 +325,7 @@ namespace SPT.Controllers
 
             var modelList = new List<StudentPerformanceViewModel>();
 
-            // ✅ FIX: Week starts on MONDAY — resets every Monday at 00:00
+            
             var today = DateTime.UtcNow.Date;
             int daysSinceMonday = ((int)today.DayOfWeek + 6) % 7;
             var startOfWeek = today.AddDays(-daysSinceMonday);
@@ -337,7 +337,6 @@ namespace SPT.Controllers
 
             foreach (var s in students)
             {
-                // ✅ FIX: Weekly hours use Monday-based week
                 var weekLogs = s.ProgressLogs.Where(l => l.Date.Date >= startOfWeek && l.IsApproved).ToList();
                 decimal hoursThisWeek = weekLogs.Sum(l => l.Hours);
                 int checkInsThisWeek = weekLogs.Select(l => l.Date.Date).Distinct().Count();
@@ -368,7 +367,7 @@ namespace SPT.Controllers
                     TrackCode = s.Track?.Code ?? "N/A",
                     MentorName = s.Mentor?.FullName ?? "Unassigned",
                     TargetHoursPerWeek = s.TargetHoursPerWeek,
-                    HoursLast7Days = hoursThisWeek,      // ✅ Now = this week (Mon–Sun)
+                    HoursLast7Days = hoursThisWeek,      
                     CheckInsLast7Days = checkInsThisWeek,
                     CompletedModules = completedMods,
                     TotalModules = totalMods,
@@ -425,7 +424,7 @@ namespace SPT.Controllers
 
             try
             {
-                // STEP 1: Generate Username
+               
                 var nameParts = model.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 string surname = nameParts.Length > 0 ? nameParts[0] : "Student";
                 string firstInitial = nameParts.Length > 1 ? nameParts[1].Substring(0, 1) : "X";
@@ -441,7 +440,7 @@ namespace SPT.Controllers
                     username = $"{surname}{firstInitial}{nextId:D3}";
                 }
 
-                // STEP 2: Create Identity User
+               
                 var user = new ApplicationUser
                 {
                     UserName = username,
@@ -460,7 +459,7 @@ namespace SPT.Controllers
 
                 await _userManager.AddToRoleAsync(user, "Student");
 
-                // STEP 3: Auto-Generate Cohort
+                
                 var track = await _context.Tracks.FindAsync(model.TrackId);
                 if (track == null)
                 {
@@ -487,7 +486,7 @@ namespace SPT.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                // STEP 4: Handle Profile Picture
+              
                 if (profilePicture != null && profilePicture.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
@@ -500,7 +499,7 @@ namespace SPT.Controllers
                     model.ProfilePicture = $"/uploads/profiles/{fileName}";
                 }
 
-                // STEP 5: Save Student
+                
                 model.UserId = user.Id;
                 model.CohortId = cohort.Id;
                 model.TargetHoursPerWeek = 25;
@@ -523,7 +522,7 @@ namespace SPT.Controllers
                     User.Identity.Name ?? "Admin",
                     _userManager.GetUserId(User));
 
-                // STEP 6: Send welcome email
+             
                 string? emailError = null;
                 try
                 {
@@ -592,6 +591,16 @@ namespace SPT.Controllers
             }
         }
 
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetNextStudentId()
+        {
+            int nextId = await _context.Students.AnyAsync()
+                ? await _context.Students.MaxAsync(s => s.Id) + 1
+                : 1;
+            return Json(nextId);
+        }
+
 
         // =========================
         // EDIT STUDENT (ADMIN ONLY)
@@ -616,7 +625,7 @@ namespace SPT.Controllers
             var existingStudent = await _context.Students.FindAsync(id);
             if (existingStudent == null) return NotFound();
 
-            // Update allowed fields
+            
             existingStudent.FullName = model.FullName;
             existingStudent.Email = model.Email;
             existingStudent.Phone = model.Phone;
@@ -630,7 +639,6 @@ namespace SPT.Controllers
             existingStudent.EmergencyContactPhone = model.EmergencyContactPhone;
             existingStudent.UpdatedAt = DateTime.UtcNow;
 
-            // Handle Photo
             if (profilePicture != null && profilePicture.Length > 0)
             {
                 var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
@@ -644,7 +652,6 @@ namespace SPT.Controllers
             }
 
             await _context.SaveChangesAsync();
-            // ✅ Email credentials privately instead of showing password in UI
             
             await _context.SaveChangesAsync();
             TempData["Success"] = "✅ Student updated successfully.";
@@ -662,14 +669,13 @@ namespace SPT.Controllers
             var student = await _context.Students.Include(s => s.User).FirstOrDefaultAsync(s => s.Id == id);
             if (student == null) return NotFound();
 
-            // ✅ THIS IS WHERE YOU ADD THE AUDIT LOG
+            
             await _auditService.LogAsync(
     "DELETE_STUDENT",
     $"Deleted student {student.FullName} ({student.Email})",
     User.Identity.Name,
     _userManager.GetUserId(User));
 
-            // Delete User (Cascade deletes student profile)
             if (student.User != null)
             {
                 await _userManager.DeleteAsync(student.User);
@@ -813,7 +819,6 @@ _userManager.GetUserId(User));
 
         public async Task<IActionResult> Mentors()
         {
-            // Include the User to get email, and Students to count them
             var mentors = await _context.Mentors
                 .Include(m => m.User)
                 .Include(m => m.Students)
@@ -825,16 +830,20 @@ _userManager.GetUserId(User));
             return View(mentors);
         }
 
+        // =========================
+        // EDIT MENTOR
+        // =========================
+
         [HttpGet]
         public async Task<IActionResult> EditMentor(int id)
         {
             var mentor = await _context.Mentors
-                .Include(m => m.User)   // ← THIS was missing — causes email to be null
+                .Include(m => m.User)   
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (mentor == null) return NotFound();
 
             ViewBag.Tracks = new SelectList(_context.Tracks, "Id", "Name", mentor.TrackId);
-            return View("EditMentor", mentor);  // ← use dedicated view, not CreateMentor
+            return View("EditMentor", mentor);  
         }
 
         [HttpPost]
@@ -883,7 +892,7 @@ _userManager.GetUserId(User));
 
             if (mentor == null) return NotFound();
 
-            // optional safety — block if has students
+            
             if (mentor.Students.Any())
             {
                 TempData["Error"] = "Cannot delete mentor with assigned students.";
@@ -900,7 +909,9 @@ _userManager.GetUserId(User));
         }
 
 
-
+        // =========================
+        // RESET PASSWORD
+        // =========================
         [HttpPost]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
@@ -909,7 +920,7 @@ _userManager.GetUserId(User));
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound();
 
-            // Generate a readable temp password
+            
             var newPassword = "Temp@" + new Random().Next(1000, 9999);
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -918,7 +929,7 @@ _userManager.GetUserId(User));
             if (!result.Succeeded)
             {
                 TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
-                // ✅ FIX: redirect back to wherever we came from
+                
                 string referer = Request.Headers["Referer"].ToString();
                 if (!string.IsNullOrEmpty(referer) && referer.Contains("Mentor"))
                     return RedirectToAction("Mentors");
@@ -931,14 +942,13 @@ _userManager.GetUserId(User));
                 User.Identity.Name,
                 _userManager.GetUserId(User));
 
-            // Find the person's full name
+            
             string fullName = user.UserName ?? "User";
             var mentor = await _context.Mentors.FirstOrDefaultAsync(m => m.UserId == userId);
             var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == userId);
             if (mentor != null) fullName = mentor.FullName;
             else if (student != null) fullName = student.FullName;
 
-            // Send email with new password
             try
             {
                 string emailBody = $@"
@@ -976,7 +986,7 @@ _userManager.GetUserId(User));
                 TempData["Success"] = $"Password reset. New temp password: {newPassword} (Email failed — share manually)";
             }
 
-            // ✅ FIX: redirect to correct page based on who was reset
+           
             if (mentor != null) return RedirectToAction("Mentors");
             return RedirectToAction("Students");
         }
@@ -1016,7 +1026,7 @@ _userManager.GetUserId(User));
 
                 await _context.SaveChangesAsync();
 
-                // Build recipient list based on audience
+               
                 var recipientUsers = new List<ApplicationUser>();
 
                 if (model.Audience == "Students" || model.Audience == "All")
@@ -1025,10 +1035,10 @@ _userManager.GetUserId(User));
                 if (model.Audience == "Mentors" || model.Audience == "All")
                     recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Mentor"));
 
-                // Admins ALWAYS receive every announcement
+                
                 recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Admin"));
 
-                // Determine redirect: Mentor goes to Mentor dashboard, Admin to Admin dashboard
+                
                 string redirectUrl = User.IsInRole("Admin") ? "/Admin/Dashboard" : "/Mentor/Dashboard";
 
                 foreach (var user in recipientUsers.DistinctBy(u => u.Id))
@@ -1082,7 +1092,7 @@ _userManager.GetUserId(User));
                 ViewBag.IsFiltered = true;
             }
 
-            // 2. Filter by Status
+         
             if (status == "Pending")
             {
                 query = query.Where(l => !l.IsApproved);
@@ -1092,16 +1102,15 @@ _userManager.GetUserId(User));
                 query = query.Where(l => l.IsApproved);
             }
 
-            // 3. Filter by Student Name (Search Box)
+           
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(l => l.Student.FullName.Contains(search));
             }
 
-            // Order: Newest first
             query = query.OrderByDescending(l => l.Date);
 
-            // Pass current filter state to View
+           
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentSearch = search;
 
@@ -1109,17 +1118,7 @@ _userManager.GetUserId(User));
             return View(logs);
         }
 
-        [HttpGet]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetNextStudentId()
-        {
-            int nextId = await _context.Students.AnyAsync()
-                ? await _context.Students.MaxAsync(s => s.Id) + 1
-                : 1;
-            return Json(nextId);
-        }
-
-        // POST: /Admin/EditLog
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1160,7 +1159,7 @@ _userManager.GetUserId(User));
             return RedirectToAction("ProgressLogs");
         }
 
-        // POST: /Admin/DeleteLog
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1188,6 +1187,8 @@ _userManager.GetUserId(User));
             TempData["Success"] = $"✅ Log deleted. {studentName}'s total hours reduced by {hours} hrs.";
             return RedirectToAction("ProgressLogs");
         }
+
+
         // =========================
         // STUDENT DETAILS (Profile View for Admin)
         // =========================
@@ -1200,13 +1201,13 @@ _userManager.GetUserId(User));
     .Include(s => s.Cohort)
     .Include(s => s.Mentor)
     .Include(s => s.User)
-    .Include(s => s.ProgressLogs.Where(l => l.QuizScore.HasValue))  // ← quiz logs only
+    .Include(s => s.ProgressLogs.Where(l => l.QuizScore.HasValue)) 
         .ThenInclude(l => l.Module)
     .FirstOrDefaultAsync(s => s.Id == id);
 
             if (student == null) return NotFound();
 
-            // Pass username via ViewBag
+           
             ViewBag.Username = student.User?.UserName ?? "N/A";
 
             return View(student);
@@ -1222,12 +1223,11 @@ _userManager.GetUserId(User));
             ViewBag.Tracks = new SelectList(tracks, "Id", "Name");
             ViewBag.Cohorts = new SelectList(await _context.Cohorts.Where(c => c.IsActive).ToListAsync(), "Id", "Name");
 
-            // ── Mentor dropdown: filtered + labelled ──
+           
             var mentors = await _context.Mentors
                 .Include(m => m.Track)
                 .ToListAsync();
 
-            // Show: General mentors always + mentors assigned to the selected track
             var filteredMentors = mentors
                 .Where(m =>
                     m.Specialization == "General" ||
@@ -1236,7 +1236,7 @@ _userManager.GetUserId(User));
                 .Select(m => new
                 {
                     Id = m.Id,
-                    // Label: "FullName [General]" or "FullName [FSC]"
+                    
                     DisplayName = m.Specialization == "General" || m.TrackId == null
                         ? $"{m.FullName} [General]"
                         : $"{m.FullName} [{m.Track?.Code ?? m.Specialization}]"
@@ -1280,7 +1280,7 @@ _userManager.GetUserId(User));
 
             if (status != "All")
             {
-                // Filter by Open/Resolved
+                
                 bool isResolved = status == "Resolved";
                 query = query.Where(t => t.IsResolved == isResolved);
             }
@@ -1296,17 +1296,16 @@ _userManager.GetUserId(User));
 
         public async Task<IActionResult> ResolveTicket(int id, string response, string actionType)
         {
-            // ✅ FIX 1: Include Student data to prevent NullReferenceException
+            
             var ticket = await _context.SupportTickets
                 .Include(t => t.Student)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (ticket == null) return NotFound();
 
-            // Update the Admin Response
             ticket.AdminResponse = response;
 
-            // ✅ FIX 2: Check which button was clicked
+            
             if (actionType == "Resolve")
             {
                 ticket.IsResolved = true;
@@ -1315,13 +1314,13 @@ _userManager.GetUserId(User));
             }
             else
             {
-                // Just a reply, keep it open
+                
                 ticket.IsResolved = false;
-                ticket.Status = "In Progress"; // Change status to show it's being worked on
+                ticket.Status = "In Progress"; 
                 TempData["Success"] = "Response sent. Ticket remains open.";
             }
 
-            // Send Notification (Only if Student exists)
+            
             if (ticket.Student != null)
             {
                 var notification = new Notification
@@ -1354,7 +1353,7 @@ _userManager.GetUserId(User));
             return View(tracks);
         }
 
-        // POST: /Admin/CreateTrack
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTrack(string name, string code)
@@ -1368,7 +1367,7 @@ _userManager.GetUserId(User));
             code = code.Trim().ToUpper();
             name = name.Trim();
 
-            // Check for duplicate code
+           
             bool codeExists = await _context.Tracks.AnyAsync(t => t.Code == code);
             if (codeExists)
             {
@@ -1386,7 +1385,7 @@ _userManager.GetUserId(User));
             _context.Tracks.Add(track);
             await _context.SaveChangesAsync();
 
-            // Auto-create 19 modules for the new track (same pattern as SeedData)
+            
             var modules = new List<SyllabusModule>();
 
             for (int i = 1; i <= 18; i++)
@@ -1426,7 +1425,7 @@ _userManager.GetUserId(User));
             return RedirectToAction("ManageTracks");
         }
 
-        // POST: /Admin/EditTrack
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditTrack(int id, string name, string code)
@@ -1447,7 +1446,7 @@ _userManager.GetUserId(User));
             code = code.Trim().ToUpper();
             name = name.Trim();
 
-            // Check duplicate code (excluding current track)
+            
             bool codeExists = await _context.Tracks.AnyAsync(t => t.Code == code && t.Id != id);
             if (codeExists)
             {
@@ -1464,7 +1463,7 @@ _userManager.GetUserId(User));
             return RedirectToAction("ManageTracks");
         }
 
-        // POST: /Admin/ToggleTrack
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleTrack(int id)
@@ -1484,7 +1483,7 @@ _userManager.GetUserId(User));
             return RedirectToAction("ManageTracks");
         }
 
-        // POST: /Admin/DeleteTrack
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteTrack(int id)
@@ -1527,6 +1526,9 @@ _userManager.GetUserId(User));
             return View(resources);
         }
 
+        // =========================
+        // RESOURCES 
+        // =========================
         [HttpPost]
         [Authorize(Roles = "Admin,Mentor")]
         [ValidateAntiForgeryToken]
@@ -1535,7 +1537,7 @@ _userManager.GetUserId(User));
             
             ModelState.Remove("Track");
             ModelState.Remove("Module");
-            ModelState.Remove("TrackId");   // we handle it manually below
+            ModelState.Remove("TrackId");   
 
             model.TrackId = trackId;
 
@@ -1555,7 +1557,6 @@ _userManager.GetUserId(User));
                 return RedirectToAction(nameof(ManageLibrary));
             }
 
-            // Debug: show what failed
             var errors = ModelState
                 .Where(x => x.Value.Errors.Count > 0)
                 .Select(x => $"{x.Key}: {string.Join(", ", x.Value.Errors.Select(e => e.ErrorMessage))}")
@@ -1574,7 +1575,7 @@ _userManager.GetUserId(User));
         {
             var tracks = await _context.Tracks.ToListAsync();
             ViewBag.Tracks = new SelectList(tracks, "Id", "Name");
-            ViewBag.TrackList = tracks;  // ADD THIS — needed for the manual foreach in the view
+            ViewBag.TrackList = tracks;  
             return View();
         }
 
@@ -1600,6 +1601,10 @@ _userManager.GetUserId(User));
             return RedirectToAction(nameof(ManageLibrary));
         }
 
+
+        // =========================
+        // MANAGE CURRICULUM
+        // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> ManageCurriculum(int? trackId)
@@ -1614,7 +1619,7 @@ _userManager.GetUserId(User));
                 if (mentor != null)
                 {
                     mentorTrackId = mentor.TrackId;
-                    // Track-specific mentor: force to their track
+                    
                     if (mentor.Specialization != "General" && mentor.TrackId.HasValue)
                         trackId = mentor.TrackId;
                 }
@@ -1640,7 +1645,7 @@ _userManager.GetUserId(User));
             ViewBag.Tracks = availableTracks;
             ViewBag.SelectedTrackId = trackId;
             ViewBag.IsAdmin = isAdmin;
-            // Pass total counts per track for the tab badges
+            
             ViewBag.TrackCounts = await _context.SyllabusModules
                 .GroupBy(m => m.TrackId)
                 .ToDictionaryAsync(g => g.Key, g => g.Count());
@@ -1649,7 +1654,7 @@ _userManager.GetUserId(User));
         }
 
         // =========================
-        // CREATE MODULE — GET
+        //  MODULE 
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1661,9 +1666,7 @@ _userManager.GetUserId(User));
             return View(new SyllabusModule { TrackId = trackId ?? 0, IsActive = true, RequiredHours = 8, PassScore = 75 });
         }
 
-        // =========================
-        // CREATE MODULE — POST
-        // =========================
+      
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1683,7 +1686,6 @@ _userManager.GetUserId(User));
                 return View(model);
             }
 
-            // Auto-set display order to next available for this track
             if (model.DisplayOrder == 0)
             {
                 int maxOrder = await _context.SyllabusModules
@@ -1700,9 +1702,7 @@ _userManager.GetUserId(User));
             return RedirectToAction(nameof(ManageCurriculum), new { trackId = model.TrackId });
         }
 
-        // =========================
-        // EDIT MODULE — GET
-        // =========================
+      
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> EditModule(int id)
@@ -1720,9 +1720,7 @@ _userManager.GetUserId(User));
             return View(module);
         }
 
-        // =========================
-        // EDIT MODULE — POST
-        // =========================
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1765,9 +1763,7 @@ _userManager.GetUserId(User));
             return RedirectToAction(nameof(ManageCurriculum), new { trackId = model.TrackId });
         }
 
-        // =========================
-        // DELETE MODULE — POST
-        // =========================
+     
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -1781,7 +1777,7 @@ _userManager.GetUserId(User));
 
             if (module == null) return NotFound();
 
-            // Block deletion if any student completed it
+           
             if (module.ModuleCompletions.Any(mc => mc.IsCompleted))
             {
                 TempData["Error"] = $"❌ Cannot delete '{module.ModuleName}' — {module.ModuleCompletions.Count(mc => mc.IsCompleted)} student(s) have completed it.";
@@ -1797,9 +1793,7 @@ _userManager.GetUserId(User));
             return RedirectToAction(nameof(ManageCurriculum), new { trackId });
         }
 
-        // =========================
-        // TOGGLE MODULE ACTIVE
-        // =========================
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1816,7 +1810,7 @@ _userManager.GetUserId(User));
         }
 
         // =========================
-        // MANAGE RESOURCES — GET (for a specific module)
+        // MANAGE RESOURCES — 
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1920,7 +1914,7 @@ _userManager.GetUserId(User));
                     isGeneralMentor = mentor.Specialization == "General" || mentor.TrackId == null;
                 }
 
-                // Track-specific mentor: force filter to their track
+                
                 if (!isGeneralMentor && mentorTrackId.HasValue && !trackId.HasValue)
                     trackId = mentorTrackId;
             }
@@ -1934,10 +1928,10 @@ _userManager.GetUserId(User));
                     .Where(t => t.Id == mentorTrackId)
                     .ToListAsync();
 
-            // ── Module query ──
+            
             var query = _context.SyllabusModules
                 .Include(m => m.Track)
-                .Include(m => m.Questions)   // ✅ FIX: Must include so qCount works in view
+                .Include(m => m.Questions)   
                 .AsQueryable();
 
             if (trackId.HasValue)
@@ -1950,7 +1944,7 @@ _userManager.GetUserId(User));
                 .ThenBy(m => m.DisplayOrder)
                 .ToListAsync();
 
-            // ✅ FIX: Auto-correct phantom "Enabled" — HasQuiz=true but 0 questions
+          
             bool correctionNeeded = false;
             foreach (var mod in modules)
             {
@@ -2035,7 +2029,7 @@ _userManager.GetUserId(User));
                 .ToListAsync();
 
             ViewBag.Tracks = await _context.Tracks.ToListAsync();
-            ViewBag.SelectedTrack = trackId;   // int? — no cast error
+            ViewBag.SelectedTrack = trackId;  
             ViewBag.Search = search;
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
@@ -2058,7 +2052,7 @@ _userManager.GetUserId(User));
             if (result == "pass") query = query.Where(a => a.Score >= 70);
             else if (result == "fail") query = query.Where(a => a.Score < 70);
 
-            // ✅ FIX: guard with .HasValue before using .Value
+            
             if (moduleId.HasValue && moduleId.Value > 0)
                 query = query.Where(a => a.ModuleId == moduleId.Value);
 
@@ -2111,7 +2105,7 @@ _userManager.GetUserId(User));
             return View(modules);
         }
 
-        // POST: /Admin/SaveModuleProgress
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -2125,7 +2119,7 @@ _userManager.GetUserId(User));
 
             completedModuleIds ??= new List<int>();
 
-            // Get all modules for this student's track
+            
             var allModules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
                 .Select(m => m.Id)
@@ -2140,7 +2134,6 @@ _userManager.GetUserId(User));
 
                 if (shouldBeCompleted && existing == null)
                 {
-                    // Add new completion
                     _context.ModuleCompletions.Add(new ModuleCompletion
                     {
                         StudentId = studentId,
@@ -2153,14 +2146,14 @@ _userManager.GetUserId(User));
                 }
                 else if (shouldBeCompleted && existing != null && !existing.IsCompleted)
                 {
-                    // Update existing to completed
+                   
                     existing.IsCompleted = true;
                     existing.CompletionDate = DateTime.UtcNow;
                     existing.VerifiedBy = $"Admin ({User.Identity.Name})";
                 }
                 else if (!shouldBeCompleted && existing != null && existing.IsCompleted)
                 {
-                    // Unmark as completed
+                    
                     existing.IsCompleted = false;
                 }
             }
@@ -2177,7 +2170,7 @@ _userManager.GetUserId(User));
             return RedirectToAction(nameof(ManageModuleProgress), new { studentId });
         }
 
-        // POST: /Admin/UnlockCapstone
+     
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
@@ -2189,7 +2182,7 @@ _userManager.GetUserId(User));
 
             if (student == null) return NotFound();
 
-            // Module 19 is the capstone/mini project module
+        
             var capstoneMod = await _context.SyllabusModules
                 .FirstOrDefaultAsync(m => m.TrackId == student.TrackId && m.IsMiniProject);
 
@@ -2358,7 +2351,6 @@ _userManager.GetUserId(User));
             return View();
         }
 
-        // Helper to Download Template
         public IActionResult DownloadTemplate()
         {
             var csv = "FullName,Email,TrackCode\nJohn Doe,john@example.com,FSC\nJane Smith,jane@test.com,API";
@@ -2396,7 +2388,6 @@ _userManager.GetUserId(User));
         {
             var query = _context.AuditLogs.AsQueryable();
 
-            // Filter by tab category
             query = tab switch
             {
                 "Student" => query.Where(a =>
@@ -2422,7 +2413,7 @@ _userManager.GetUserId(User));
                     a.Action.Contains("CREATE_MENTOR") ||
                     a.Action.Contains("DELETE_MENTOR")),
 
-                _ => query  // "All" — no filter
+                _ => query 
             };
 
             int totalCount = await query.CountAsync();

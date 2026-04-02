@@ -52,10 +52,9 @@ public static class SeedData
         if (!await context.Tracks.AnyAsync())
         {
             context.Tracks.AddRange(
-                new Track { Name = "Frontend JavaScript", Code = "FEJ", IsActive = true },
+                new Track { Name = "Fullstack JavaScript", Code = "FEJ", IsActive = true },
                 new Track { Name = "Backend C#", Code = "BEC", IsActive = true },
-                new Track { Name = "Fullstack", Code = "FSC", IsActive = true },
-                new Track { Name = "Backend Web API Development", Code = "API", IsActive = true },
+                new Track { Name = "Fullstack C#", Code = "FSC", IsActive = true },
                 new Track { Name = "Mobile Game Development", Code = "MGD", IsActive = true },
                 new Track { Name = "Web 3", Code = "WB3", IsActive = true }
             );
@@ -234,7 +233,6 @@ public static class SeedData
         return module.Track.Code switch
         {
             "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
-            "API" => "https://learn.microsoft.com/en-us/aspnet/core/web-api/",
             "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
             "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
             "MGD" => "https://learn.unity.com/",
@@ -251,7 +249,7 @@ public static class SeedData
         }
         return module.Track.Code switch
         {
-            "API" => "https://learn.microsoft.com/en-us/aspnet/core/web-api/",
+          
             "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
             "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
             "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
@@ -265,7 +263,7 @@ public static class SeedData
     {
         return module.Track.Code switch
         {
-            "API" => "https://www.youtube.com/watch?v=pKd0Rpw7O48",
+           
             "FSC" => "https://www.youtube.com/watch?v=gfkTfcpWqAY",
             "FEJ" => "https://www.youtube.com/watch?v=PkZNo7MFNFg",
             "BEC" => "https://www.youtube.com/watch?v=GhQdlIFylQ8",
