@@ -218,7 +218,7 @@ dotnet ef database update
 
 This will create all tables and run `SeedData` automatically on first launch, creating:
 - Admin user (`admin` / `Admin@123`)
-- 6 default tracks (FEJ, BEC, FSC, API, MGD, WB3)
+- 5 default tracks (FEJ, BEC, FSC, MGD, WB3)
 - 19 modules per track
 
 ### 4. Run the application

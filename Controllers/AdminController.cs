@@ -1004,6 +1004,10 @@ _userManager.GetUserId(User));
         }
 
 
+        // ============================================================
+        // REPLACE CreateAnnouncement POST in AdminController.cs with this
+        // ============================================================
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -1026,7 +1030,7 @@ _userManager.GetUserId(User));
 
                 await _context.SaveChangesAsync();
 
-               
+                // Build recipient list based on audience
                 var recipientUsers = new List<ApplicationUser>();
 
                 if (model.Audience == "Students" || model.Audience == "All")
@@ -1035,12 +1039,12 @@ _userManager.GetUserId(User));
                 if (model.Audience == "Mentors" || model.Audience == "All")
                     recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Mentor"));
 
-                
+                // Admins always receive every announcement
                 recipientUsers.AddRange(await _userManager.GetUsersInRoleAsync("Admin"));
 
-                
                 string redirectUrl = User.IsInRole("Admin") ? "/Admin/Dashboard" : "/Mentor/Dashboard";
 
+                // Create in-app notifications
                 foreach (var user in recipientUsers.DistinctBy(u => u.Id))
                 {
                     _context.Notifications.Add(new Notification
@@ -1057,7 +1061,53 @@ _userManager.GetUserId(User));
                 }
 
                 await _context.SaveChangesAsync();
-                TempData["Success"] = $"📢 Announcement sent to {model.Audience} (+ Admins)!";
+
+                // ✅ Send notification emails to each recipient
+                string loginUrl = "https://rmsysspt.onrender.com";
+                string emailSubject = $"📢 New Announcement: {model.Title}";
+                string emailBody = $@"
+<div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
+    <h2 style='color:#0d6efd;'>📢 New Announcement</h2>
+    <p>You have a new notification on the <strong>RMSys SPT Academy</strong> portal.</p>
+    <div style='background:#f8f9fa;border-left:4px solid #0d6efd;padding:15px;margin:16px 0;border-radius:4px;'>
+        <h3 style='margin:0 0 8px 0;color:#212529;'>{model.Title}</h3>
+        <p style='margin:0;color:#495057;'>{model.Message}</p>
+    </div>
+    <p>Please login to your dashboard to view the full details.</p>
+    <p>
+        <a href='{loginUrl}'
+           style='background:#0d6efd;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;'>
+            Login to Dashboard
+        </a>
+    </p>
+    <hr/>
+    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated notification from RMSys SPT Academy. Do not reply to this email.</p>
+</div>";
+
+                int emailsSent = 0;
+                int emailsFailed = 0;
+
+                foreach (var user in recipientUsers.DistinctBy(u => u.Id))
+                {
+                    // Skip users with no email
+                    if (string.IsNullOrWhiteSpace(user.Email)) continue;
+
+                    try
+                    {
+                        await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody);
+                        emailsSent++;
+                    }
+                    catch
+                    {
+                        emailsFailed++;
+                    }
+                }
+
+                string emailSummary = emailsFailed > 0
+                    ? $" ({emailsSent} email(s) sent, {emailsFailed} failed)"
+                    : $" ({emailsSent} email(s) sent)";
+
+                TempData["Success"] = $"📢 Announcement sent to {model.Audience} (+ Admins)!{emailSummary}";
 
                 return User.IsInRole("Admin")
                     ? RedirectToAction("Dashboard", "Admin")
@@ -1066,6 +1116,7 @@ _userManager.GetUserId(User));
 
             return View(model);
         }
+
         // =========================
         // MASTER PROGRESS LOGS (History & Review)
         // =========================
