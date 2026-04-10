@@ -14,13 +14,21 @@ namespace SPT.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AuditService _auditService;
+        private readonly EmailNotificationService _emailNotif;
+        private readonly IConfiguration _config;
 
-        public SupportController(ApplicationDbContext context, AuditService auditService,
-            UserManager<ApplicationUser> userManager)
+        public SupportController(
+     ApplicationDbContext context,
+     AuditService auditService,
+     UserManager<ApplicationUser> userManager,
+     EmailNotificationService emailNotif,
+     IConfiguration config)
         {
             _context = context;
             _userManager = userManager;
             _auditService = auditService;
+            _emailNotif = emailNotif;
+            _config = config;
         }
 
         public async Task<IActionResult> Index()
@@ -82,6 +90,23 @@ namespace SPT.Controllers
             {
                 TempData["Error"] = "Could not identify student account.";
             }
+            string adminEmailAddr = _config["Email:User"] ?? "";
+            string? mentorEmailForTicket = null;
+
+            if (student.MentorId.HasValue)
+            {
+                var mentor = await _context.Mentors
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.Id == student.MentorId);
+                mentorEmailForTicket = mentor?.User?.Email;
+            }
+
+            await _emailNotif.SendSupportTicketCreatedAsync(
+                student.FullName,
+                model.Subject,
+                model.Message,
+                adminEmailAddr,
+                mentorEmailForTicket);
             return RedirectToAction(nameof(Index));
         }
 

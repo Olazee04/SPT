@@ -11,6 +11,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<EmailNotificationService>();
+builder.Services.AddHostedService<InactivityReminderService>();
 
 // ✅ Global PostgreSQL DateTime fix — no more SpecifyKind needed anywhere
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);

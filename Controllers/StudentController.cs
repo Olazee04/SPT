@@ -22,18 +22,21 @@ namespace SPT.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly AuditService _auditService;
         private readonly IEmailService _emailService;
+        private readonly EmailNotificationService _emailNotif;
 
         public StudentController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment env, AuditService auditService,
-            IEmailService emailService)
+            IEmailService emailService, EmailNotificationService emailNotif)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
             _auditService = auditService;
             _emailService = emailService;
+            _emailNotif = emailNotif;
+
         }
 
         // =========================
@@ -308,6 +311,7 @@ public async Task<IActionResult> LogWork(
                 });
 
                 await _context.SaveChangesAsync();
+
                 await _auditService.LogAsync(
     "LOG WORK",
     $"Student logged {hours} hours for {logDate:MMM dd}",
@@ -380,6 +384,26 @@ public async Task<IActionResult> LogWork(
             });
 
             await _context.SaveChangesAsync();
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            string adminEmail = adminUsers.FirstOrDefault()?.Email ?? "";
+
+            string? mentorEmail = null;
+            if (student.MentorId.HasValue)
+            {
+                var mentor = await _context.Mentors
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.Id == student.MentorId);
+                mentorEmail = mentor?.User?.Email;
+            }
+
+            var studentUser = await _userManager.FindByIdAsync(student.UserId);
+            await _emailNotif.SendLogSubmittedAsync(
+                studentUser?.UserName ?? student.FullName,
+                student.FullName,
+                log.Date,
+                log.Hours,
+                adminEmail,
+                mentorEmail);
 
             return RedirectToAction(nameof(Dashboard));
 

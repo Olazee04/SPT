@@ -19,7 +19,7 @@ namespace SPT.Controllers
         private readonly IEmailService _emailService;
         private readonly AuditService _auditService;
         private readonly IConfiguration _config;
-
+        private readonly EmailNotificationService _emailNotif;
         private static DateTime ToUtc(DateTime dt) =>
             DateTime.SpecifyKind(dt, DateTimeKind.Utc);
 
@@ -29,7 +29,8 @@ namespace SPT.Controllers
             IWebHostEnvironment env,
             IEmailService emailService,
             AuditService auditService,
-            IConfiguration config)
+            IConfiguration config, 
+            EmailNotificationService emailNotif)
    
             {
                 _context = context;
@@ -38,7 +39,8 @@ namespace SPT.Controllers
                 _emailService = emailService;
                 _auditService = auditService;
                 _config = config;
-            }
+               _emailNotif = emailNotif;
+        }
 
             // =========================
             // ADMIN DASHBOARD
@@ -281,6 +283,26 @@ namespace SPT.Controllers
                     _userManager.GetUserId(User));
 
                 TempData["Success"] = "✅ Log verified successfully.";
+                var studentForEmail = await _context.Students
+    .Include(s => s.ProgressLogs)
+    .FirstOrDefaultAsync(s => s.Id == log.StudentId);
+
+                if (studentForEmail != null)
+                {
+                    decimal totalHours = studentForEmail.ProgressLogs
+                        .Where(l => l.IsApproved).Sum(l => l.Hours);
+                    int rank = await _context.Students
+                        .Where(s => s.EnrollmentStatus == "Active" && s.Id != studentForEmail.Id)
+                        .Select(s => s.ProgressLogs.Where(p => p.IsApproved).Sum(p => (decimal?)p.Hours) ?? 0)
+                        .CountAsync(h => h > totalHours) + 1;
+
+                    await _emailNotif.SendLogApprovedAsync(
+                        studentForEmail.Email,
+                        studentForEmail.FullName,
+                        log.Date,
+                        log.Hours,
+                        rank);
+                }
             }
             catch (Exception ex)
             {
@@ -1236,6 +1258,14 @@ _userManager.GetUserId(User));
                 _userManager.GetUserId(User));
 
             TempData["Success"] = $"✅ Log deleted. {studentName}'s total hours reduced by {hours} hrs.";
+            if (log.Student != null && !string.IsNullOrWhiteSpace(log.Student.Email))
+            {
+                await _emailNotif.SendLogDeletedAsync(
+                    log.Student.Email,
+                    log.Student.FullName,
+                    date,
+                    hours);
+            }
             return RedirectToAction("ProgressLogs");
         }
 
@@ -1389,6 +1419,14 @@ _userManager.GetUserId(User));
             }
 
             await _context.SaveChangesAsync();
+            if (ticket.Student != null && !string.IsNullOrWhiteSpace(ticket.Student.Email))
+            {
+                await _emailNotif.SendSupportTicketResponseAsync(
+                    ticket.Student.Email,
+                    ticket.Student.FullName,
+                    ticket.Subject,
+                    response);
+            }
             return RedirectToAction(nameof(SupportTickets));
         }
 
@@ -1903,6 +1941,25 @@ _userManager.GetUserId(User));
             await _context.SaveChangesAsync();
             await _auditService.LogAsync("RESOURCE_ADDED", $"Resource added to module #{moduleId}: {title}", User.Identity.Name, _userManager.GetUserId(User));
             TempData["Success"] = "✅ Resource added successfully.";
+            var moduleForEmail = await _context.SyllabusModules
+    .Include(m => m.Track)
+    .FirstOrDefaultAsync(m => m.Id == moduleId);
+
+            if (moduleForEmail?.Track != null)
+            {
+                var studentsOnTrack = await _context.Students
+                    .Where(s => s.TrackId == moduleForEmail.TrackId
+                             && s.EnrollmentStatus == "Active"
+                             && !string.IsNullOrEmpty(s.Email))
+                    .Select(s => s.Email)
+                    .ToListAsync();
+
+                await _emailNotif.SendNewResourceAddedAsync(
+                    moduleForEmail.Track.Name,
+                    title,
+                    url,
+                    studentsOnTrack);
+            }
             return RedirectToAction(nameof(ManageResources), new { moduleId });
         }
 
