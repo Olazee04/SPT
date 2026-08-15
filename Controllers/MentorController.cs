@@ -9,7 +9,10 @@ using SPT.Services;
 
 namespace SPT.Controllers
 {
-    [Authorize(Roles = "Mentor")]
+    // ✅ FIX: Changed from [Authorize(Roles = "Mentor")] to include Admin
+    // Admin gets full access to all Mentor actions
+    // Internal logic handles what each role sees (Admin sees all, Mentor sees their students)
+    [Authorize(Roles = "Mentor,Admin")]
     public class MentorController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -21,14 +24,49 @@ namespace SPT.Controllers
         public MentorController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            IWebHostEnvironment env, AuditService auditService,
-             IEmailService emailService) 
+            IWebHostEnvironment env,
+            AuditService auditService,
+            IEmailService emailService)
         {
             _context = context;
             _userManager = userManager;
             _env = env;
             _auditService = auditService;
-            _emailService = emailService; 
+            _emailService = emailService;
+        }
+
+        // =========================
+        // HELPER: GET CURRENT MENTOR
+        // Returns null if user is Admin (Admin has no Mentor record)
+        // =========================
+        private async Task<Mentor?> GetCurrentMentorAsync()
+        {
+            var userId = _userManager.GetUserId(User);
+            return await _context.Mentors
+                .Include(m => m.User)
+                .Include(m => m.Track)
+                .FirstOrDefaultAsync(m => m.UserId == userId);
+        }
+
+        // =========================
+        // HELPER: Build student query based on role
+        // Admin sees ALL students
+        // General Mentor sees ALL students
+        // Track Mentor sees only their track/assigned students
+        // =========================
+        private IQueryable<Student> GetStudentScope(Mentor? mentor)
+        {
+            // Admin always sees all students
+            if (User.IsInRole("Admin"))
+                return _context.Students;
+
+            // General Mentor sees all students
+            if (mentor == null || mentor.Specialization == "General" || mentor.TrackId == null)
+                return _context.Students;
+
+            // Track-specific Mentor sees their track + directly assigned students
+            return _context.Students
+                .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
         }
 
         // =========================
@@ -37,14 +75,9 @@ namespace SPT.Controllers
         public async Task<IActionResult> Dashboard()
         {
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return View("Error");
 
-            IQueryable<Student> studentQuery;
-            if (mentor.Specialization == "General" || mentor.TrackId == null)
-                studentQuery = _context.Students;
-            else
-                studentQuery = _context.Students
-                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
+            // Admin with no mentor record uses null mentor — GetStudentScope handles this
+            var studentQuery = GetStudentScope(mentor);
 
             var students = await studentQuery
                 .Include(s => s.User)
@@ -93,7 +126,6 @@ namespace SPT.Controllers
             model.StudentPerformance = performance;
             model.ActiveStudents = performance.Count(p => p.Status == "Active");
             model.AvgConsistency = performance.Any() ? (decimal)performance.Average(p => p.ConsistencyScore) : 0;
-
             model.TrackLabels = performance.GroupBy(p => p.Track).Select(g => g.Key).ToArray();
             model.TrackCounts = performance.GroupBy(p => p.Track).Select(g => g.Count()).ToArray();
             model.ActivityDates = new string[7];
@@ -112,35 +144,18 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // HELPER: GET CURRENT MENTOR
-        // =========================
-        private async Task<Mentor?> GetCurrentMentorAsync()
-        {
-            var userId = _userManager.GetUserId(User);
-            return await _context.Mentors
-                .Include(m => m.User)
-                .Include(m => m.Track)   // <-- THIS was missing, causing Track to always be null
-                .FirstOrDefaultAsync(m => m.UserId == userId);
-        }
-
-        // =========================
         // MY STUDENTS LIST
+        // =========================
         [HttpGet]
         public async Task<IActionResult> Students()
         {
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return RedirectToAction(nameof(Dashboard));
-
-            IQueryable<Student> studentQuery;
-            if (mentor.Specialization == "General" || mentor.TrackId == null)
-                studentQuery = _context.Students;
-            else
-                studentQuery = _context.Students
-                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
+            var studentQuery = GetStudentScope(mentor);
 
             var students = await studentQuery
                 .Include(s => s.Track)
                 .Include(s => s.Cohort)
+                .Include(s => s.User)
                 .Include(s => s.ProgressLogs)
                 .Include(s => s.ModuleCompletions)
                 .ToListAsync();
@@ -152,7 +167,6 @@ namespace SPT.Controllers
 
             var modelList = new List<StudentPerformanceViewModel>();
 
-            // ✅ FIX: Week starts on MONDAY
             var today = DateTime.UtcNow.Date;
             int daysSinceMonday = ((int)today.DayOfWeek + 6) % 7;
             var startOfWeek = today.AddDays(-daysSinceMonday);
@@ -162,10 +176,8 @@ namespace SPT.Controllers
                 var weekLogs = s.ProgressLogs.Where(l => l.Date.Date >= startOfWeek && l.IsApproved).ToList();
                 decimal hoursThisWeek = weekLogs.Sum(l => l.Hours);
                 int checkInsThisWeek = weekLogs.Select(l => l.Date.Date).Distinct().Count();
-
                 int totalMods = trackModuleCounts.ContainsKey(s.TrackId) ? trackModuleCounts[s.TrackId] : 1;
                 int completedMods = s.ModuleCompletions.Count(mc => mc.IsCompleted);
-
                 int consistency = 0;
                 if (s.TargetHoursPerWeek > 0)
                 {
@@ -178,10 +190,11 @@ namespace SPT.Controllers
                     StudentId = s.Id,
                     FullName = s.FullName,
                     Email = s.Email,
+                    Username = s.User?.UserName ?? s.Email,
                     ProfilePicture = s.ProfilePicture,
                     CohortName = s.Cohort?.Name ?? "N/A",
                     TrackCode = s.Track?.Code ?? "N/A",
-                    MentorName = mentor.FullName,
+                    MentorName = mentor?.FullName ?? "Admin",
                     TargetHoursPerWeek = s.TargetHoursPerWeek,
                     HoursLast7Days = hoursThisWeek,
                     CheckInsLast7Days = checkInsThisWeek,
@@ -200,17 +213,15 @@ namespace SPT.Controllers
                 .Take(10)
                 .ToListAsync();
 
-            int pendingCount = pendingLogs.Count;
             int avgConsistency = modelList.Count == 0 ? 0 : (int)modelList.Average(x => x.ConsistencyScore);
 
             ViewBag.MyStudentsCount = students.Count;
-            ViewBag.PendingLogs = pendingCount;
+            ViewBag.PendingLogs = pendingLogs.Count;
             ViewBag.AvgConsistency = avgConsistency;
             ViewBag.PendingLogsList = pendingLogs;
 
             return View(modelList);
         }
-
 
         // =========================
         // MENTOR: PROGRESS LOGS
@@ -219,14 +230,7 @@ namespace SPT.Controllers
         public async Task<IActionResult> ProgressLogs(string status = "All", string search = "")
         {
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return View("Error");
-
-            IQueryable<Student> studentScope;
-            if (mentor.Specialization == "General" || mentor.TrackId == null)
-                studentScope = _context.Students;
-            else
-                studentScope = _context.Students.Where(s => s.MentorId == mentor.Id || s.TrackId == mentor.TrackId);
-
+            var studentScope = GetStudentScope(mentor);
             var studentIds = await studentScope.Select(s => s.Id).ToListAsync();
 
             var query = _context.ProgressLogs
@@ -237,7 +241,9 @@ namespace SPT.Controllers
 
             if (status == "Pending") query = query.Where(l => !l.IsApproved);
             else if (status == "Approved") query = query.Where(l => l.IsApproved);
-            if (!string.IsNullOrEmpty(search)) query = query.Where(l => l.Student.FullName.Contains(search));
+
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(l => l.Student.FullName.Contains(search));
 
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentSearch = search;
@@ -255,7 +261,6 @@ namespace SPT.Controllers
             int? mentorRating, int? quizScore, string? action)
         {
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return Forbid();
 
             var log = await _context.ProgressLogs
                 .Include(l => l.Student).ThenInclude(s => s.User)
@@ -263,12 +268,13 @@ namespace SPT.Controllers
 
             if (log == null) return NotFound();
 
-            bool canAccess = mentor.Specialization == "General"
-    || mentor.TrackId == null
-    || log.Student.MentorId == mentor.Id
-    || log.Student.TrackId == mentor.TrackId;
-
-            if (!canAccess) return Forbid();
+            // Admin can update any log — Mentor checks access
+            if (!User.IsInRole("Admin"))
+            {
+                bool isGeneral = mentor?.Specialization == "General" || mentor?.TrackId == null;
+                bool isAssigned = log.Student.MentorId == mentor?.Id || log.Student.TrackId == mentor?.TrackId;
+                if (!isGeneral && !isAssigned) return Forbid();
+            }
 
             if (action == "Reject")
             {
@@ -311,7 +317,7 @@ namespace SPT.Controllers
                 {
                     UserId = log.Student.User.Id,
                     Title = "Log Approved",
-                    Message = $"Your log for {log.Date:MMM dd} was approved by your mentor.",
+                    Message = $"Your log for {log.Date:MMM dd} was approved.",
                     Type = "Success",
                     Url = "/Student/Dashboard",
                     TargetPage = "Dashboard",
@@ -322,7 +328,7 @@ namespace SPT.Controllers
 
             await _context.SaveChangesAsync();
             await _auditService.LogAsync("LOG_APPROVED_MENTOR",
-                $"Mentor approved log #{log.Id}", User.Identity.Name, _userManager.GetUserId(User));
+                $"Log #{log.Id} approved", User.Identity.Name, _userManager.GetUserId(User));
 
             TempData["Success"] = "✅ Log approved.";
             return RedirectToAction(nameof(ProgressLogs));
@@ -336,13 +342,20 @@ namespace SPT.Controllers
         public async Task<IActionResult> ApproveLog(int id, string? action)
         {
             var mentor = await GetCurrentMentorAsync();
-            var log = await _context.ProgressLogs.Include(l => l.Student).FirstOrDefaultAsync(l => l.Id == id);
+
+            var log = await _context.ProgressLogs
+                .Include(l => l.Student)
+                .FirstOrDefaultAsync(l => l.Id == id);
 
             if (log == null) return NotFound();
 
-            bool isGeneral = mentor?.Specialization == "General" || mentor?.TrackId == null;
-            bool isAssigned = log.Student.MentorId == mentor?.Id || log.Student.TrackId == mentor?.TrackId;
-            if (!isGeneral && !isAssigned) return Forbid();
+            // Admin bypasses mentor scope check
+            if (!User.IsInRole("Admin"))
+            {
+                bool isGeneral = mentor?.Specialization == "General" || mentor?.TrackId == null;
+                bool isAssigned = log.Student.MentorId == mentor?.Id || log.Student.TrackId == mentor?.TrackId;
+                if (!isGeneral && !isAssigned) return Forbid();
+            }
 
             if (action == "Reject")
             {
@@ -357,33 +370,22 @@ namespace SPT.Controllers
             }
 
             await _context.SaveChangesAsync();
-            await _auditService.LogAsync(
-                "LOG_APPROVED",
-                $"Approved log #{log.Id} for {log.Student.FullName}",
-                User.Identity.Name,
-                _userManager.GetUserId(User));
+            await _auditService.LogAsync("LOG_APPROVED",
+                $"Log #{log.Id} actioned for {log.Student.FullName}",
+                User.Identity.Name, _userManager.GetUserId(User));
 
             return RedirectToAction(nameof(Dashboard));
         }
 
         // =========================
-        // QUIZ SCORES — FIXED
+        // QUIZ SCORES
         // =========================
         [HttpGet]
         public async Task<IActionResult> QuizScores(string search = "", int page = 1)
         {
             int pageSize = 15;
-
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return View("Error");
-
-            IQueryable<Student> studentScope;
-            if (mentor.Specialization == "General" || mentor.TrackId == null)
-                studentScope = _context.Students;
-            else
-                studentScope = _context.Students
-                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
-
+            var studentScope = GetStudentScope(mentor);
             var studentIds = await studentScope.Select(s => s.Id).ToListAsync();
 
             var query = _context.ProgressLogs
@@ -396,9 +398,8 @@ namespace SPT.Controllers
                 query = query.Where(l => l.Student.FullName.Contains(search));
 
             int total = await query.CountAsync();
-
             ViewBag.Search = search;
-            ViewBag.MentorName = mentor.FullName;
+            ViewBag.MentorName = mentor?.FullName ?? "Admin";
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
 
@@ -412,23 +413,14 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // MODULE QUIZ SCORES — Mentor (QuizAttempts table)
+        // MODULE QUIZ SCORES
         // =========================
         [HttpGet]
         public async Task<IActionResult> ModuleQuizScores(string search = "", int page = 1)
         {
             int pageSize = 15;
-
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return View("Error");
-
-            IQueryable<Student> studentScope;
-            if (mentor.Specialization == "General" || mentor.TrackId == null)
-                studentScope = _context.Students;
-            else
-                studentScope = _context.Students
-                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
-
+            var studentScope = GetStudentScope(mentor);
             var studentIds = await studentScope.Select(s => s.Id).ToListAsync();
 
             var query = _context.QuizAttempts
@@ -441,7 +433,6 @@ namespace SPT.Controllers
                 query = query.Where(a => a.Student.FullName.Contains(search));
 
             int total = await query.CountAsync();
-
             var data = await query
                 .OrderByDescending(a => a.AttemptedAt)
                 .Skip((page - 1) * pageSize)
@@ -455,6 +446,9 @@ namespace SPT.Controllers
             return View(data);
         }
 
+        // =========================
+        // MANAGE CURRICULUM
+        // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
         public async Task<IActionResult> ManageCurriculum(int? trackId)
@@ -469,7 +463,6 @@ namespace SPT.Controllers
                 if (mentor != null)
                 {
                     mentorTrackId = mentor.TrackId;
-                    // Track-specific mentor: force to their track
                     if (mentor.Specialization != "General" && mentor.TrackId.HasValue)
                         trackId = mentor.TrackId;
                 }
@@ -495,7 +488,6 @@ namespace SPT.Controllers
             ViewBag.Tracks = availableTracks;
             ViewBag.SelectedTrackId = trackId;
             ViewBag.IsAdmin = isAdmin;
-            // Pass total counts per track for the tab badges
             ViewBag.TrackCounts = await _context.SyllabusModules
                 .GroupBy(m => m.TrackId)
                 .ToDictionaryAsync(g => g.Key, g => g.Count());
@@ -504,7 +496,7 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // CREATE MODULE — GET
+        // CREATE MODULE
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
@@ -516,9 +508,6 @@ namespace SPT.Controllers
             return View(new SyllabusModule { TrackId = trackId ?? 0, IsActive = true, RequiredHours = 8, PassScore = 75 });
         }
 
-        // =========================
-        // CREATE MODULE — POST
-        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -538,7 +527,6 @@ namespace SPT.Controllers
                 return View(model);
             }
 
-            // Auto-set display order to next available for this track
             if (model.DisplayOrder == 0)
             {
                 int maxOrder = await _context.SyllabusModules
@@ -549,14 +537,13 @@ namespace SPT.Controllers
 
             _context.SyllabusModules.Add(model);
             await _context.SaveChangesAsync();
-
             await _auditService.LogAsync("MODULE_CREATED", $"Module created: {model.ModuleName}", User.Identity.Name, _userManager.GetUserId(User));
             TempData["Success"] = $"✅ Module '{model.ModuleName}' created successfully.";
             return RedirectToAction(nameof(ManageCurriculum), new { trackId = model.TrackId });
         }
 
         // =========================
-        // EDIT MODULE — GET
+        // EDIT MODULE
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
@@ -566,18 +553,13 @@ namespace SPT.Controllers
                 .Include(m => m.Track)
                 .Include(m => m.Resources)
                 .FirstOrDefaultAsync(m => m.Id == id);
-
             if (module == null) return NotFound();
 
             ViewBag.Tracks = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
                 await _context.Tracks.Where(t => t.IsActive).ToListAsync(), "Id", "Name", module.TrackId);
-
             return View(module);
         }
 
-        // =========================
-        // EDIT MODULE — POST
-        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -621,7 +603,7 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // DELETE MODULE — POST
+        // DELETE MODULE
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -633,10 +615,8 @@ namespace SPT.Controllers
                 .Include(m => m.Resources)
                 .Include(m => m.Questions)
                 .FirstOrDefaultAsync(m => m.Id == id);
-
             if (module == null) return NotFound();
 
-            // Block deletion if any student completed it
             if (module.ModuleCompletions.Any(mc => mc.IsCompleted))
             {
                 TempData["Error"] = $"❌ Cannot delete '{module.ModuleName}' — {module.ModuleCompletions.Count(mc => mc.IsCompleted)} student(s) have completed it.";
@@ -646,7 +626,6 @@ namespace SPT.Controllers
             int trackId = module.TrackId;
             _context.SyllabusModules.Remove(module);
             await _context.SaveChangesAsync();
-
             await _auditService.LogAsync("MODULE_DELETED", $"Module deleted: {module.ModuleName}", User.Identity.Name, _userManager.GetUserId(User));
             TempData["Success"] = $"✅ Module '{module.ModuleName}' deleted.";
             return RedirectToAction(nameof(ManageCurriculum), new { trackId });
@@ -662,16 +641,14 @@ namespace SPT.Controllers
         {
             var module = await _context.SyllabusModules.FindAsync(id);
             if (module == null) return NotFound();
-
             module.IsActive = !module.IsActive;
             await _context.SaveChangesAsync();
-
             TempData["Success"] = $"Module '{module.ModuleName}' is now {(module.IsActive ? "Active" : "Inactive")}.";
             return RedirectToAction(nameof(ManageCurriculum), new { trackId = module.TrackId });
         }
 
         // =========================
-        // MANAGE RESOURCES — GET (for a specific module)
+        // MANAGE RESOURCES
         // =========================
         [HttpGet]
         [Authorize(Roles = "Admin,Mentor")]
@@ -681,15 +658,10 @@ namespace SPT.Controllers
                 .Include(m => m.Track)
                 .Include(m => m.Resources)
                 .FirstOrDefaultAsync(m => m.Id == moduleId);
-
             if (module == null) return NotFound();
-
             return View(module);
         }
 
-        // =========================
-        // ADD RESOURCE — POST
-        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -716,9 +688,6 @@ namespace SPT.Controllers
             return RedirectToAction(nameof(ManageResources), new { moduleId });
         }
 
-        // =========================
-        // EDIT RESOURCE — POST
-        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -726,20 +695,15 @@ namespace SPT.Controllers
         {
             var resource = await _context.ModuleResources.FindAsync(id);
             if (resource == null) return NotFound();
-
             resource.Title = title;
             resource.Url = url;
             resource.Type = type;
             resource.IsActive = isActive;
-
             await _context.SaveChangesAsync();
             TempData["Success"] = "✅ Resource updated.";
             return RedirectToAction(nameof(ManageResources), new { moduleId = resource.ModuleId });
         }
 
-        // =========================
-        // DELETE RESOURCE — POST
-        // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Mentor")]
@@ -747,20 +711,15 @@ namespace SPT.Controllers
         {
             var resource = await _context.ModuleResources.FindAsync(id);
             if (resource == null) return NotFound();
-
             int moduleId = resource.ModuleId;
             _context.ModuleResources.Remove(resource);
             await _context.SaveChangesAsync();
-
             TempData["Success"] = "✅ Resource deleted.";
             return RedirectToAction(nameof(ManageResources), new { moduleId });
         }
 
-
-
-
         // =========================
-        // GET: PROFILE
+        // PROFILE
         // =========================
         public async Task<IActionResult> Profile()
         {
@@ -772,20 +731,13 @@ namespace SPT.Controllers
         public async Task<IActionResult> Messages()
         {
             var mentor = await GetCurrentMentorAsync();
-            if (mentor == null) return RedirectToAction("Dashboard");
 
-            IQueryable<Student> studentScope;
-            if (mentor.Specialization == "General" || mentor.TrackId == null)
-                studentScope = _context.Students;
-            else
-                studentScope = _context.Students
-                    .Where(s => s.TrackId == mentor.TrackId || s.MentorId == mentor.Id);
-
-            var students = await studentScope.OrderBy(s => s.FullName).ToListAsync();
+            var studentQuery = GetStudentScope(mentor);
+            var students = await studentQuery.OrderBy(s => s.FullName).ToListAsync();
 
             var otherMentors = await _context.Mentors
                 .Include(m => m.User)
-                .Where(m => m.Id != mentor.Id)
+                .Where(m => mentor == null || m.Id != mentor.Id)
                 .OrderBy(m => m.FullName)
                 .ToListAsync();
 
@@ -794,7 +746,7 @@ namespace SPT.Controllers
         }
 
         // =========================
-        // POST: UPDATE PROFILE & PASSWORD
+        // UPDATE PROFILE & PASSWORD
         // =========================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -808,9 +760,13 @@ namespace SPT.Controllers
                 .Include(m => m.Track)
                 .FirstOrDefaultAsync(m => m.UserId == user.Id);
 
-            if (mentor == null) return NotFound();
+            // Admin has no mentor record — redirect gracefully
+            if (mentor == null)
+            {
+                TempData["Error"] = "Profile update is only available for Mentors.";
+                return RedirectToAction("Dashboard", "Admin");
+            }
 
-            // Handle profile picture update
             if (profilePicture != null && profilePicture.Length > 0)
             {
                 var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "profiles");
@@ -823,15 +779,12 @@ namespace SPT.Controllers
                 mentor.ProfilePicture = $"/uploads/profiles/{fileName}";
                 _context.Update(mentor);
                 await _context.SaveChangesAsync();
-
                 await _auditService.LogAsync("MENTOR_PROFILE_UPDATED", "Mentor updated profile picture",
                     User.Identity.Name, _userManager.GetUserId(User));
-
                 TempData["Success"] = "Profile picture updated!";
                 return RedirectToAction(nameof(Profile));
             }
 
-            // Handle password change
             if (!string.IsNullOrEmpty(newPassword))
             {
                 if (string.IsNullOrEmpty(currentPassword))
@@ -841,7 +794,6 @@ namespace SPT.Controllers
                 }
 
                 var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
-
                 if (!result.Succeeded)
                 {
                     TempData["Error"] = "Error: " + string.Join(", ", result.Errors.Select(e => e.Description));
@@ -851,24 +803,22 @@ namespace SPT.Controllers
                 await _auditService.LogAsync("PASSWORD_CHANGED", "Mentor changed password",
                     User.Identity.Name, _userManager.GetUserId(User));
 
-                // Send password change notification email
                 try
                 {
                     string emailBody = $@"
 <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;'>
-    <h2 style='color:#fd7e14;'>Password Changed &#128274;</h2>
+    <h2 style='color:#fd7e14;'>Password Changed 🔒</h2>
     <p>Hi <strong>{mentor.FullName}</strong>,</p>
     <p>Your SPT Academy account password was successfully changed.</p>
-    <p>If you made this change, no further action is needed.</p>
-    <p style='color:#dc3545;'><strong>If you did NOT make this change, contact your admin immediately.</strong></p>
+    <p>If you did NOT make this change, contact your admin immediately.</p>
     <hr/>
-    <p style='color:#6c757d;font-size:0.85rem;'>This is an automated security notification from RMSys SPT Academy.</p>
+    <p style='color:#6c757d;font-size:0.85rem;'>RMSys SPT Academy — automated security notification.</p>
 </div>";
                     await _emailService.SendEmailAsync(user.Email, "SPT Academy - Password Changed", emailBody);
                 }
-                catch { /* don't block if email fails */ }
+                catch { }
 
-                TempData["Success"] = "Password changed successfully! A confirmation email has been sent.";
+                TempData["Success"] = "Password changed successfully!";
                 return RedirectToAction(nameof(Profile));
             }
 

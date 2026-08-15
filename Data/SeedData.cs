@@ -2,22 +2,18 @@
 using Microsoft.EntityFrameworkCore;
 using SPT.Data;
 using SPT.Models;
-
 public static class SeedData
 {
     public static async Task InitializeAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();
-
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
         // =============================
         // DATABASE (SAFE FOR IDENTITY)
         // =============================
         await context.Database.MigrateAsync();
-
         // ==========
         // 1. ROLES
         // ==========
@@ -29,7 +25,6 @@ public static class SeedData
                 await roleManager.CreateAsync(new IdentityRole(role));
             }
         }
-
         // ==============
         // 2. ADMIN USER
         // ==============
@@ -41,11 +36,9 @@ public static class SeedData
                 Email = "admin@spt.com",
                 EmailConfirmed = true
             };
-
             await userManager.CreateAsync(admin, "Admin@123");
             await userManager.AddToRoleAsync(admin, "Admin");
         }
-
         // ============
         // 3. TRACKS
         // ============
@@ -58,28 +51,23 @@ public static class SeedData
                 new Track { Name = "Mobile Game Development", Code = "MGD", IsActive = true },
                 new Track { Name = "Web 3", Code = "WB3", IsActive = true }
             );
-
             await context.SaveChangesAsync();
         }
-
         // ===================================
         // 4. ENSURE ALL STUDENTS HAVE TRACK
         // ===================================
         var defaultTrack = await context.Tracks
             .AsNoTracking()
             .FirstAsync(t => t.Code == "FSC");
-
         var studentsWithoutTrack = await context.Students
             .Where(s => s.TrackId == null)
             .ToListAsync();
-
         if (studentsWithoutTrack.Any())
         {
             foreach (var s in studentsWithoutTrack)
             {
                 s.TrackId = defaultTrack.Id;
             }
-
             await context.SaveChangesAsync();
         }
 
@@ -89,18 +77,14 @@ public static class SeedData
         var tracks = await context.Tracks
             .AsNoTracking()
             .ToListAsync();
-
         foreach (var track in tracks)
         {
             bool hasModules = await context.SyllabusModules
                 .AsNoTracking()
                 .AnyAsync(m => m.TrackId == track.Id);
-
             if (hasModules)
                 continue;
-
             var modules = new List<SyllabusModule>();
-
             // MODULES 1–18 (LEARNING)
             for (int i = 1; i <= 18; i++)
             {
@@ -117,7 +101,6 @@ public static class SeedData
                     IsActive = true
                 });
             }
-
             // MODULE 19 (MINI PROJECT)
             modules.Add(new SyllabusModule
             {
@@ -132,19 +115,24 @@ public static class SeedData
                 IsMiniProject = true,
                 IsActive = true
             });
-
             context.SyllabusModules.AddRange(modules);
             await context.SaveChangesAsync();
         }
         // =====================================================
-        // 6. MODULE RESOURCES – NORMALIZE TO 2 PER MODULE
+        // 6. MODULE RESOURCES – FILL GAPS ONLY (NEVER OVERWRITE)
         // =====================================================
+        // IMPORTANT: This block runs on every app startup (not gated behind
+        // an AnyAsync() check), because it also needs to backfill resources
+        // for tracks/modules created later via the admin panel. That means
+        // it must NEVER touch a resource that already exists — otherwise it
+        // silently clobbers curated module-specific links (title/url set via
+        // SQL or the admin UI) back to the generic per-track fallback on the
+        // next restart/redeploy. It only fills in what's genuinely missing.
         var learningModules = await context.SyllabusModules
             .Where(m => m.DisplayOrder <= 18)
             .Include(m => m.Resources)
-             .Include(m => m.Track)
+            .Include(m => m.Track)
             .ToListAsync();
-
         foreach (var module in learningModules)
         {
             var resources = await context.ModuleResources
@@ -152,9 +140,12 @@ public static class SeedData
                 .OrderBy(r => r.Id)
                 .ToListAsync();
 
-            // Ensure Documentation resource
-            var doc = resources.FirstOrDefault(r => r.Type == "Article");
-            if (doc == null)
+            bool hasArticle = resources.Any(r => r.Type == "Article");
+            bool hasVideo = resources.Any(r => r.Type == "Video");
+
+            // Only insert a fallback Article if the module has NONE at all.
+            // Never edit an existing resource's Title/Url here.
+            if (!hasArticle)
             {
                 context.ModuleResources.Add(new ModuleResource
                 {
@@ -165,15 +156,9 @@ public static class SeedData
                     IsActive = true
                 });
             }
-            else
-            {
-                doc.Title = $"{module.ModuleName} – Official Documentation";
-                doc.Url = GetDocumentationUrl(module);
-            }
 
-            // Ensure Video resource
-            var video = resources.FirstOrDefault(r => r.Type == "Video");
-            if (video == null)
+            // Only insert a fallback Video if the module has NONE at all.
+            if (!hasVideo)
             {
                 context.ModuleResources.Add(new ModuleResource
                 {
@@ -184,21 +169,13 @@ public static class SeedData
                     IsActive = true
                 });
             }
-            else
-            {
-                video.Title = $"{module.ModuleName} – Video Tutorial";
-                video.Url = GetVideoUrl(module);
-            }
 
-           
-            foreach (var extra in resources.Skip(2))
-                context.ModuleResources.Remove(extra);
+            // NOTE: the old "delete anything past the first 2 resources" logic
+            // was removed on purpose — several modules intentionally have 3
+            // curated resources (e.g. an extra reading link), and that logic
+            // was deleting the 3rd one on every restart.
         }
-
         await context.SaveChangesAsync();
-
-
-
         // ===================================
         // 7. TRACK-LEVEL RESOURCES (LIBRARY)
         // ====================================
@@ -207,7 +184,6 @@ public static class SeedData
             var allTracks = await context.Tracks
                 .AsNoTracking()
                 .ToListAsync();
-
             foreach (var track in allTracks)
             {
                 context.Resources.Add(new Resource
@@ -220,13 +196,15 @@ public static class SeedData
                     CreatedAt = DateTime.UtcNow
                 });
             }
-
             await context.SaveChangesAsync();
         }
     }
-
     // ===================================
-    // DEFAULT RESOURCE URLS (SAFE & REAL)
+    // FALLBACK RESOURCE URLS
+    // Used ONLY when a module has zero resources of that type — e.g. a
+    // brand-new track/module that hasn't been populated with curated
+    // per-module links yet. Once real resources exist, these are never
+    // consulted again for that module.
     // ====================================
     private static string GetDefaultResourceUrl(SyllabusModule module)
     {
@@ -240,7 +218,6 @@ public static class SeedData
             _ => "https://learn.microsoft.com/"
         };
     }
-
     private static string GetDocumentationUrl(SyllabusModule module)
     {
         if (module == null || module.Track == null)
@@ -249,7 +226,6 @@ public static class SeedData
         }
         return module.Track.Code switch
         {
-          
             "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
             "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
             "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
@@ -258,12 +234,10 @@ public static class SeedData
             _ => "https://learn.microsoft.com/"
         };
     }
-
     private static string GetVideoUrl(SyllabusModule module)
     {
         return module.Track.Code switch
         {
-           
             "FSC" => "https://www.youtube.com/watch?v=gfkTfcpWqAY",
             "FEJ" => "https://www.youtube.com/watch?v=PkZNo7MFNFg",
             "BEC" => "https://www.youtube.com/watch?v=GhQdlIFylQ8",
@@ -272,6 +246,4 @@ public static class SeedData
             _ => "https://www.youtube.com/"
         };
     }
-
-
 }
