@@ -204,20 +204,18 @@ public static class SeedData
     // Used ONLY when a module has zero resources of that type — e.g. a
     // brand-new track/module that hasn't been populated with curated
     // per-module links yet. Once real resources exist, these are never
-    // consulted again for that module.
+    // consulted again for that module (see the gap-filling logic above).
+    //
+    // Covers all 9 live tracks (per Admin > Manage Tracks): BEC, FEJ, FSC,
+    // FPY, MAD, MGP, MGU, UXD, WB3. The stale "MGD" case was removed — no
+    // track uses that code anymore; MGU/MGP replaced it.
+    //
+    // Video fallback uses a YouTube SEARCH URL rather than one hardcoded
+    // video ID. A specific video can get taken down and silently break
+    // (which is exactly the bug we just fixed for BEC) — a search URL
+    // can't 404, and it visibly signals "not yet curated" rather than
+    // quietly showing a dead or wrong link.
     // ====================================
-    private static string GetDefaultResourceUrl(SyllabusModule module)
-    {
-        return module.Track.Code switch
-        {
-            "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
-            "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
-            "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
-            "MGD" => "https://learn.unity.com/",
-            "WB3" => "https://docs.soliditylang.org/",
-            _ => "https://learn.microsoft.com/"
-        };
-    }
     private static string GetDocumentationUrl(SyllabusModule module)
     {
         if (module == null || module.Track == null)
@@ -229,19 +227,31 @@ public static class SeedData
             "FSC" => "https://learn.microsoft.com/en-us/dotnet/",
             "FEJ" => "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
             "BEC" => "https://learn.microsoft.com/en-us/dotnet/csharp/",
-            "MGD" => "https://learn.unity.com/",
+            "FPY" => "https://docs.python.org/3/",
+            "MAD" => "https://reactnative.dev/docs/getting-started",
+            "MGU" => "https://learn.unity.com/",
+            "MGP" => "https://kivy.org/doc/stable/",
+            "UXD" => "https://www.interaction-design.org/literature",
             "WB3" => "https://docs.soliditylang.org/",
             _ => "https://learn.microsoft.com/"
         };
     }
     private static string GetVideoUrl(SyllabusModule module)
     {
+        if (module == null || module.Track == null)
+        {
+            return "https://www.youtube.com/";
+        }
         return module.Track.Code switch
         {
             "FSC" => "https://www.youtube.com/watch?v=gfkTfcpWqAY",
             "FEJ" => "https://www.youtube.com/watch?v=PkZNo7MFNFg",
             "BEC" => "https://www.youtube.com/watch?v=GhQdlIFylQ8",
-            "MGD" => "https://www.youtube.com/watch?v=gB1F9G0JXOo",
+            "FPY" => "https://www.youtube.com/results?search_query=python+full+course",
+            "MAD" => "https://www.youtube.com/results?search_query=flutter+react+native+tutorial",
+            "MGU" => "https://www.youtube.com/results?search_query=unity+c%23+game+development+tutorial",
+            "MGP" => "https://www.youtube.com/results?search_query=kivy+python+game+development+tutorial",
+            "UXD" => "https://www.youtube.com/results?search_query=ui+ux+design+tutorial",
             "WB3" => "https://www.youtube.com/watch?v=gyMwXuJrbJQ",
             _ => "https://www.youtube.com/"
         };
