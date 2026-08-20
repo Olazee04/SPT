@@ -78,8 +78,7 @@ namespace SPT.Controllers
             ViewBag.ProgressPercentage = totalModules > 0
                 ? (int)((double)completedModules / totalModules * 100)
                 : 0;
-            ViewBag.CanViewCertificate = completedModules == totalModules && totalModules > 0;
-
+            
             // ── Fetch active modules for dropdown ─────────────────────
             var modules = await _context.SyllabusModules
                 .Where(m => m.TrackId == student.TrackId && m.IsActive)
@@ -208,9 +207,6 @@ namespace SPT.Controllers
                 .ToList();
             ViewBag.CurrentModules = unlockedModules;
 
-            bool capstoneUnlocked = student.ModuleCompletions
-                .Any(mc => mc.ModuleId == 19 && mc.IsCompleted);
-            ViewBag.CapstoneUnlocked = capstoneUnlocked;
 
             // ── Announcements ─────────────────────────────────────────
             ViewBag.LatestAnnouncement = await _context.Announcements
@@ -814,6 +810,9 @@ public async Task<IActionResult> LogWork(
             ViewBag.Progress = (int)progress;
             ViewBag.CompletedCount = completedCount;
             ViewBag.TotalModules = totalModules;
+
+            ViewBag.IssuedCertificate = await _context.Certificates
+            .FirstOrDefaultAsync(c => c.StudentId == student.Id);
 
             return View(student);
         }

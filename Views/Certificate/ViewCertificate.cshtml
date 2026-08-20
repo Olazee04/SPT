@@ -5,70 +5,251 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8" />
     <title>Certificate - @Model.Student.FullName</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Georgia', serif; }
-        .cert-container {
-            width: 900px; height: 600px; background: white; padding: 40px;
-            border: 10px solid #ddd;
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            text-align: center;
+        :root {
+            --navy: #0a1a3c;
+            --navy-light: #16295c;
+            --gold: #c9a227;
+            --gold-light: #e6c65c;
+            --cream: #fdfbf5;
         }
-        .border-inner { border: 2px solid #2c3e50; height: 100%; padding: 20px; box-sizing: border-box; }
-        .logo { font-size: 40px; color: #2c3e50; margin-bottom: 20px; }
-        h1 { font-size: 40px; color: #2c3e50; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
-        .sub-text { font-size: 18px; color: #7f8c8d; margin-top: 10px; }
-        .student-name { font-size: 45px; color: #2980b9; margin: 30px 0; border-bottom: 2px solid #eee; display: inline-block; padding-bottom: 10px; font-family: 'Arial', sans-serif; font-weight: bold; }
-        .course-name { font-size: 24px; font-weight: bold; margin-bottom: 40px; }
-        .date-section { position: absolute; bottom: 60px; left: 60px; text-align: left; }
-        .sign-section { position: absolute; bottom: 60px; right: 60px; text-align: center; }
-        .sign-line { width: 200px; border-top: 1px solid #333; margin-top: 10px; }
-        .badge-icon { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: #f1c40f; font-size: 80px; opacity: 0.8; }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: #e8e8e8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .cert-container {
+            width: 1000px;
+            height: 700px;
+            background: var(--cream);
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+        }
+
+        /* Outer navy frame with gold inset line */
+        .frame-outer {
+            position: absolute;
+            inset: 18px;
+            border: 3px solid var(--navy);
+        }
+        .frame-inner {
+            position: absolute;
+            inset: 26px;
+            border: 1px solid var(--gold);
+        }
+
+        .cert-content {
+            position: absolute;
+            inset: 55px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ===== Brand mark ===== */
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 6px;
+        }
+        .brand-text { text-align: left; }
+        .brand-name {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 22px;
+            color: var(--navy);
+            letter-spacing: 0.5px;
+            line-height: 1;
+        }
+        .brand-sub {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: var(--gold);
+            margin-top: 3px;
+        }
+
+        .divider {
+            width: 90px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            margin: 18px 0;
+        }
+
+        h1.title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 34px;
+            color: var(--navy);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin: 4px 0 0 0;
+        }
+
+        .presented-to {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #7a7a7a;
+            margin-top: 22px;
+        }
+
+        .student-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-weight: 600;
+            font-size: 54px;
+            color: var(--navy);
+            margin: 10px 0 4px 0;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid var(--gold);
+            display: inline-block;
+            min-width: 380px;
+        }
+
+        .body-text {
+            font-size: 13.5px;
+            color: #444;
+            max-width: 620px;
+            line-height: 1.7;
+            margin-top: 18px;
+        }
+        .track-name {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .bottom-row {
+            position: absolute;
+            bottom: 40px;
+            left: 55px;
+            right: 55px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .meta-block { text-align: left; }
+        .meta-label {
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 4px;
+        }
+        .meta-value {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--navy);
+        }
+        .meta-block.right { text-align: right; }
+
+        .cert-id-tag {
+            position: absolute;
+            top: 34px;
+            right: 34px;
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: #b5b5b5;
+            font-family: 'Montserrat', sans-serif;
+        }
 
         @@media print {
-            body { background: white; }
-            .cert-container { box-shadow: none; border: 5px solid #333; width: 100%; height: 100%; }
+            body { background: white; padding: 0; }
+            .cert-container { box-shadow: none; }
         }
     </style>
 </head>
 <body>
     <div class="cert-container">
-        <div class="border-inner">
-            <div class="logo"><i class="fas fa-graduation-cap"></i> SPT Academy</div>
+        <div class="frame-outer"></div>
+        <div class="frame-inner"></div>
 
-            <div class="sub-text">This is to certify that</div>
+        <div class="cert-id-tag">CERT ID: @Model.CertificateId</div>
+
+        <div class="cert-content">
+
+            <!-- Brand mark: SVG monogram + wordmark -->
+            <div class="brand-row">
+                <svg width="56" height="56" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="goldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#e6c65c"/>
+                            <stop offset="100%" stop-color="#a8801c"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="45" cy="45" r="42" fill="none" stroke="url(#goldRing)" stroke-width="3"/>
+                    <circle cx="45" cy="45" r="35" fill="#0a1a3c"/>
+                    <text x="45" y="59" font-family="Georgia, serif" font-size="42" font-weight="bold"
+                          fill="url(#goldRing)" text-anchor="middle">R</text>
+                </svg>
+                <div class="brand-text">
+                    <div class="brand-name">RMSys Solutions</div>
+                    <div class="brand-sub">SPT ACADEMY</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <h1 class="title">Certificate of Completion</h1>
+
+            <div class="presented-to">This certifies that</div>
             <div class="student-name">@Model.Student.FullName</div>
 
-            <div class="sub-text">has successfully completed the curriculum for</div>
-            <div class="course-name">@Model.TrackName</div>
-
-            <p style="color:#555; max-width: 600px; margin: 0 auto; line-height:1.5;">
-                Demonstrating excellence, dedication, and proficiency in all required modules and capstone projects.
-            </p>
-
-            <i class="fas fa-medal badge-icon"></i>
-
-            <div class="date-section">
-                <strong>@Model.DateIssued.ToString("MMMM dd, yyyy")</strong>
-                <div class="sign-line">Date Issued</div>
+            <div class="body-text">
+                has successfully completed the comprehensive training program in
+                <span class="track-name">@Model.TrackName</span>,
+                demonstrating proficiency in all required modules, practical
+                assessments, and the final capstone project.
             </div>
 
-            <div class="sign-section">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/f/f8/Signature_sample.svg" height="40" style="opacity:0.7" />
-                <div class="sign-line">Program Director</div>
+            <!-- Circular seal -->
+            <svg width="110" height="110" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
+                 style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%) rotate(-6deg); opacity:0.92;">
+                <defs>
+                    <path id="sealCirclePath" d="M 50,50 m -37,0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" />
+                </defs>
+                <circle cx="50" cy="50" r="47" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+                <circle cx="50" cy="50" r="37" fill="none" stroke="#0a1a3c" stroke-width="1"/>
+                <text font-size="6.3" fill="#0a1a3c" font-family="Georgia, serif" letter-spacing="1.5">
+                    <textPath href="#sealCirclePath" startOffset="1%">RMSYS SOLUTIONS • SPT ACADEMY • VERIFIED •</textPath>
+                </text>
+                <text x="50" y="47" text-anchor="middle" font-size="13" font-weight="bold"
+                      fill="#0a1a3c" font-family="Georgia, serif">R</text>
+                <text x="50" y="60" text-anchor="middle" font-size="5.5" fill="#c9a227"
+                      font-family="Montserrat, sans-serif" letter-spacing="1.5">OFFICIAL</text>
+            </svg>
+
+            <div class="bottom-row">
+                <div class="meta-block">
+                    <div class="meta-label">Date of Issue</div>
+                    <div class="meta-value">@Model.DateIssued.ToString("MMMM dd, yyyy")</div>
+                </div>
+                <div class="meta-block right">
+                    <div class="meta-label">Issued By</div>
+                    <div class="meta-value" style="font-size:13px;">@Model.IssuedBy</div>
+                </div>
             </div>
 
-            <div style="position:absolute; top:20px; right:20px; font-size:12px; color:#ccc;">
-                ID: @Model.CertificateId
-            </div>
         </div>
     </div>
-
-    <script>
-        // Auto print prompt
-        // window.print();
-    </script>
 </body>
 </html>
